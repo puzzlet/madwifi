@@ -1647,16 +1647,9 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 	last_ev = current_ev;
 	iwe.cmd = SIOCGIWESSID;
 	iwe.u.data.flags = 1;
-	if (vap->iv_opmode == IEEE80211_M_HOSTAP) {
-		iwe.u.data.length = vap->iv_des_nssid > 0 ?
-			vap->iv_des_ssid[0].len : 0;
-		current_ev = iwe_stream_add_point(current_ev,
-			end_buf, &iwe, vap->iv_des_ssid[0].ssid);
-	} else {
-		iwe.u.data.length = se->se_ssid[1];
-		current_ev = iwe_stream_add_point(current_ev,
-			end_buf, &iwe, (char *) se->se_ssid+2);
-	}
+	iwe.u.data.length = se->se_ssid[1];
+	current_ev = iwe_stream_add_point(current_ev,
+		end_buf, &iwe, (char *) se->se_ssid+2);
 
 	/* We ran out of space in the buffer. */
 	if (last_ev == current_ev)
