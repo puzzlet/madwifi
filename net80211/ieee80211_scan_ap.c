@@ -650,6 +650,7 @@ ap_end(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 			if ((c = ieee80211_find_channel(ic, c->ic_freq,
 				c->ic_flags & ~IEEE80211_CHAN_TURBO)) == NULL) {
 				/* should never happen ?? */
+				SCAN_AP_UNLOCK_IRQ_EARLY(as);
 				return 0;
 			}
 		}
