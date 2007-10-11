@@ -247,22 +247,23 @@ sta_add(struct ieee80211_scan_state *ss, const struct ieee80211_scanparams *sp,
 	IEEE80211_ADDR_COPY(se->base.se_macaddr, macaddr);
 	TAILQ_INSERT_TAIL(&st->st_entry, se, se_list);
 	LIST_INSERT_HEAD(&st->st_hash[hash], se, se_hash);
+
 found:
 	ise = &se->base;
+
 	/* XXX ap beaconing multiple ssid w/ same bssid */
 	if (sp->ssid[1] != 0 &&
 	    (ISPROBE(subtype) || ise->se_ssid[1] == 0))
 		memcpy(ise->se_ssid, sp->ssid, 2 + sp->ssid[1]);
-	KASSERT(sp->rates[1] <= IEEE80211_RATE_MAXSIZE,
-		("rate set too large: %u", sp->rates[1]));
-	memcpy(ise->se_rates, sp->rates, 2 + sp->rates[1]);
+
+	memcpy(ise->se_rates, sp->rates, 
+			2 + IEEE80211_SANITISE_RATESIZE(sp->rates[1]));
 	if (sp->xrates != NULL) {
-		/* XXX validate xrates[1] */
-		KASSERT(sp->xrates[1] <= IEEE80211_RATE_MAXSIZE,
-			("xrate set too large: %u", sp->xrates[1]));
-		memcpy(ise->se_xrates, sp->xrates, 2 + sp->xrates[1]);
+		memcpy(ise->se_xrates, sp->xrates, 
+				2 + IEEE80211_SANITISE_RATESIZE(sp->xrates[1]));
 	} else
 		ise->se_xrates[1] = 0;
+
 	IEEE80211_ADDR_COPY(ise->se_bssid, wh->i_addr3);
 	/*
 	 * Record rssi data using extended precision LPF filter.

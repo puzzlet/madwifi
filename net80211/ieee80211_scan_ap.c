@@ -511,31 +511,30 @@ ap_add(struct ieee80211_scan_state *ss, const struct ieee80211_scanparams *sp,
 	IEEE80211_ADDR_COPY(se->base.se_macaddr, macaddr);
 	TAILQ_INSERT_TAIL(&as->as_entry, se, se_list);
 	LIST_INSERT_HEAD(&as->as_hash[hash], se, se_hash);
+
 found:
 	ise = &se->base;
-	/* XXX ap beaconing multiple ssid w/ same bssid */
-	if (sp->ssid[1] != 0 &&
-	    ((subtype == IEEE80211_FC0_SUBTYPE_PROBE_RESP) || ise->se_ssid[1] == 0))
-	{
+
+	/* XXX: AP beaconing multiple SSID w/ same BSSID */
+	if ((sp->ssid[1] != 0) &&
+	    ((subtype == IEEE80211_FC0_SUBTYPE_PROBE_RESP) || 
+	     (ise->se_ssid[1] == 0)))
 		memcpy(ise->se_ssid, sp->ssid, 2 + sp->ssid[1]);
-        }
-	KASSERT(sp->rates[1] <= IEEE80211_RATE_MAXSIZE,
-		("rate set too large: %u", sp->rates[1]));
-	memcpy(ise->se_rates, sp->rates, 2 + sp->rates[1]);
+
+	memcpy(ise->se_rates, sp->rates, 
+		IEEE80211_SANITISE_RATESIZE(2 + sp->rates[1]));
 	if (sp->xrates != NULL) {
-		/* XXX validate xrates[1] */
-		KASSERT(sp->xrates[1] <= IEEE80211_RATE_MAXSIZE,
-			("xrate set too large: %u", sp->xrates[1]));
-		memcpy(ise->se_xrates, sp->xrates, 2 + sp->xrates[1]);
+		memcpy(ise->se_xrates, sp->xrates, 
+				IEEE80211_SANITISE_RATESIZE(2 + sp->xrates[1]));
 	} else
 		ise->se_xrates[1] = 0;
+
 	IEEE80211_ADDR_COPY(ise->se_bssid, wh->i_addr3);
-	/*
-	 * Record rssi data using extended precision LPF filter.
-	 */
-	if (se->se_lastupdate == 0)		/* first sample */
+
+	/* Record RSSI data using extended precision LPF filter.*/
+	if (se->se_lastupdate == 0)			/* First sample */
 		se->se_avgrssi = RSSI_IN(rssi);
-	else					/* avg w/ previous samples */
+	else					/* Avg. w/ previous samples */
 		RSSI_LPF(se->se_avgrssi, rssi);
 	se->base.se_rssi = RSSI_GET(se->se_avgrssi);
 	ise->se_rtsf = rtsf;
