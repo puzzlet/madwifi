@@ -4280,7 +4280,7 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 	struct ieee80211vap *vap;
 	struct ath_buf *bf;
 	unsigned int slot;
-	u_int32_t bfaddr;
+	u_int32_t bfaddr = 0;
 
 	/*
 	 * Check if the previous beacon has gone out.  If
@@ -4336,23 +4336,21 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 				bfaddr = bf->bf_daddr;
 		}
 	} else {				/* burst'd beacons */
-		u_int32_t *bflink;
+		u_int32_t *bflink = NULL;
 
-		bflink = &bfaddr;
-		/* XXX rotate/randomize order? */
+		/* XXX: rotate/randomize order? */
 		for (slot = 0; slot < ATH_BCBUF; slot++) {
-			vap = sc->sc_bslot[slot];
-			if (vap != NULL) {
-				bf = ath_beacon_generate(sc, vap, needmark);
-				if (bf != NULL) {
+			if ((vap = sc->sc_bslot[slot]) != NULL) {
+				if ((bf = ath_beacon_generate(sc, vap, needmark)) != NULL) {
+					if (bflink != NULL)
 #ifdef AH_NEED_DESC_SWAP
-					if (bflink != &bfaddr)
 						*bflink = cpu_to_le32(bf->bf_daddr);
-					else
-						*bflink = bf->bf_daddr;
 #else
-					*bflink = bf->bf_daddr;
+						*bflink = bf->bf_daddr;
 #endif
+					else /* For the first bf, save bf_addr for later */
+						bfaddr = bf->bf_daddr;
+
 					bflink = &bf->bf_desc->ds_link;
 				}
 			}
