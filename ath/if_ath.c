@@ -4355,7 +4355,8 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 				}
 			}
 		}
-		*bflink = 0;			/* link of last frame */
+		if (bflink != NULL)
+			*bflink = 0;			/* link of last frame */
 	}
 
 	/*
