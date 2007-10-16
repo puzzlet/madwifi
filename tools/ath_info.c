@@ -691,13 +691,14 @@ usage(const char *n)
 {
 	int i;
 
-	fprintf(stderr, "%s [-w [-g N:M]] [-v] [-f] <base_address> "
+	fprintf(stderr, "%s [-w [-g N:M]] [-v] [-f] [-d] <base_address> "
 		"[<name1> <val1> [<name2> <val2> ...]]\n\n", n);
 	fprintf(stderr,
 		"-w      write values into EEPROM\n"
 		"-g N:M  set GPIO N to level M (only used with -w)\n"
 		"-v      verbose output\n"
 		"-f      force; suppress question before writing\n"
+		"-d      dump eeprom (file 'ath-eeprom-dump.bin' and screen)\n"
 		"<base_address>  device base address (see lspci output)\n\n");
 
 	fprintf(stderr,
@@ -728,10 +729,13 @@ main(int argc, char *argv[])
 	u_int16_t eeprom_header, srev, phy_rev_5ghz, phy_rev_2ghz;
 	u_int16_t eeprom_version, mac_version, regdomain, has_crystal, ee_magic;
 	u_int8_t error, has_a, has_b, has_g, has_rfkill, eeprom_size;
+	int byte_size=0;
 	void *mem;
 	int fd;
 	int i, anr=1;
 	int do_write=0; /* default: read only */
+	int do_dump=0;
+
 	struct {
 		int valid;
 		int value;
@@ -771,6 +775,10 @@ main(int argc, char *argv[])
 
 		case 'v':
 			verbose=1;
+			break;
+
+		case 'd':
+			do_dump=1;
 			break;
 
 		case 'h':
@@ -949,12 +957,18 @@ main(int argc, char *argv[])
 
 	printf("EEPROM Size: ");
 
-	if (eeprom_size == 0)
+	if (eeprom_size == 0) {
 		printf("       4K\n");
-	else if (eeprom_size == 1)
+		byte_size = 4096;
+	}
+	else if (eeprom_size == 1) {
 		printf("       8K\n");
-	else if (eeprom_size == 2)
+		byte_size = 8192;
+	}
+	else if (eeprom_size == 2) {
 		printf("       16K\n");
+		byte_size = 16384;
+	}
 	else
 		printf("       ??\n");
 	
@@ -999,6 +1013,26 @@ main(int argc, char *argv[])
 	printf("GPIO registers: CR %08lx DO %08lx DI %08lx\n",
 	       AR5K_REG_READ(AR5K_GPIOCR), AR5K_REG_READ(AR5K_GPIODO),
 	       AR5K_REG_READ(AR5K_GPIODI));
+
+	if (do_dump) {
+		printf("\nEEPROM dump (%d byte)\n", byte_size);
+		printf("==============================================");
+		u_int16_t data;
+		FILE* dumpfile = fopen("ath-eeprom-dump.bin", "w");
+		for (i=1; i<=(byte_size/2); i++) {
+			error = ath5k_hw_eeprom_read(mem, i, &data, mac_version);
+			if (error) {
+				printf("\nUnable to read at %04x !\n", i);
+				continue;
+			}
+			if (!((i-1)%8))
+				printf("\n%04x:  ",i);
+			printf("%04x ", data);
+			fwrite(&data, 2, 1, dumpfile);
+		}
+		printf("\n==============================================\n");
+		fclose(dumpfile);
+	}
 
 	if (do_write) {
 		unsigned long int rcr=AR5K_REG_READ(AR5K_GPIOCR),
