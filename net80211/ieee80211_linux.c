@@ -104,6 +104,10 @@ static struct attribute_group ieee80211_attr_grp = {
 };
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17) */
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24)
+#define proc_net init_net.proc_net
+#endif
+
 /*
  * Print a console message with the device name prepended.
  */
