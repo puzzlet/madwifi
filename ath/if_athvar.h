@@ -104,9 +104,13 @@ typedef void irqreturn_t;
 #endif /* !defined(IRQ_NONE) */
 
 #ifndef SET_MODULE_OWNER
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)
 #define	SET_MODULE_OWNER(dev) do {		\
 	dev->owner = THIS_MODULE;		\
 } while (0)
+#else
+#define SET_MODULE_OWNER(dev) do { } while (0)
+#endif
 #endif
 
 #ifndef SET_NETDEV_DEV
