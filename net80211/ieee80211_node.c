@@ -733,10 +733,14 @@ ieee80211_node_table_init(struct ieee80211com *ic, struct ieee80211_node_table *
 }
 
 static __inline void _node_table_join(struct ieee80211_node_table *nt, struct ieee80211_node *ni) {
+	struct ieee80211_node *tni = NULL;
 	IEEE80211_NODE_TABLE_LOCK_ASSERT(nt);
 
 	ni->ni_table = nt;
-	TAILQ_INSERT_TAIL(&nt->nt_node, ieee80211_ref_node(ni), ni_list);
+	tni = ieee80211_ref_node(ni);
+	TAILQ_INSERT_TAIL(&nt->nt_node, tni, ni_list);
+	tni = NULL;
+	
 	LIST_INSERT_HEAD(&nt->nt_hash[IEEE80211_NODE_HASH(ni->ni_macaddr)], ni, ni_hash);
 }
 
