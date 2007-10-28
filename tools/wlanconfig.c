@@ -696,8 +696,9 @@ print_chaninfo(const struct ieee80211_channel *c)
 {
 #define	IEEE80211_IS_CHAN_PASSIVE(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_PASSIVE))
+#define	IEEE80211_IS_CHAN_RADAR(_c) \
+	(((_c)->ic_flags & IEEE80211_CHAN_RADAR) != 0)
 	char buf[14];
-
 	buf[0] = '\0';
 	if (IEEE80211_IS_CHAN_FHSS(c))
 		strlcat(buf, " FHSS", sizeof(buf));
@@ -713,9 +714,15 @@ print_chaninfo(const struct ieee80211_channel *c)
 		strlcat(buf, " Static", sizeof(buf));
 	if (IEEE80211_IS_CHAN_DTURBO(c))
 		strlcat(buf, " Dynamic", sizeof(buf));
-	printf("Channel %3u : %u%c Mhz%-14.14s",
+	if (IEEE80211_IS_CHAN_HALF(c))
+		strlcat(buf, " Half", sizeof(buf));
+	if (IEEE80211_IS_CHAN_QUARTER(c))
+		strlcat(buf, " Quarter", sizeof(buf));
+	printf("Channel %3u : %u%c%c Mhz%-14.14s",
 		c->ic_ieee, c->ic_freq,
-		IEEE80211_IS_CHAN_PASSIVE(c) ? '*' : ' ', buf);
+		IEEE80211_IS_CHAN_PASSIVE(c) ? '*' : ' ', 
+	        IEEE80211_IS_CHAN_RADAR(c) ? '!' : ' ', 
+	       buf);
 #undef IEEE80211_IS_CHAN_PASSIVE
 }
 
