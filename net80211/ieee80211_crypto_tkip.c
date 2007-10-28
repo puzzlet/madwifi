@@ -297,7 +297,7 @@ tkip_decap(struct ieee80211_key *k, struct sk_buff *skb, int hdrlen)
 		tid = ((struct ieee80211_qosframe *)wh)->i_qos[0] & IEEE80211_QOS_TID;
 
 	ctx->rx_rsc = READ_6(ivp[2], ivp[0], ivp[4], ivp[5], ivp[6], ivp[7]);
-	if (ctx->rx_rsc <= k->wk_keyrsc[tid]) {
+	if (ctx->rx_rsc && ctx->rx_rsc <= k->wk_keyrsc[tid]) {
 		/*
 		 * Replay violation; notify upper layer.
 		 */
