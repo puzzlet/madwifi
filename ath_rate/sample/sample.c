@@ -759,7 +759,7 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		 * sample higher rates 1 try at a time doing so
 		 * may unfairly penalize them.
 		 */
-		if (tries[0]) {
+		if (tries[0] && ndx[0] >= 0) {
 			update_stats(sc, an, frame_size,
 				ndx[0], tries[0],
 				ndx[1], tries[1],
@@ -771,7 +771,7 @@ ath_rate_tx_complete(struct ath_softc *sc,
 
 		}
 
-		if (tries[1] && finalTSIdx > 0) {
+		if (tries[1] && ndx[1] >= 0 && finalTSIdx > 0) {
 			update_stats(sc, an, frame_size,
 				ndx[1], tries[1],
 				ndx[2], tries[2],
@@ -782,7 +782,7 @@ ath_rate_tx_complete(struct ath_softc *sc,
 			long_tries -= tries[1];
 		}
 
-		if (tries[2] && finalTSIdx > 1) {
+		if (tries[2] && ndx[2] >= 0 && finalTSIdx > 1) {
 			update_stats(sc, an, frame_size,
 				ndx[2], tries[2],
 				ndx[3], tries[3],
@@ -793,7 +793,7 @@ ath_rate_tx_complete(struct ath_softc *sc,
 			long_tries -= tries[2];
 		}
 
-		if (tries[3] && finalTSIdx > 2) {
+		if (tries[3] && ndx[3] >= 0 && finalTSIdx > 2) {
 			update_stats(sc, an, frame_size,
 				ndx[3], tries[3],
 				0, 0,
