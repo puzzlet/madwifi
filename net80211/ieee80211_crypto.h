@@ -106,7 +106,7 @@ struct ieee80211_key {
 
 #define	IEEE80211_CIPHER_MAX		(IEEE80211_CIPHER_NONE + 1)
 
-#define	IEEE80211_KEYIX_NONE	((ieee80211_keyix_t) -1)
+#define	IEEE80211_KEYIX_NONE	((ieee80211_keyix_t) (uint8_t)-1)
 
 #if defined(__KERNEL__) || defined(_KERNEL)
 
