@@ -787,6 +787,7 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 	vap->iv_sysctl_header = ATH_REGISTER_SYSCTL_TABLE(vap->iv_sysctls);
 	if (!vap->iv_sysctl_header) {
 		printk("%s: failed to register sysctls!\n", vap->iv_dev->name);
+		kfree(devname);
 		kfree(vap->iv_sysctls);
 		vap->iv_sysctls = NULL;
 	}
@@ -936,7 +937,7 @@ ieee80211_virtfs_vdetach(struct ieee80211vap *vap)
 		proc_madwifi_count--;
 	}
 
-	if (vap->iv_sysctls[2].procname) {
+	if (vap->iv_sysctls && vap->iv_sysctls[2].procname) {
 		kfree(vap->iv_sysctls[2].procname);
 		vap->iv_sysctls[2].procname = NULL;
 	}
