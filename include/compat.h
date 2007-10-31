@@ -154,6 +154,14 @@ static inline int timeval_compare(struct timeval *lhs, struct timeval *rhs)
 	do { (_skb)->mac.raw = (_skb)->data; } while(0)
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24)
+#define CTL_AUTO -2
+#define DEV_ATH 9
+#else
+#define CTL_AUTO CTL_UNNUMBERED
+#define DEV_ATH CTL_UNNUMBERED
+#endif
+
 #endif /* __KERNEL__ */
 
 #endif /* _ATH_COMPAT_H_ */

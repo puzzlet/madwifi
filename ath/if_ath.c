@@ -9403,7 +9403,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 	if (write) {
 		ret = ATH_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos);
 		if (ret == 0) {
-			switch (ctl->ctl_name) {
+			switch ((long)ctl->extra2) {
 			case ATH_SLOTTIME:
 				if (val > 0) {
 					if (!ath_hal_setslottime(ah, val))
@@ -9515,7 +9515,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			}
 		}
 	} else {
-		switch (ctl->ctl_name) {
+		switch ((long)ctl->extra2) {
 		case ATH_SLOTTIME:
 			val = ath_hal_getslottime(ah);
 			break;
@@ -9581,92 +9581,106 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 static int mincalibrate = 1;			/* once a second */
 static int maxint = 0x7fffffff;		/* 32-bit big */
 
-#define	CTL_AUTO	-2	/* cannot be CTL_ANY or CTL_NONE */
-
 static const ctl_table ath_sysctl_template[] = {
-	{ .ctl_name	= ATH_SLOTTIME,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "slottime",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_SLOTTIME,
 	},
-	{ .ctl_name	= ATH_ACKTIMEOUT,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "acktimeout",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_ACKTIMEOUT,
 	},
-	{ .ctl_name	= ATH_CTSTIMEOUT,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "ctstimeout",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_CTSTIMEOUT,
 	},
-	{ .ctl_name	= ATH_SOFTLED,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "softled",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_SOFTLED,
 	},
-	{ .ctl_name	= ATH_LEDPIN,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "ledpin",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_LEDPIN,
 	},
-	{ .ctl_name	= ATH_COUNTRYCODE,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "countrycode",
 	  .mode		= 0444,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_COUNTRYCODE,
 	},
-	{ .ctl_name	= ATH_REGDOMAIN,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "regdomain",
 	  .mode		= 0444,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_REGDOMAIN,
 	},
 #ifdef AR_DEBUG
-	{ .ctl_name	= ATH_DEBUG,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "debug",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_DEBUG,
 	},
 #endif
-	{ .ctl_name	= ATH_TXANTENNA,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "txantenna",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_TXANTENNA,
 	},
-	{ .ctl_name	= ATH_RXANTENNA,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "rxantenna",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_RXANTENNA,
 	},
-	{ .ctl_name	= ATH_DIVERSITY,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "diversity",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_DIVERSITY,
 	},
-	{ .ctl_name	= ATH_TXINTRPERIOD,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "txintrperiod",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_TXINTRPERIOD,
 	},
-	{ .ctl_name	= ATH_FFTXQMIN,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "fftxqmin",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_FFTXQMIN,
 	},
 #ifdef ATH_SUPERG_XR
-	{ .ctl_name	= ATH_XR_POLL_PERIOD,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "xrpollperiod",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_XR_POLL_PERIOD,
 	},
-	{ .ctl_name	= ATH_XR_POLL_COUNT,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "xrpollcount",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_XR_POLL_COUNT,
 	},
 #endif
-	{ .ctl_name	= ATH_ACKRATE,
+	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "ackrate",
 	  .mode		= 0644,
-	  .proc_handler	= ath_sysctl_halparam
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_ACKRATE,
 	},
 	{ 0 }
 };
@@ -9715,7 +9729,7 @@ ath_dynamic_sysctl_register(struct ath_softc *sc)
 		sizeof(ath_sysctl_template));
 
 	/* add in dynamic data references */
-	for (i = 4; sc->sc_sysctls[i].ctl_name; i++)
+	for (i = 4; sc->sc_sysctls[i].procname; i++)
 		if (sc->sc_sysctls[i].extra1 == NULL)
 			sc->sc_sysctls[i].extra1 = sc;
 
@@ -9806,10 +9820,6 @@ ath_announce(struct net_device *dev)
  * Static (i.e. global) sysctls.  Note that the HAL sysctls
  * are located under ours by sharing the setting for DEV_ATH.
  */
-enum {
-	DEV_ATH		= 9,			/* XXX known by HAL */
-};
-
 static ctl_table ath_static_sysctls[] = {
 #ifdef AR_DEBUG
 	{ .ctl_name	= CTL_AUTO,

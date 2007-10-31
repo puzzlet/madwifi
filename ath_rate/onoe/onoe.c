@@ -434,15 +434,9 @@ static int maxpercent = 100;		/* 100% */
 static int minpercent = 0;		/* 0% */
 static int maxint = 0x7fffffff;		/* 32-bit big */
 
-#define	CTL_AUTO	-2	/* cannot be CTL_ANY or CTL_NONE */
-
 /*
  * Static (i.e. global) sysctls.
  */
-enum {
-	DEV_ATH		= 9,			/* XXX known by many */
-};
-
 static ctl_table ath_rate_static_sysctls[] = {
 	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "interval",

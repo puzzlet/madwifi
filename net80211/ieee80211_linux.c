@@ -670,8 +670,6 @@ IEEE80211_SYSCTL_DECL(ieee80211_sysctl_monitor_crc_errors, ctl, write, filp, buf
 	return ret;
 }
 
-#define	CTL_AUTO	-2	/* cannot be CTL_ANY or CTL_NONE */
-
 static const ctl_table ieee80211_sysctl_template[] = {
 #ifdef IEEE80211_DEBUG
 	{ .ctl_name	= CTL_AUTO,
@@ -776,7 +774,7 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 		sizeof(ieee80211_sysctl_template));
 
 	/* add in dynamic data references */
-	for (i = 4; vap->iv_sysctls[i].ctl_name; i++)
+	for (i = 4; vap->iv_sysctls[i].procname; i++)
 		if (vap->iv_sysctls[i].extra1 == NULL)
 			vap->iv_sysctls[i].extra1 = vap;
 

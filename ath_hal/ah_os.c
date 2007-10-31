@@ -453,12 +453,6 @@ ath_hal_memcmp(const void *a, const void *b, size_t n)
 }
 EXPORT_SYMBOL(ath_hal_memcmp);
 
-enum {
-	DEV_ATH		= 9,			/* XXX must match driver */
-};
-
-#define	CTL_AUTO	-2	/* cannot be CTL_ANY or CTL_NONE */
-
 static ctl_table ath_hal_sysctls[] = {
 #ifdef AH_DEBUG
 	{ .ctl_name	= CTL_AUTO,
