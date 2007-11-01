@@ -334,13 +334,13 @@ static const struct ath5k_srev_name ath5k_srev_names[] = {
  * Read from a device register
  */
 #define AR5K_REG_READ(_reg)		\
-	(*((volatile unsigned long int *)(mem + (_reg))))
+	(*((volatile u_int32_t *)(mem + (_reg))))
 
 /*
  * Write to a device register
  */
 #define AR5K_REG_WRITE(_reg, _val)	\
-	(*((volatile unsigned long int *)(mem + (_reg))) = (_val))
+	(*((volatile u_int32_t *)(mem + (_reg))) = (_val))
 
 #define AR5K_REG_ENABLE_BITS(_reg, _flags)	\
 	AR5K_REG_WRITE(_reg, AR5K_REG_READ(_reg) | (_flags))
@@ -825,11 +825,11 @@ int main(int argc, char *argv[])
 
 	/* wake from power-down and remove reset (in case the driver isn't running) */
 	{
-		unsigned long int
+		u_int32_t
 		    sleep_ctl = AR5K_REG_READ(AR5K_SLEEP_CTL),
 		    reset_ctl = AR5K_REG_READ(AR5K_RESET_CTL);
 
-		dbg("sleep_ctl reg %08lx   reset_ctl reg %08lx",
+		dbg("sleep_ctl reg %08x   reset_ctl reg %08x",
 		    sleep_ctl, reset_ctl);
 		if (sleep_ctl & AR5K_SLEEP_CTL_SLE_SLP) {
 			dbg("waking up the chip");
@@ -1012,7 +1012,7 @@ int main(int argc, char *argv[])
 	printf(" ========================\n");
 
 	/* print current GPIO settings */
-	printf("GPIO registers: CR %08lx DO %08lx DI %08lx\n",
+	printf("GPIO registers: CR %08x DO %08x DI %08x\n",
 	       AR5K_REG_READ(AR5K_GPIOCR), AR5K_REG_READ(AR5K_GPIODO),
 	       AR5K_REG_READ(AR5K_GPIODI));
 
@@ -1039,9 +1039,9 @@ int main(int argc, char *argv[])
 	}
 
 	if (do_write) {
-		unsigned long int rcr = AR5K_REG_READ(AR5K_GPIOCR),
+		u_int32_t rcr = AR5K_REG_READ(AR5K_GPIOCR),
 		    rdo = AR5K_REG_READ(AR5K_GPIODO);
-		unsigned long int old_cr = rcr, old_do = rdo;
+		u_int32_t old_cr = rcr, old_do = rdo;
 		int rc;
 
 		if (mac_version >= AR5K_SREV_VER_AR5213 && !nr_gpio_set) {
@@ -1052,7 +1052,7 @@ int main(int argc, char *argv[])
 		}
 
 		/* set gpios */
-		dbg("old GPIO CR %08lx DO %08lx DI %08lx",
+		dbg("old GPIO CR %08x DO %08x DI %08x",
 		    rcr, rdo, AR5K_REG_READ(AR5K_GPIODI));
 
 		for (i = 0; i < sizeof(gpio_set) / sizeof(gpio_set[0]); i++) {
@@ -1065,19 +1065,19 @@ int main(int argc, char *argv[])
 		}
 
 		if (rcr != old_cr) {
-			dbg("GPIO CR %lx -> %lx", old_cr, rcr);
+			dbg("GPIO CR %x -> %x", old_cr, rcr);
 			AR5K_REG_WRITE(AR5K_GPIOCR, rcr);
 		}
 		usleep(5);
 
 		if (rdo != old_do) {
-			dbg("GPIO CR %lx -> %lx", old_do, rdo);
+			dbg("GPIO CR %x -> %x", old_do, rdo);
 			AR5K_REG_WRITE(AR5K_GPIODO, rdo);
 		}
 
 		/* dump current values again if we have written anything */
 		if (rcr != old_cr || rdo != old_do)
-			dbg("new GPIO CR %08lx DO %08lx DI %08lx",
+			dbg("new GPIO CR %08x DO %08x DI %08x",
 			    AR5K_REG_READ(AR5K_GPIOCR),
 			    AR5K_REG_READ(AR5K_GPIODO),
 			    AR5K_REG_READ(AR5K_GPIODI));
@@ -1089,13 +1089,13 @@ int main(int argc, char *argv[])
 
 		/* restore old GPIO settings */
 		if (rcr != old_cr) {
-			dbg("restoring GPIO CR %lx -> %lx", rcr, old_cr);
+			dbg("restoring GPIO CR %x -> %x", rcr, old_cr);
 			AR5K_REG_WRITE(AR5K_GPIOCR, old_cr);
 		}
 		usleep(5);
 
 		if (rdo != old_do) {
-			dbg("restoring GPIO CR %lx -> %lx", rdo, old_do);
+			dbg("restoring GPIO CR %x -> %x", rdo, old_do);
 			AR5K_REG_WRITE(AR5K_GPIODO, old_do);
 		}
 
