@@ -96,6 +96,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <endian.h>
+#include <byteswap.h>
 
 #define dbg(fmt, __args__...) \
 do { \
@@ -331,16 +333,20 @@ static const struct ath5k_srev_name ath5k_srev_names[] = {
 	(((_val) & (_flags)) >> _flags##_S)
 
 /*
- * Read from a device register
+ * Access device registers
  */
+#if __BYTE_ORDER == __BIG_ENDIAN
+#define AR5K_REG_READ(_reg)		\
+	__bswap_32(*((volatile u_int32_t *)(mem + (_reg))))
+#define AR5K_REG_WRITE(_reg, _val)	\
+	(*((volatile u_int32_t *)(mem + (_reg))) = __bswap_32(_val))
+#else
 #define AR5K_REG_READ(_reg)		\
 	(*((volatile u_int32_t *)(mem + (_reg))))
-
-/*
- * Write to a device register
- */
 #define AR5K_REG_WRITE(_reg, _val)	\
 	(*((volatile u_int32_t *)(mem + (_reg))) = (_val))
+#endif
+
 
 #define AR5K_REG_ENABLE_BITS(_reg, _flags)	\
 	AR5K_REG_WRITE(_reg, AR5K_REG_READ(_reg) | (_flags))
