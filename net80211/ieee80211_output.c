@@ -270,7 +270,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		 * We'll get the frame back when the time is right.
 		 */
 		ieee80211_pwrsave(ni, skb);
-		ieee80211_unref_node(&ni);
+		ieee80211_unref_node(&ni); /* matches ieee80211_find_txnode */
 		return 0;
 	}
 
@@ -284,11 +284,11 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	if (vap->iv_xrvap && ni == vap->iv_bss &&
 	    vap->iv_xrvap->iv_sta_assoc) {
 		struct sk_buff *skb1;
-		ni = ieee80211_find_txnode(vap->iv_xrvap, eh->ether_dhost);
 		skb1 = skb_clone(skb, GFP_ATOMIC);
 		if (skb1) {
 			cb = (struct ieee80211_cb *) skb1->cb;
-			cb->ni = ni;
+			cb->ni = ieee80211_find_txnode(vap->iv_xrvap, 
+						       eh->ether_dhost);
 			cb->flags = 0;
 			cb->next = NULL;
 			(void) dev_queue_xmit(skb1);
@@ -296,14 +296,14 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	}
 #endif
 	ieee80211_parent_queue_xmit(skb);
-	ieee80211_unref_node(&ni);
+	ieee80211_unref_node(&ni); /* matches ieee80211_find_txnode */
 	return 0;
 
 bad:
 	if (skb != NULL)
 		dev_kfree_skb(skb);
 	if (ni != NULL)
-		ieee80211_unref_node(&ni);
+		ieee80211_unref_node(&ni); /* matches ieee80211_find_txnode */
 	return 0;
 }
 
