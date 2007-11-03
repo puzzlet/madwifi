@@ -1103,14 +1103,15 @@ ieee80211_ioctl_getspy(struct net_device *dev, struct iw_request_info *info,
 	for (i = 0; i < number; i++) {
 		ni = ieee80211_find_node(nt, &vap->iv_spy.mac[i * IEEE80211_ADDR_LEN]);
 		/* check we are associated w/ this vap */
-		if (ni && (ni->ni_vap == vap)) {
-			set_quality(&spy_stat[i], ni->ni_rssi, ic->ic_channoise);
-			if (ni->ni_rtsf != vap->iv_spy.ts_rssi[i]) {
-				vap->iv_spy.ts_rssi[i] = ni->ni_rtsf;
-			} else {
-				spy_stat[i].updated = 0;
+		if (ni) {
+			if(ni->ni_vap == vap) {
+				set_quality(&spy_stat[i], ni->ni_rssi, ic->ic_channoise);
+				if (ni->ni_rtsf != vap->iv_spy.ts_rssi[i]) {
+					vap->iv_spy.ts_rssi[i] = ni->ni_rtsf;
+				} else {
+					spy_stat[i].updated = 0;
+				}
 			}
-
 			ieee80211_unref_node(&ni);
 		} else {
 			spy_stat[i].updated = IW_QUAL_ALL_INVALID;
