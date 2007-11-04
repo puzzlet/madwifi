@@ -8322,8 +8322,8 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 
 		/* XXX: if it is SCAN state, disable beacons. */
 		if (nstate == IEEE80211_S_SCAN) {
-			ath_hal_intrset(ah, sc->sc_imask &~ (HAL_INT_SWBA | HAL_INT_BMISS));
 			sc->sc_imask &= ~(HAL_INT_SWBA | HAL_INT_BMISS);
+			ath_hal_intrset(ah, sc->sc_imask);
 			/* need to reconfigure the beacons when it moves to RUN */
 			sc->sc_beacons = 0;
 		}
