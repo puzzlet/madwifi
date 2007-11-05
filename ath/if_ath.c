@@ -7905,12 +7905,19 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 		else
 			ath_hal_setcoverageclass(sc->sc_ah, ic->ic_coverageclass, 0);
 
-		if (!ath_hal_reset(ah, sc->sc_opmode, &hchan, AH_TRUE, &status)) {
+		/* MT: ath_hal_reset with chanchange = AH_TRUE doesn't seem to 
+		 * completely reset the state of the card.  According to 
+		 * reports from ticket #1106, kismet and aircrack people they
+		 * needed to do the reset with chanchange = AH_FALSE in order
+		 * to receive traffic when peforming high velocity channel 
+		 * changes. */
+		if (!ath_hal_reset(ah, sc->sc_opmode, &hchan, AH_TRUE, &status)   ||
+		    !ath_hal_reset(ah, sc->sc_opmode, &hchan, AH_FALSE, &status)) {
 			printk("%s: %s: unable to reset channel %u (%u MHz) "
 				"flags 0x%x '%s' (HAL status %u)\n",
 				DEV_NAME(dev), __func__,
 				ieee80211_chan2ieee(ic, chan), chan->ic_freq,
-			        hchan.channelFlags,
+				hchan.channelFlags,
 				ath_get_hal_status_desc(status), status);
 			return -EIO;
 		}
