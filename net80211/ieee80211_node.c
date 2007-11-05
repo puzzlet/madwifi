@@ -738,6 +738,21 @@ static __inline void _node_table_join(struct ieee80211_node_table *nt, struct ie
 
 	ni->ni_table = nt;
 	tni = ieee80211_ref_node(ni);
+	/* MT: BEGIN HACK 
+         * XXX: r2792 fixed a bug where ieee80211_ref_node was being
+ 	 * invoked five times on ni because it was passed to TAILQ_INSERT_TAIL
+         * which happens to evaluate it's value five times.  This fixed a problem
+         * where we were gaining four extra references, but unfortunately exposed
+         * other bugs which cause kernel panics.  I am working on a fix for this as part
+         * of ticket #1621.  In the meantime, adding these references back is 'wrong'
+         * but better than getting five new critical defects per day while debugging.
+         */
+	ieee80211_ref_node(ni);ieee80211_ref_node(ni); 
+	ieee80211_ref_node(ni);ieee80211_ref_node(ni); 
+	/*
+	 * END HACK
+         */
+
 	TAILQ_INSERT_TAIL(&nt->nt_node, tni, ni_list);
 	tni = NULL;
 	
