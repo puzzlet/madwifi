@@ -113,7 +113,7 @@ install:
 	test -d $(DESTDIR)/$(KMODPATH) || mkdir -p $(DESTDIR)/$(KMODPATH)
 	for i in $(MOD_INSTALL); do \
 		f=`basename $$i .o`; \
-		install $$f.$(KMODSUF) $(DESTDIR)/$(KMODPATH); \
+		install -m 0644  $$f.$(KMODSUF) $(DESTDIR)/$(KMODPATH); \
 	done
 
 clean:

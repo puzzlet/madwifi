@@ -60,7 +60,7 @@ all:
 
 install:
 	test -d $(DESTDIR)/$(KMODPATH) || mkdir -p $(DESTDIR)/$(KMODPATH)
-	install ath_rate_minstrel.$(KMODSUF) $(DESTDIR)/$(KMODPATH)
+	install -m 0644 ath_rate_minstrel.$(KMODSUF) $(DESTDIR)/$(KMODPATH)
 
 clean:
 	-rm -f *~ *.o *.ko *.mod.c
