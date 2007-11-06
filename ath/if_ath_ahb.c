@@ -191,7 +191,7 @@ exit_ath_wmac(u_int16_t wlanNum, struct ar531x_config *config)
 	if (dev->irq)
 		free_irq(dev->irq, dev);
 	devid = sc->aps_sc.devid;
-	config->tag = (unsigned long) devid;
+	config->tag = (void *)((unsigned long) devid);
 
 	ahb_disable_wmac(devid, wlanNum);
 	free_netdev(dev);
