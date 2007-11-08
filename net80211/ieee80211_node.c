@@ -1088,6 +1088,7 @@ _ieee80211_find_wds_node(struct ieee80211_node_table *nt, const u_int8_t *macadd
 	return NULL;
 }
 
+/* NB: A node reference is acquired here; the caller MUST release it. */
 static struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
 _ieee80211_find_node_debug(struct ieee80211_node_table *nt,
@@ -1257,11 +1258,11 @@ ieee80211_add_neighbor(struct ieee80211vap *vap, const struct ieee80211_frame *w
 }
 
 /*
- * Locate the node for sender, track state, and then pass the
- * (referenced) node up to the 802.11 layer for its use.  We
- * return NULL when the sender is unknown; the driver is required
- * locate the appropriate virtual ap in that case; possibly
- * sending it to all (using ieee80211_input_all).
+ * Return the node for the sender of a frame; if the sender is unknown return 
+ * NULL. The caller is expected to deal with this. (The frame is sent to all 
+ * VAPs in this case).
+ *
+ * NB: A node reference is acquired here; the caller MUST release it.
  */
 struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -1300,8 +1301,10 @@ EXPORT_SYMBOL(ieee80211_find_rxnode);
 #endif
 
 /*
- * Return a reference to the appropriate node for sending
- * a data frame.  This handles node discovery in adhoc networks.
+ * Return the appropriate node for sending a data frame.  This handles node 
+ * discovery in adhoc networks.
+ *
+ * NB: A node reference is acquired here; the caller MUST release it.
  */
 struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -1322,7 +1325,7 @@ ieee80211_find_txnode(struct ieee80211vap *vap, const u_int8_t *mac)
 	if (vap->iv_opmode == IEEE80211_M_STA || IEEE80211_IS_MULTICAST(mac))
 		return ieee80211_ref_node(vap->iv_bss);
 
-	/* XXX can't hold lock across dup_bss due to recursive locking */
+	/* XXX: Can't hold lock across dup_bss due to recursive locking. */
 	nt = &vap->iv_ic->ic_sta;
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
 	ni = _ieee80211_find_node(nt, mac);

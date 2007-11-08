@@ -223,7 +223,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		goto bad;
 	}
 
-	cb = (struct ieee80211_cb *) skb->cb;
+	cb = (struct ieee80211_cb *)skb->cb;
 	memset(cb, 0, sizeof(struct ieee80211_cb));
 
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
@@ -270,40 +270,35 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		 * We'll get the frame back when the time is right.
 		 */
 		ieee80211_pwrsave(ni, skb);
-		ieee80211_unref_node(&ni); /* matches ieee80211_find_txnode */
+		ieee80211_unref_node(&ni);
 		return 0;
 	}
 
 #ifdef ATH_SUPERG_XR
-	/* 
-	 * broadcast/multicast  packets need to be sent on XR vap in addition to
-	 * normal vap.
-	 */
+	/* Broadcast/multicast packets need to be sent on XR vap in addition to
+	 * normal vap. */
 
-	/* FIXME: ieee80211_parent_queue_xmit */
-	if (vap->iv_xrvap && ni == vap->iv_bss &&
+	if (vap->iv_xrvap && (ni == vap->iv_bss) &&
 	    vap->iv_xrvap->iv_sta_assoc) {
-		struct sk_buff *skb1;
-		skb1 = skb_clone(skb, GFP_ATOMIC);
+		struct sk_buff *skb1 = skb_clone(skb, GFP_ATOMIC);
 		if (skb1) {
-			cb = (struct ieee80211_cb *) skb1->cb;
+			cb = (struct ieee80211_cb *)skb1->cb;
+			memset(cb, 0, sizeof(struct ieee80211_cb));
 			cb->ni = ieee80211_find_txnode(vap->iv_xrvap, 
 						       eh->ether_dhost);
-			cb->flags = 0;
-			cb->next = NULL;
-			(void) dev_queue_xmit(skb1);
+			ieee80211_parent_queue_xmit(skb1);
 		}
 	}
 #endif
 	ieee80211_parent_queue_xmit(skb);
-	ieee80211_unref_node(&ni); /* matches ieee80211_find_txnode */
+	ieee80211_unref_node(&ni);
 	return 0;
 
 bad:
 	if (skb != NULL)
 		dev_kfree_skb(skb);
 	if (ni != NULL)
-		ieee80211_unref_node(&ni); /* matches ieee80211_find_txnode */
+		ieee80211_unref_node(&ni);
 	return 0;
 }
 
