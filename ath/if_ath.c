@@ -2413,8 +2413,8 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	HAL_PKT_TYPE atype;
 	u_int flags;
 	u_int8_t antenna, txrate;
-	struct ath_txq *txq=NULL;
-	struct ath_desc *ds=NULL;
+	struct ath_txq *txq = NULL;
+	struct ath_desc *ds = NULL;
 	struct ieee80211_frame *wh;
 
 	wh = (struct ieee80211_frame *) skb->data;
@@ -2432,9 +2432,8 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	DPRINTF(sc, ATH_DEBUG_XMIT, "%s: skb %p [data %p len %u] skbaddr %llx\n",
 		__func__, skb, skb->data, skb->len, ito64(bf->bf_skbaddr));
 
-
 	bf->bf_skb = skb;
-	bf->bf_node = NULL;
+	KASSERT((bf->bf_node == NULL), ("Detected node reference leak"));
 #ifdef ATH_SUPERG_FF
 	bf->bf_numdescff = 0;
 #endif
@@ -2443,7 +2442,6 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	ds = bf->bf_desc;
 	rt = sc->sc_currates;
 	KASSERT(rt != NULL, ("no rate table, mode %u", sc->sc_curmode));
-
 
 	if (IEEE80211_IS_MULTICAST(wh->i_addr1)) {
 		flags |= HAL_TXDESC_NOACK;	/* no ack on broad/multicast */
@@ -2532,7 +2530,6 @@ ath_ffstageq_flush(struct ath_softc *sc, struct ath_txq *txq,
 	int (*ath_ff_flushdonetest)(struct ath_txq *txq, struct ath_buf *bf))
 {
 	struct ath_buf *bf_ff = NULL;
-	struct ieee80211_node *ni = NULL;
 	unsigned int pktlen;
 	int framecnt;
 
@@ -2545,16 +2542,15 @@ ath_ffstageq_flush(struct ath_softc *sc, struct ath_txq *txq,
 			return;
 		}
 
-		ni = bf_ff->bf_node;
-		KASSERT(ATH_NODE(ni)->an_tx_ffbuf[bf_ff->bf_skb->priority],
+		KASSERT(ATH_NODE(bf_ff->bf_node)->an_tx_ffbuf[bf_ff->bf_skb->priority],
 			("no bf_ff on staging queue %p", bf_ff));
-		ATH_NODE(ni)->an_tx_ffbuf[bf_ff->bf_skb->priority] = NULL;
+		ATH_NODE(bf_ff->bf_node)->an_tx_ffbuf[bf_ff->bf_skb->priority] = NULL;
 		TAILQ_REMOVE(&txq->axq_stageq, bf_ff, bf_stagelist);
 
 		ATH_TXQ_UNLOCK_IRQ(txq);
 
 		/* encap and xmit */
-		bf_ff->bf_skb = ieee80211_encap(ni, bf_ff->bf_skb, &framecnt);
+		bf_ff->bf_skb = ieee80211_encap(bf_ff->bf_node, bf_ff->bf_skb, &framecnt);
 		if (bf_ff->bf_skb == NULL) {
 			DPRINTF(sc, ATH_DEBUG_XMIT | ATH_DEBUG_FF,
 				"%s: discard, encapsulation failure\n", __func__);
@@ -2562,15 +2558,17 @@ ath_ffstageq_flush(struct ath_softc *sc, struct ath_txq *txq,
 			goto bad;
 		}
 		pktlen = bf_ff->bf_skb->len;	/* NB: don't reference skb below */
-		if (ath_tx_start(sc->sc_dev, ni, bf_ff, bf_ff->bf_skb, 0) == 0)
+		if (ath_tx_start(sc->sc_dev, bf_ff->bf_node, bf_ff, bf_ff->bf_skb, 0) == 0)
 			continue;
 	bad:
-		ieee80211_unref_node(&ni);
 		if (bf_ff->bf_skb != NULL) {
+			struct ieee80211_cb *cb = (struct ieee80211_cb *)bf_ff->bf_skb->cb;
+			if (cb->ni != NULL)
+				ieee80211_unref_node(&cb->ni);
 			dev_kfree_skb(bf_ff->bf_skb);
 			bf_ff->bf_skb = NULL;
 		}
-		bf_ff->bf_node = NULL;
+		ieee80211_unref_node(&bf_ff->bf_node);
 
 		ATH_TXBUF_LOCK_IRQ(sc);
 		STAILQ_INSERT_TAIL(&sc->sc_txbuf, bf_ff, bf_list);
@@ -2615,7 +2613,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ath_softc *sc = dev->priv;
 	struct ieee80211_node *ni = NULL;
 	struct ath_buf *bf = NULL;
-	struct ieee80211_cb *cb = (struct ieee80211_cb *) skb->cb;
+	struct ieee80211_cb *cb = (struct ieee80211_cb *)skb->cb;
 	struct ether_header *eh;
 	STAILQ_HEAD(tmp_bf_head, ath_buf) bf_head;
 	struct ath_buf *tbf, *tempbf;
@@ -2684,8 +2682,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	}
 
 	/* NB: use this lock to protect an->an_tx_ffbuf (and txq->axq_stageq)
-	 *	in athff_can_aggregate() call too.
-	 */
+	 *     in athff_can_aggregate() call too. */
 	ATH_TXQ_LOCK_IRQ(txq);
 	if (athff_can_aggregate(sc, eh, an, skb, vap->iv_fragthreshold, &ff_flush)) {
 		if (an->an_tx_ffbuf[skb->priority]) { /* i.e., frame on the staging queue */
@@ -2723,7 +2720,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 				"%s: adding to fast-frame stage Q\n", __func__);
 
 			bf->bf_skb = skb;
-			bf->bf_node = ni;
+			bf->bf_node = ieee80211_ref_node(ni);
 			bf->bf_queueage = txq->axq_totalqueued;
 			an->an_tx_ffbuf[skb->priority] = bf;
 
@@ -2744,12 +2741,11 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			/* NB: ath_tx_start -> ath_tx_txqaddbuf uses ATH_TXQ_LOCK too */
 			ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
 
-			/* encap and xmit */
+			/* Encap. and transmit */
 			bf_ff->bf_skb = ieee80211_encap(ni, bf_ff->bf_skb, &framecnt);
-
 			if (bf_ff->bf_skb == NULL) {
 				DPRINTF(sc, ATH_DEBUG_XMIT,
-					"%s: discard, ff flush encap failure\n",
+					"%s: discard, fast-frame flush encap. failure\n",
 					__func__);
 				sc->sc_stats.ast_tx_encap++;
 			} else {
@@ -2760,13 +2756,15 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 			if (!success) {
 				DPRINTF(sc, ATH_DEBUG_XMIT | ATH_DEBUG_FF,
-					"%s: ff stageq flush failure\n", __func__);
-				ieee80211_unref_node(&ni);
+					"%s: fast-frame stageq flush failure\n", __func__);
 				if (bf_ff->bf_skb) {
+					cb = (struct ieee80211_cb *)bf_ff->bf_skb->cb;
+					if (&cb->ni != NULL)
+						ieee80211_unref_node(&cb->ni);
 					dev_kfree_skb(bf_ff->bf_skb);
 					bf_ff->bf_skb = NULL;
 				}
-				bf_ff->bf_node = NULL;
+				ieee80211_unref_node(&bf_ff->bf_node);
 
 				ATH_TXBUF_LOCK_IRQ(sc);
 				STAILQ_INSERT_TAIL(&sc->sc_txbuf, bf_ff, bf_list);
@@ -2832,20 +2830,18 @@ ff_bypass:
 		for (bfcnt = 1; bfcnt < framecnt; ++bfcnt) {
 			if ((tbf = STAILQ_FIRST(&sc->sc_txbuf)) != NULL) {
 				STAILQ_REMOVE_HEAD(&sc->sc_txbuf, bf_list);
+				tbf->bf_node = ieee80211_ref_node(ni);
 				STAILQ_INSERT_TAIL(&bf_head, tbf, bf_list);
 			} else
 				break;
-
-			ieee80211_ref_node(ni);
 		}
 
 		if (bfcnt != framecnt) {
 			if (!STAILQ_EMPTY(&bf_head)) {
-				/*
-				 *  Failed to alloc enough ath_bufs;
-				 *  return to sc_txbuf list
-				 */
+				/*  Failed to alloc enough ath_bufs;
+				 *  return to sc_txbuf list */
 				STAILQ_FOREACH_SAFE(tbf, &bf_head, bf_list, tempbf) {
+					ieee80211_unref_node(&tbf->bf_node);
 					STAILQ_INSERT_TAIL(&sc->sc_txbuf, tbf, bf_list);
 				}
 			}
@@ -2855,7 +2851,7 @@ ff_bypass:
 		}
 		ATH_TXBUF_UNLOCK_IRQ(sc);
 
-		while ((bf = STAILQ_FIRST(&bf_head)) != NULL && skb != NULL) {
+		while (((bf = STAILQ_FIRST(&bf_head)) != NULL) && (skb != NULL)) {
 			unsigned int nextfraglen = 0;
 
 			STAILQ_REMOVE_HEAD(&bf_head, bf_list);
@@ -2878,6 +2874,8 @@ ff_bypass:
 		}
 	}
 
+	ni = NULL;
+
 #ifdef ATH_SUPERG_FF
 	/* flush out stale FF from staging Q for applicable operational modes. */
 	/* XXX: ADHOC mode too? */
@@ -2892,24 +2890,26 @@ hardstart_fail:
 		ATH_TXBUF_LOCK_IRQ(sc);
 		STAILQ_FOREACH_SAFE(tbf, &bf_head, bf_list, tempbf) {
 			tbf->bf_skb = NULL;
-			tbf->bf_node = NULL;
-
-			if (ni != NULL)
-				ieee80211_unref_node(&ni);
+			if (tbf->bf_node != NULL)
+				ieee80211_unref_node(&tbf->bf_node);
 
 			STAILQ_INSERT_TAIL(&sc->sc_txbuf, tbf, bf_list);
 		}
 		ATH_TXBUF_UNLOCK_IRQ(sc);
 	}
 
-	/* let the kernel requeue the skb (dont free it!) */
+	/* Pass control of the skb to the caller (i.e., resources are their 
+	 * problem). */
  	if (requeue)
 		return NETDEV_TX_BUSY;
 
-	/* free sk_buffs */
+	/* Otherwise, we have to deal with them. */ 
 	while (skb) {
 		tskb = skb->next;
 		skb->next = NULL;
+		cb = (struct ieee80211_cb *)skb->cb;
+		if (cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
 		dev_kfree_skb(skb);
 		skb = tskb;
 	}
@@ -2930,9 +2930,8 @@ ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 {
 	struct net_device *dev = ic->ic_dev;
 	struct ath_softc *sc = dev->priv;
-	struct ieee80211_node *ni = NULL;
 	struct ath_buf *bf = NULL;
-	struct ieee80211_cb *cb;
+	struct ieee80211_cb *cb = NULL;
 	int error;
 
 	if ((dev->flags & IFF_RUNNING) == 0 || sc->sc_invalid) {
@@ -2973,26 +2972,33 @@ ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 	 * we need to hold the reference with the frame.
 	 */
 	cb = (struct ieee80211_cb *)skb->cb;
-	ni = cb->ni;
-	error = ath_tx_start(dev, ni, bf, skb, 0);
-	if (error == 0) {
-		sc->sc_stats.ast_tx_mgmt++;
-		return 0;
-	}
-	/* fall thru... */
+	error = ath_tx_start(dev, cb->ni, bf, skb, 0);
+	if (error)
+		goto bad;
+
+	sc->sc_stats.ast_tx_mgmt++;
+	return 0;
 bad:
-	if (ni != NULL)
-		ieee80211_unref_node(&ni);
+	/* XXX: ath_tx_start does not appear to clean up after itself if it 
+	 *      fails in the middle of setting up a buffer. We do that here.
+	 *      This is evil. */
+	if (cb != NULL)
+		if (&cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
+	
+	dev_kfree_skb_any(skb);
+	skb = NULL;
+
 	if (bf != NULL) {
+		if (bf->bf_node != NULL)
+			ieee80211_unref_node(&bf->bf_node);
+		/* NB: bf->bf_skb == skb, so the resources are freed above */
 		bf->bf_skb = NULL;
-		bf->bf_node = NULL;
 
 		ATH_TXBUF_LOCK_IRQ(sc);
 		STAILQ_INSERT_TAIL(&sc->sc_txbuf, bf, bf_list);
 		ATH_TXBUF_UNLOCK_IRQ(sc);
 	}
-	dev_kfree_skb_any(skb);
-	skb = NULL;
 	return error;
 }
 
@@ -3953,6 +3959,7 @@ ath_beacon_alloc(struct ath_softc *sc, struct ieee80211_node *ni)
 {
 	struct ath_vap *avp = ATH_VAP(ni->ni_vap);
 	struct ieee80211_frame *wh;
+	struct ieee80211_cb *cb = NULL;
 	struct ath_buf *bf;
 	struct sk_buff *skb;
 
@@ -3963,6 +3970,9 @@ ath_beacon_alloc(struct ath_softc *sc, struct ieee80211_node *ni)
 	if (bf->bf_skb != NULL) {
 		bus_unmap_single(sc->sc_bdev,
 		    bf->bf_skbaddr, bf->bf_skb->len, BUS_DMA_TODEVICE);
+		cb = (struct ieee80211_cb *)bf->bf_skb->cb;
+		if (cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
 		dev_kfree_skb(bf->bf_skb);
 		bf->bf_skb = NULL;
 	}
@@ -4031,8 +4041,7 @@ ath_beacon_setup(struct ath_softc *sc, struct ath_buf *bf)
 #define	USE_SHPREAMBLE(_ic) \
 	(((_ic)->ic_flags & (IEEE80211_F_SHPREAMBLE | IEEE80211_F_USEBARKER))\
 		== IEEE80211_F_SHPREAMBLE)
-	struct ieee80211_node *ni = bf->bf_node;
-	struct ieee80211com *ic = ni->ni_ic;
+	struct ieee80211com *ic = bf->bf_node->ni_ic;
 	struct sk_buff *skb = bf->bf_skb;
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_desc *ds;
@@ -4107,7 +4116,7 @@ ath_beacon_setup(struct ath_softc *sc, struct ath_buf *bf)
 		skb->len + IEEE80211_CRC_LEN, 	/* frame length */
 		sizeof(struct ieee80211_frame), /* header length */
 		HAL_PKT_TYPE_BEACON, 		/* Atheros packet type */
-		ni->ni_txpower, 		/* txpower XXX */
+		bf->bf_node->ni_txpower, 	/* txpower XXX */
 		rate, 1, 			/* series 0 rate/tries */
 		HAL_TXKEYIX_INVALID, 		/* no encryption */
 		antenna, 			/* antenna mode */
@@ -4142,7 +4151,6 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 {
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_buf *bf;
-	struct ieee80211_node *ni;
 	struct ath_vap *avp;
 	struct sk_buff *skb;
 	unsigned int curlen, ncabq;
@@ -4168,7 +4176,6 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 		return NULL;
 	}
 	bf = avp->av_bcbuf;
-	ni = bf->bf_node;
 
 #ifdef ATH_SUPERG_DYNTURBO
 	/* 
@@ -4192,7 +4199,7 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	skb = bf->bf_skb;
 	curlen = skb->len;
 	ncabq = avp->av_mcastq.axq_depth;
-	if (ieee80211_beacon_update(ni, &avp->av_boff, skb, ncabq)) {
+	if (ieee80211_beacon_update(bf->bf_node, &avp->av_boff, skb, ncabq)) {
 		bus_unmap_single(sc->sc_bdev,
 			bf->bf_skbaddr, curlen, BUS_DMA_TODEVICE);
 		bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
@@ -4379,7 +4386,7 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 	if (sc->sc_updateslot == UPDATE) {
 		sc->sc_updateslot = COMMIT;	/* commit next beacon */
 		sc->sc_slotupdate = slot;
-	} else if (sc->sc_updateslot == COMMIT && sc->sc_slotupdate == slot)
+	} else if ((sc->sc_updateslot == COMMIT) && (sc->sc_slotupdate == slot))
 		ath_setslottime(sc);		/* commit change to hardware */
 
 	if ((!sc->sc_stagbeacons || slot == 0) && (!sc->sc_diversity)) {
@@ -4454,7 +4461,6 @@ ath_beacon_start_adhoc(struct ath_softc *sc, struct ieee80211vap *vap)
 {
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_buf *bf;
-	struct ieee80211_node *ni;
 	struct ath_vap *avp;
 	struct sk_buff *skb;
 
@@ -4465,7 +4471,6 @@ ath_beacon_start_adhoc(struct ath_softc *sc, struct ieee80211vap *vap)
 		return;
 	}
 	bf = avp->av_bcbuf;
-	ni = bf->bf_node;
 
 	/*
 	 * Update dynamic beacon contents.  If this returns
@@ -4474,7 +4479,7 @@ ath_beacon_start_adhoc(struct ath_softc *sc, struct ieee80211vap *vap)
 	 * of the TIM bitmap).
 	 */
 	skb = bf->bf_skb;
-	if (ieee80211_beacon_update(ni, &avp->av_boff, skb, 0)) {
+	if (ieee80211_beacon_update(bf->bf_node, &avp->av_boff, skb, 0)) {
 		bus_unmap_single(sc->sc_bdev,
 			bf->bf_skbaddr, bf->bf_skb->len, BUS_DMA_TODEVICE);
 		bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
@@ -4502,9 +4507,13 @@ ath_beacon_start_adhoc(struct ath_softc *sc, struct ieee80211vap *vap)
 static void
 ath_beacon_return(struct ath_softc *sc, struct ath_buf *bf)
 {
+	struct ieee80211_cb *cb = NULL;
 	if (bf->bf_skb != NULL) {
-		bus_unmap_single(sc->sc_bdev,
-		    bf->bf_skbaddr, bf->bf_skb->len, BUS_DMA_TODEVICE);
+		bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr, 
+				bf->bf_skb->len, BUS_DMA_TODEVICE);
+		cb = (struct ieee80211_cb *)bf->bf_skb->cb;
+		if (cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
 		dev_kfree_skb(bf->bf_skb);
 		bf->bf_skb = NULL;
 	}
@@ -4520,11 +4529,15 @@ static void
 ath_beacon_free(struct ath_softc *sc)
 {
 	struct ath_buf *bf;
+	struct ieee80211_cb *cb = NULL;
 
 	STAILQ_FOREACH(bf, &sc->sc_bbuf, bf_list) {
 		if (bf->bf_skb != NULL) {
 			bus_unmap_single(sc->sc_bdev,
 				bf->bf_skbaddr, bf->bf_skb->len, BUS_DMA_TODEVICE);
+			cb = (struct ieee80211_cb *)bf->bf_skb->cb;
+			if (cb->ni != NULL)
+				ieee80211_unref_node(&cb->ni);
 			dev_kfree_skb(bf->bf_skb);
 			bf->bf_skb = NULL;
 		}
@@ -4771,7 +4784,7 @@ ath_descdma_setup(struct ath_softc *sc,
 	bsize = sizeof(struct ath_buf) * nbuf;
 	bf = kmalloc(bsize, GFP_KERNEL);
 	if (bf == NULL) {
-		error = -ENOMEM;		/* XXX different code */
+		error = -ENOMEM;
 		goto fail2;
 	}
 	memset(bf, 0, bsize);
@@ -4798,7 +4811,7 @@ ath_descdma_cleanup(struct ath_softc *sc,
 	struct ath_descdma *dd, ath_bufhead *head, int dir)
 {
 	struct ath_buf *bf;
-	struct ieee80211_node *ni;
+	struct ieee80211_cb *cb = NULL;
 
 	STAILQ_FOREACH(bf, head, bf_list) {
 		if (bf->bf_skb != NULL) {
@@ -4809,17 +4822,14 @@ ath_descdma_cleanup(struct ath_softc *sc,
 			else
 				bus_unmap_single(sc->sc_bdev,
 					bf->bf_skbaddr, bf->bf_skb->len, dir);
+			cb = (struct ieee80211_cb *)bf->bf_skb->cb;
+			if (cb->ni != NULL)
+				ieee80211_unref_node(&cb->ni);
 			dev_kfree_skb(bf->bf_skb);
 			bf->bf_skb = NULL;
 		}
-		ni = bf->bf_node;
-		bf->bf_node = NULL;
-		if (ni != NULL) {
-			/*
-			 * Reclaim node reference.
-			 */
-			ieee80211_unref_node(&ni);
-		}
+		if (bf->bf_node != NULL)
+			ieee80211_unref_node(&bf->bf_node);
 	}
 
 	/* Free memory associated with descriptors */
@@ -4936,13 +4946,15 @@ ath_node_cleanup(struct ieee80211_node *ni)
 		bf = STAILQ_FIRST(&an->an_uapsd_q);
 		STAILQ_REMOVE_HEAD(&an->an_uapsd_q, bf_list);
 
-		cb = (struct ieee80211_cb *) bf->bf_skb->cb;
-		ieee80211_unref_node(&cb->ni);
+		cb = (struct ieee80211_cb *)bf->bf_skb->cb;
+		if (cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
 		dev_kfree_skb_any(bf->bf_skb);
+		bf->bf_skb = NULL;
 
 		bf->bf_desc->ds_link = 0;
-		bf->bf_skb = NULL;
-		bf->bf_node = NULL;
+		if (bf->bf_node != NULL)
+			ieee80211_unref_node(&bf->bf_node);
 
 		ATH_TXBUF_LOCK_IRQ(sc);
 		STAILQ_INSERT_TAIL(&sc->sc_txbuf, bf, bf_list);
@@ -4955,13 +4967,15 @@ ath_node_cleanup(struct ieee80211_node *ni)
 		bf = STAILQ_FIRST(&an->an_uapsd_overflowq);
 		STAILQ_REMOVE_HEAD(&an->an_uapsd_overflowq, bf_list);
 
-		cb = (struct ieee80211_cb *) bf->bf_skb->cb;
-		ieee80211_unref_node(&cb->ni);
+		cb = (struct ieee80211_cb *)bf->bf_skb->cb;
+		if (cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
 		dev_kfree_skb_any(bf->bf_skb);
-
 		bf->bf_skb = NULL;
-		bf->bf_node = NULL;
+
 		bf->bf_desc->ds_link = 0;
+		if (bf->bf_node != NULL)
+			ieee80211_unref_node(&bf->bf_node);
 
 		ATH_TXBUF_LOCK_IRQ(sc);
 		STAILQ_INSERT_TAIL(&sc->sc_txbuf, bf, bf_list);
@@ -5157,7 +5171,8 @@ ath_node_move_data(const struct ieee80211_node *ni)
 		while (bf) {
 			skb = bf->bf_skb;
 			bf->bf_skb = NULL;
-			bf->bf_node = NULL;
+			if (bf->bf_node != NULL)
+				ieee80211_unref_node(&bf->bf_node);
 
 			ATH_TXBUF_LOCK_IRQ(sc);
 			STAILQ_INSERT_TAIL(&sc->sc_txbuf, bf, bf_list);
@@ -5498,21 +5513,26 @@ ath_tx_capture(struct net_device *dev, const struct ath_buf *bf,  struct sk_buff
 	const struct ath_tx_status *ts = &bf->bf_dsstatus.ds_txstat;
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ieee80211_frame *wh;
+	struct ieee80211_cb *cb = NULL;
 	unsigned int extra = A_MAX(sizeof(struct ath_tx_radiotap_header),
 				   A_MAX(sizeof(struct wlan_ng_prism2_header),
 					 ATHDESC_HEADER_SIZE));
 	u_int32_t tstamp;
 	unsigned int headersize;
 	int padbytes;
-	/*                                                                      
-	 * release the owner of this skb since we're basically                  
-	 * recycling it                                                         
-	 */
+	
+	/* Release the owner of this skb since we're basically recycling it. */
 	if (atomic_read(&skb->users) != 1) {
 		struct sk_buff *skb2 = skb;
 		skb = skb_copy(skb, GFP_ATOMIC);
 		if (skb == NULL) {
 			printk("%s:%d %s\n", __FILE__, __LINE__, __func__);
+
+			/* Another copy of the skb has not been made so we 
+			 * must release the reference. */
+			cb = (struct ieee80211_cb *)skb->cb;
+			if (cb->ni != NULL)
+				ieee80211_unref_node(&cb->ni);
 			dev_kfree_skb(skb2);
 			return;
 		}
@@ -5550,6 +5570,9 @@ ath_tx_capture(struct net_device *dev, const struct ath_buf *bf,  struct sk_buff
 		ieee80211_input_monitor(ic, skb, bf, 1, tsf, sc);
 	}
  done:
+	cb = (struct ieee80211_cb *)skb->cb;
+	if (cb->ni != NULL)
+		ieee80211_unref_node(&cb->ni);
 	dev_kfree_skb(skb);
 }
 
@@ -5851,13 +5874,10 @@ rx_accept:
 		 */
 		if (rs->rs_keyix != HAL_RXKEYIX_INVALID &&
 		    (ni = sc->sc_keyixmap[rs->rs_keyix]) != NULL) {
-			struct ath_node *an;
-			/*
-			 * Fast path: node is present in the key map;
-			 * grab a reference for processing the frame.
-			 */
-			an = ATH_NODE(ieee80211_ref_node(ni));
-			ATH_RSSI_LPF(an->an_avgrssi, rs->rs_rssi);
+			/* Fast path: node is present in the key map;
+			 * grab a reference for processing the frame. */
+			ni = ieee80211_ref_node(ni);
+			ATH_RSSI_LPF(ATH_NODE(ni)->an_avgrssi, rs->rs_rssi);
 			type = ieee80211_input(ni, skb, rs->rs_rssi, rs_tsf);
 			ieee80211_unref_node(&ni);
 		} else {
@@ -5881,6 +5901,7 @@ rx_accept:
 				if (keyix != IEEE80211_KEYIX_NONE &&
 				    sc->sc_keyixmap[keyix] == NULL)
 					sc->sc_keyixmap[keyix] = ieee80211_ref_node(ni);
+				an = NULL;
 				ieee80211_unref_node(&ni);
 			} else
 				type = ieee80211_input_all(ic, skb, rs->rs_rssi, rs_tsf);
@@ -6285,6 +6306,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 static void ath_grppoll_stop(struct ieee80211vap *vap)
 {
 	struct ieee80211com *ic = vap->iv_ic;
+	struct ieee80211_cb *cb  = NULL;
 	struct ath_softc *sc = ic->ic_dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_txq *txq = &sc->sc_grpplq;
@@ -6309,9 +6331,13 @@ static void ath_grppoll_stop(struct ieee80211vap *vap)
 
 		bus_unmap_single(sc->sc_bdev,
 			bf->bf_skbaddr, bf->bf_skb->len, BUS_DMA_TODEVICE);
+		cb = (struct ieee80211_cb *)bf->bf_skb->cb;
+		if (cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
 		dev_kfree_skb(bf->bf_skb);
 		bf->bf_skb = NULL;
-		bf->bf_node = NULL;
+		if (bf->bf_node != NULL)
+			ieee80211_unref_node(&bf->bf_node);
 
 		ATH_TXBUF_LOCK_IRQ(sc);
 		STAILQ_INSERT_TAIL(&sc->sc_grppollbuf, bf, bf_list);
@@ -6633,11 +6659,12 @@ ath_tx_findindex(const HAL_RATE_TABLE *rt, int rate)
 }
 
 /*
- * Needs external locking!
+ * XXX: Needs external locking!
  */
 static void
 ath_tx_uapsdqueue(struct ath_softc *sc, struct ath_node *an, struct ath_buf *bf)
 {
+	struct ieee80211_cb *cb = NULL;
 	struct ath_buf *lastbuf;
 
 	/* case the delivery queue just sent and can move overflow q over */
@@ -6675,6 +6702,9 @@ ath_tx_uapsdqueue(struct ath_softc *sc, struct ath_node *an, struct ath_buf *bf)
 		 */
 		lastbuf = STAILQ_FIRST(&an->an_uapsd_q);
 		STAILQ_REMOVE_HEAD(&an->an_uapsd_q, bf_list);
+		cb = (struct ieee80211_cb *)lastbuf->bf_skb->cb;
+		if (cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
 		dev_kfree_skb(lastbuf->bf_skb);
 		lastbuf->bf_skb = NULL;
 		ieee80211_unref_node(&lastbuf->bf_node);
@@ -6805,7 +6835,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni, struct ath_buf *
 		ivlen = ath_get_ivlen(k) / 4;
 #endif
 		/* packet header may have moved, reset our local pointer */
-		wh = (struct ieee80211_frame *) skb->data;
+		wh = (struct ieee80211_frame *)skb->data;
 	} else if (ni->ni_ucastkey.wk_cipher == &ieee80211_cipher_none) {
 		/*
 		 * Use station key cache slot, if assigned.
@@ -6847,7 +6877,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni, struct ath_buf *
 	}
 #endif /* ATH_SUPERG_FF */
 	bf->bf_skb = skb;
-	bf->bf_node = ni;
+	bf->bf_node = ieee80211_ref_node(ni);
 
 	/* setup descriptors */
 	ds = bf->bf_desc;
@@ -7299,7 +7329,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni, struct ath_buf *
 		ieee80211_node_refcnt(vap->iv_bss));
 
 
-	ath_tx_txqaddbuf(sc, ni, txq, bf, ds, pktlen);
+	ath_tx_txqaddbuf(sc, PASS_NODE(ni), txq, bf, ds, pktlen);
 	return 0;
 #undef MIN
 }
@@ -7418,14 +7448,6 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 			if ((ts->ts_status & HAL_TXERR_FILT) == 0 &&
 			    (bf->bf_flags & HAL_TXDESC_NOACK) == 0)
 				sc->sc_rc->ops->tx_complete(sc, an, bf);
-			/*
-			 * Reclaim reference to node.
-			 *
-			 * NB: the node may be reclaimed here if, for example
-			 *     this is a DEAUTH message that was sent and the
-			 *     node was timed out due to inactivity.
-			 */
-			 ieee80211_unref_node(&ni);
 		}
 
 		bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr,
@@ -7493,7 +7515,13 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 		}
 
 		bf->bf_skb = NULL;
-		bf->bf_node = NULL;
+		/* Reclaim reference to node.
+		 *
+		 * NB: the node may be reclaimed here if, for example
+		 *     this is a DEAUTH message that was sent and the
+		 *     node was timed out due to inactivity. */
+		ieee80211_unref_node(&bf->bf_node);
+		ni = NULL;
 
 		ATH_TXBUF_LOCK_IRQ(sc);
 		STAILQ_INSERT_TAIL(&sc->sc_txbuf, bf, bf_list);
@@ -7638,6 +7666,7 @@ ath_tx_draintxq(struct ath_softc *sc, struct ath_txq *txq)
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_buf *bf;
 	struct sk_buff *skb;
+	struct ieee80211_cb* cb = NULL;
 #ifdef ATH_SUPERG_FF
 	struct sk_buff *tskb;
 #endif
@@ -7664,6 +7693,9 @@ ath_tx_draintxq(struct ath_softc *sc, struct ath_txq *txq)
 		skb = bf->bf_skb->next;
 		bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr, 
 				bf->bf_skb->len, BUS_DMA_TODEVICE);
+		cb = (struct ieee80211_cb *)bf->bf_skb->cb;
+		if (cb->ni != NULL)
+			ieee80211_unref_node(&cb->ni);
 		dev_kfree_skb_any(bf->bf_skb);
 		bf->bf_skb = NULL;
 #ifdef ATH_SUPERG_FF
@@ -7673,6 +7705,9 @@ ath_tx_draintxq(struct ath_softc *sc, struct ath_txq *txq)
 				tskb = skb->next;
 				bus_unmap_single(sc->sc_bdev,
 					 bf->bf_skbaddrff[i++], skb->len, BUS_DMA_TODEVICE);
+				cb = (struct ieee80211_cb *)skb->cb;
+				if (cb->ni != NULL)
+					ieee80211_unref_node(&cb->ni);
 				dev_kfree_skb_any(skb);
 				skb = tskb;
 			}

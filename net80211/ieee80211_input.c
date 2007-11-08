@@ -467,7 +467,7 @@ ieee80211_input(struct ieee80211_node *ni,
 					nt = &ic->ic_sta;
 					ni_wds = ieee80211_find_wds_node(nt, wh->i_addr3);
 					if (ni_wds) {
-						ieee80211_unref_node(&ni_wds); /* Decr ref count */
+						ieee80211_unref_node(&ni_wds);
 						IEEE80211_DISCARD(vap, IEEE80211_MSG_INPUT,
 							wh, NULL, "%s",
 							"multicast echo originated from node behind me");
@@ -914,6 +914,9 @@ ieee80211_input_all(struct ieee80211com *ic,
 			skb1 = skb;
 			skb = NULL;
 		}
+		/* This function does not 'own' vap->iv_bss, so we cannot 
+		 * guarantee its existence during the following call, hence
+		 * briefly grab our own reference. */
 		ni = ieee80211_ref_node(vap->iv_bss);
 		type = ieee80211_input(ni, skb1, rssi, rtsf);
 		ieee80211_unref_node(&ni);

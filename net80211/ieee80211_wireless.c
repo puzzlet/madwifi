@@ -3434,11 +3434,12 @@ ieee80211_ioctl_setmlme(struct net_device *dev, struct iw_request_info *info,
 			if (!IEEE80211_ADDR_EQ(mlme->im_macaddr, vap->iv_dev->broadcast)) {
 				ni = ieee80211_find_node(&ic->ic_sta,
 					mlme->im_macaddr);
-				if (ni == NULL)
+				if (ni != NULL) {
+					if (dev == ni->ni_vap->iv_dev)
+						domlme(mlme, ni);
+					ieee80211_unref_node(&ni);
+				} else
 					return -ENOENT;
-				if (dev == ni->ni_vap->iv_dev)
-					domlme(mlme, ni);
-				ieee80211_unref_node(&ni);
 			} else
 				ieee80211_iterate_dev_nodes(dev, &ic->ic_sta, domlme, mlme);
 			break;
@@ -3451,24 +3452,26 @@ ieee80211_ioctl_setmlme(struct net_device *dev, struct iw_request_info *info,
 		if (vap->iv_opmode != IEEE80211_M_HOSTAP)
 			return -EOPNOTSUPP;
 		ni = ieee80211_find_node(&ic->ic_sta, mlme->im_macaddr);
-		if (ni == NULL)
+		if (ni != NULL) {
+			if (mlme->im_op == IEEE80211_MLME_AUTHORIZE)
+				ieee80211_node_authorize(ni);
+			else
+				ieee80211_node_unauthorize(ni);
+			ieee80211_unref_node(&ni);
+		} else
 			return -ENOENT;
-		if (mlme->im_op == IEEE80211_MLME_AUTHORIZE)
-			ieee80211_node_authorize(ni);
-		else
-			ieee80211_node_unauthorize(ni);
-		ieee80211_unref_node(&ni);
 		break;
 	case IEEE80211_MLME_CLEAR_STATS:
 		if (vap->iv_opmode != IEEE80211_M_HOSTAP)
 			return -EOPNOTSUPP;
 		ni = ieee80211_find_node(&ic->ic_sta, mlme->im_macaddr);
-		if (ni == NULL)
+		if (ni != NULL) {
+			/* clear statistics */
+			memset(&ni->ni_stats, 0, sizeof(struct ieee80211_nodestats));
+			ieee80211_unref_node(&ni);
+		} else
 			return -ENOENT;
 
-		/* clear statistics */
-		memset(&ni->ni_stats, 0, sizeof(struct ieee80211_nodestats));
-		ieee80211_unref_node(&ni);
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -3824,25 +3827,25 @@ ieee80211_ioctl_getwpaie(struct net_device *dev, struct iwreq *iwr)
 	if (copy_from_user(&wpaie, iwr->u.data.pointer, IEEE80211_ADDR_LEN))
 		return -EFAULT;
 	ni = ieee80211_find_node(&ic->ic_sta, wpaie.wpa_macaddr);
-	if (ni == NULL)
+	if (ni != NULL) {
+		memset(wpaie.wpa_ie, 0, sizeof(wpaie.wpa_ie));
+		if (ni->ni_wpa_ie != NULL) {
+			int ielen = ni->ni_wpa_ie[1] + 2;
+			if (ielen > sizeof(wpaie.wpa_ie))
+				ielen = sizeof(wpaie.wpa_ie);
+			memcpy(wpaie.wpa_ie, ni->ni_wpa_ie, ielen);
+		}
+		if (ni->ni_rsn_ie != NULL) {
+			int ielen = ni->ni_rsn_ie[1] + 2;
+			if (ielen > sizeof(wpaie.rsn_ie))
+				ielen = sizeof(wpaie.rsn_ie);
+			memcpy(wpaie.rsn_ie, ni->ni_rsn_ie, ielen);
+		}
+		ieee80211_unref_node(&ni);
+		return (copy_to_user(iwr->u.data.pointer, &wpaie, sizeof(wpaie)) ?
+				-EFAULT : 0);
+	} else
 		return -ENOENT;
-
-	memset(wpaie.wpa_ie, 0, sizeof(wpaie.wpa_ie));
-	if (ni->ni_wpa_ie != NULL) {
-		int ielen = ni->ni_wpa_ie[1] + 2;
-		if (ielen > sizeof(wpaie.wpa_ie))
-			ielen = sizeof(wpaie.wpa_ie);
-		memcpy(wpaie.wpa_ie, ni->ni_wpa_ie, ielen);
-	}
-	if (ni->ni_rsn_ie != NULL) {
-		int ielen = ni->ni_rsn_ie[1] + 2;
-		if (ielen > sizeof(wpaie.rsn_ie))
-			ielen = sizeof(wpaie.rsn_ie);
-		memcpy(wpaie.rsn_ie, ni->ni_rsn_ie, ielen);
-	}
-	ieee80211_unref_node(&ni);
-	return (copy_to_user(iwr->u.data.pointer, &wpaie, sizeof(wpaie)) ?
-		-EFAULT : 0);
 }
 
 static int
@@ -3860,16 +3863,16 @@ ieee80211_ioctl_getstastats(struct net_device *dev, struct iwreq *iwr)
 	if (copy_from_user(macaddr, iwr->u.data.pointer, IEEE80211_ADDR_LEN))
 		return -EFAULT;
 	ni = ieee80211_find_node(&ic->ic_sta, macaddr);
-	if (ni == NULL)
+	if (ni != NULL) {
+		if (iwr->u.data.length > sizeof(struct ieee80211req_sta_stats))
+			iwr->u.data.length = sizeof(struct ieee80211req_sta_stats);
+		/* NB: copy out only the statistics */
+		error = copy_to_user(iwr->u.data.pointer + off, &ni->ni_stats,
+				iwr->u.data.length - off);
+		ieee80211_unref_node(&ni);
+		return (error ? -EFAULT : 0);
+	} else
 		return -ENOENT;
-
-	if (iwr->u.data.length > sizeof(struct ieee80211req_sta_stats))
-		iwr->u.data.length = sizeof(struct ieee80211req_sta_stats);
-	/* NB: copy out only the statistics */
-	error = copy_to_user(iwr->u.data.pointer + off, &ni->ni_stats,
-		iwr->u.data.length - off);
-	ieee80211_unref_node(&ni);
-	return (error ? -EFAULT : 0);
 }
 
 struct scanreq {			/* XXX: right place for declaration? */
