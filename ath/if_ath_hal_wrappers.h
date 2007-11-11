@@ -271,4 +271,19 @@ static inline HAL_BOOL ath_hal_xrsupported(struct ath_hal *ah)
 	return ath_hal_getcapability(ah, HAL_CAP_XR, 0, NULL) == HAL_OK;
 }
 
+static inline HAL_BOOL ath_hal_hasintmit(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_INTMIT, 0, NULL) == HAL_OK); 
+}
+
+static inline HAL_BOOL ath_hal_getintmit(struct ath_hal *ah, u_int32_t *dst)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_INTMIT, 1, dst) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_setintmit(struct ath_hal *ah, u_int32_t v)
+{
+	return (ath_hal_setcapability(ah, HAL_CAP_INTMIT, 1, v, NULL) == HAL_OK);
+}
+
 #endif				/* #ifndef _IF_ATH_HAL_WRAPPERS_H_ */

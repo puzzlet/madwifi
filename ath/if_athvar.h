@@ -582,8 +582,9 @@ struct ath_softc {
 			sc_hasclrkey:1,		/* CLR key supported */
 			sc_devstopped:1,	/* stopped due to of no tx bufs */
 			sc_stagbeacons:1,	/* use staggered beacons */
-			sc_dfswait:1,    	/* waiting on channel for radar detect */
-		        sc_ackrate:1;           /* send acks at high bitrate */
+			sc_dfswait:1,		/* waiting on channel for radar detect */
+		        sc_ackrate:1,		/* send acks at high bitrate */
+			sc_hasintmit:1;		/* Interference mitigation */
 	/* rate tables */
 	const HAL_RATE_TABLE *sc_rates[IEEE80211_MODE_MAX];
 	const HAL_RATE_TABLE *sc_currates;	/* current rate table */
