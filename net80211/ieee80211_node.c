@@ -847,12 +847,6 @@ node_cleanup(struct ieee80211_node *ni)
 static void
 node_free(struct ieee80211_node *ni)
 {
-#if 0
-	/* We should 'cleanup' and then free'ing should be done automatically on decref */
-	struct ieee80211com *ic = ni->ni_ic;
-
-	ic->ic_node_cleanup(ni);
-#endif
 	KASSERT(ieee80211_node_refcnt(ni) == 0, ("node being free whilst still referenced"));
 
 	if (ni->ni_challenge != NULL)
@@ -1919,11 +1913,7 @@ ieee80211_node_leave(struct ieee80211_node *ni)
 	 */
 	ieee80211_sta_leave(ni);
 done:
-	/*
-	 * Run a cleanup and then drop the caller's reference
-	 */
 	ic->ic_node_cleanup(ni);
-	ieee80211_unref_node(&ni);
 }
 EXPORT_SYMBOL(ieee80211_node_leave);
 
