@@ -2059,19 +2059,19 @@ ieee80211_parse_rsn(struct ieee80211vap *vap, u_int8_t *frm,
 	return 0;
 }
 
+/* Record information element for later use. */
 void
 ieee80211_saveie(u_int8_t **iep, const u_int8_t *ie)
 {
 	u_int ielen = ie[1] + 2;
-	/*
-	 * Record information element for later use.
-	 */
-	if (*iep == NULL || (*iep)[1] != ie[1]) {
+	if ((*iep == NULL) || (ie == NULL) || ((*iep)[1] != ie[1])) {
 		if (*iep != NULL)
 			FREE(*iep, M_DEVBUF);
-		MALLOC(*iep, void*, ielen, M_DEVBUF, M_NOWAIT);
+		*iep = NULL;
+		if (ie != NULL)
+			MALLOC(*iep, void*, ielen, M_DEVBUF, M_NOWAIT);
 	}
-	if (*iep != NULL)
+	if ((*iep != NULL) && (ie != NULL))
 		memcpy(*iep, ie, ielen);
 }
 EXPORT_SYMBOL(ieee80211_saveie);
@@ -2248,10 +2248,15 @@ ieee80211_saveath(struct ieee80211_node *ni, u_int8_t *ie)
 	const struct ieee80211_ie_athAdvCap *athIe =
 		(const struct ieee80211_ie_athAdvCap *) ie;
 
-	ni->ni_ath_flags = athIe->athAdvCap_capability;
-	if (ni->ni_ath_flags & IEEE80211_ATHC_COMP)
-		ni->ni_ath_defkeyindex = LE_READ_2(&athIe->athAdvCap_defKeyIndex);
 	ieee80211_saveie(&ni->ni_ath_ie, ie);
+	if (athIe != NULL) {
+		ni->ni_ath_flags = athIe->athAdvCap_capability;
+		if (ni->ni_ath_flags & IEEE80211_ATHC_COMP)
+			ni->ni_ath_defkeyindex = LE_READ_2(&athIe->athAdvCap_defKeyIndex);
+	} else {
+		ni->ni_ath_flags = 0;
+		ni->ni_ath_defkeyindex = IEEE80211_INVAL_DEFKEY;
+	}
 }
 
 struct ieee80211_channel *
@@ -3188,10 +3193,8 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 						ether_sprintf(wh->i_addr2));
 				break;
 			case IEEE80211_ELEMID_VENDOR:
-				/* don't override RSN element
-				 * XXX: actually the driver should report both WPA versions,
-				 * so wpa_supplicant can choose and also detect downgrade attacks
-				*/
+				/* NB: Provide all IEs for wpa_supplicant, so
+				 * it can handle downgrade attacks, etc. */
 				if (iswpaoui(frm) && !wpa) {
 					if (vap->iv_flags & IEEE80211_F_WPA1)
 						wpa = frm;
@@ -3210,6 +3213,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		}
 		if (frm > efrm)
 			return;
+
 		IEEE80211_VERIFY_ELEMENT(rates, IEEE80211_RATE_MAXSIZE);
 		IEEE80211_VERIFY_ELEMENT(ssid, IEEE80211_NWID_LEN);
 		IEEE80211_VERIFY_SSID(vap->iv_bss, ssid);
@@ -3242,13 +3246,9 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		}
 
 		if (rsn != NULL) {
-			/*
-			 * Parse WPA information element.  Note that
-			 * we initialize the param block from the node
-			 * state so that information in the IE overrides
-			 * our defaults.  The resulting parameters are
-			 * installed below after the association is assured.
-			 */
+			/* Initialise values to node defaults, which are then 
+			 * overwritten by values in the IE. These are 
+			 * installed once association is complete. */
 			rsn_parm = ni->ni_rsn;
 			if (rsn[0] != IEEE80211_ELEMID_RSN)
 				reason = ieee80211_parse_wpa(vap, rsn, &rsn_parm, wh);
@@ -3276,7 +3276,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 			FREE(ni->ni_challenge, M_DEVBUF);
 			ni->ni_challenge = NULL;
 		}
-		/* 802.11 spec says to ignore station's privacy bit */
+		/* 802.11 spec. says to ignore station's privacy bit */
 		if ((capinfo & IEEE80211_CAPINFO_ESS) == 0) {
 			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ANY, wh->i_addr2,
 				"deny %s request, capability mismatch 0x%x",
@@ -3332,62 +3332,19 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		ni->ni_chan = ic->ic_curchan;
 		ni->ni_fhdwell = vap->iv_bss->ni_fhdwell;
 		ni->ni_fhindex = vap->iv_bss->ni_fhindex;
-		if (wpa != NULL) {
-			/*
-			 * Record WPA/RSN parameters for station, mark
-			 * node as using WPA and record information element
-			 * for applications that require it.
-			 */
-			ieee80211_saveie(&ni->ni_wpa_ie, wpa);
-		} else if (ni->ni_wpa_ie != NULL) {
-			/*
-			 * Flush any state from a previous association.
-			 */
-			FREE(ni->ni_wpa_ie, M_DEVBUF);
-			ni->ni_wpa_ie = NULL;
-		}
-		if (rsn != NULL) {
-			/*
-			 * Record WPA/RSN parameters for station, mark
-			 * node as using WPA and record information element
-			 * for applications that require it.
-			 */
-			ni->ni_rsn = rsn_parm;
-			ieee80211_saveie(&ni->ni_rsn_ie, rsn);
-		} else if (ni->ni_rsn_ie != NULL) {
-			/*
-			 * Flush any state from a previous association.
-			 */
-			FREE(ni->ni_rsn_ie, M_DEVBUF);
-			ni->ni_rsn_ie = NULL;
-		}
-		if (wme != NULL) {
-			/*
-			 * Record WME parameters for station, mark node
-			 * as capable of QoS and record information
-			 * element for applications that require it.
-			 */
-			ieee80211_saveie(&ni->ni_wme_ie, wme);
-			if (ieee80211_parse_wmeie(wme, wh, ni) > 0)
+
+		/* WPA */
+		ieee80211_saveie(&ni->ni_wpa_ie, wpa);
+		/* RSN */
+		ni->ni_rsn = rsn_parm;
+		ieee80211_saveie(&ni->ni_rsn_ie, rsn);
+		/* WME - including QoS flag */
+		ieee80211_saveie(&ni->ni_wme_ie, wme);
+		ni->ni_flags &= ~IEEE80211_NODE_QOS;
+		if ((wme != NULL) && (ieee80211_parse_wmeie(wme, wh, ni) > 0))
 				ni->ni_flags |= IEEE80211_NODE_QOS;
-		} else if (ni->ni_wme_ie != NULL) {
-			/*
-			 * Flush any state from a previous association.
-			 */
-			FREE(ni->ni_wme_ie, M_DEVBUF);
-			ni->ni_wme_ie = NULL;
-			ni->ni_flags &= ~IEEE80211_NODE_QOS;
-		}
-		if (ath != NULL)
-			ieee80211_saveath(ni, ath);
-		else if (ni->ni_ath_ie != NULL) {
-			/*
-			 * Flush any state from a previous association.
-			 */
-			FREE(ni->ni_ath_ie, M_DEVBUF);
-			ni->ni_ath_ie = NULL;
-			ni->ni_ath_flags = 0;
-		}
+
+		ieee80211_saveath(ni, ath);
 
 		/* Send TGf L2UF frame on behalf of newly associated station */
 		ieee80211_deliver_l2uf(ni);
