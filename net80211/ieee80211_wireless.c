@@ -719,7 +719,7 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 			if (vap->iv_opmode == IEEE80211_M_HOSTAP)
 				return -EINVAL;
 		}
-		if ((vap->iv_state == IEEE80211_S_RUN) && (c == ic->ic_bsschan))
+		if ((vap->iv_state == IEEE80211_S_RUN) && (c == vap->iv_des_chan))
 			return 0;			/* no change, return */
 
 		/* Don't allow to change to channel with radar found */
