@@ -707,7 +707,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	dev->hard_header_len += ATH_FF_MAX_HDR;
 #endif
 #endif
-	dev->type = ARPHRD_IEEE80211
+	dev->type = ARPHRD_IEEE80211;
 
 	ic->ic_dev = dev;
 	ic->ic_mgtstart = ath_mgtstart;
