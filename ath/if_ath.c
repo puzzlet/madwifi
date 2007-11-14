@@ -707,6 +707,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	dev->hard_header_len += ATH_FF_MAX_HDR;
 #endif
 #endif
+	dev->type = ARPHRD_IEEE80211
+
 	ic->ic_dev = dev;
 	ic->ic_mgtstart = ath_mgtstart;
 	ic->ic_init = ath_init;
@@ -1126,10 +1128,9 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 	if (sc->sc_rc->ops->dynamic_proc_register)
 		sc->sc_rc->ops->dynamic_proc_register(vap);
 
-	/*
-	 * Change the interface type for monitor mode.
-	 */
+	dev->type = ARPHRD_IEEE80211;
 	if (opmode == IEEE80211_M_MONITOR)
+		/* Use RadioTAP interface type for monitor mode. */
 		dev->type = ARPHRD_IEEE80211_RADIOTAP;
 
 	if ((flags & IEEE80211_CLONE_BSSID) &&
