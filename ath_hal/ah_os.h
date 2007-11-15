@@ -172,44 +172,25 @@ extern	u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
  * never byte-swapped by PCI chipsets or bridges, but always 
  * written directly (i.e. the format defined by the manufacturer).
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
-# if (AH_BYTE_ORDER == AH_BIG_ENDIAN)
+#if (AH_BYTE_ORDER == AH_BIG_ENDIAN)
 #define _OS_REG_WRITE(_ah, _reg, _val) do {			\
 	(0x4000 <= (_reg) && (_reg) < 0x5000) ?			\
-	 iowrite32((_val), (_ah)->ah_sh + (_reg)) :		\
-	 iowrite32be((_val), (_ah)->ah_sh + (_reg));		\
-	} while (0)
-#define _OS_REG_READ(_ah, _reg)					\
-	((0x4000 <= (_reg) && (_reg) < 0x5000) ?		\
-	 ioread32((_ah)->ah_sh + (_reg)) :			\
-	 ioread32be((_ah)->ah_sh + (_reg)));
-# else /* AH_LITTLE_ENDIAN */
-#define _OS_REG_WRITE(_ah, _reg, _val) do {			\
-	iowrite32(_val, (_ah)->ah_sh + (_reg));			\
-	} while (0)
-#define _OS_REG_READ(_ah, _reg)					\
-	ioread32((_ah)->ah_sh + (_reg))
-	
-# endif /* AH_BYTE_ORDER */
-#else
-# if (AH_BYTE_ORDER == AH_BIG_ENDIAN)
-#define _OS_REG_WRITE(_ah, _reg, _val) do {			\
-	 writel((0x4000 <= (_reg) && (_reg) < 0x5000) ? 	\
-	 	(_val) : cpu_to_le32(_val), 			\
-		(_ah)->ah_sh + (_reg));				\
-	} while (0)
+	 writel((_val), (_ah)->ah_sh + (_reg)) :		\
+	 ({__raw_writel((_val), (_ah)->ah_sh + (_reg)); 	\
+	   mb(); });						\
+} while (0)
 #define _OS_REG_READ(_ah, _reg)					\
 	((0x4000 <= (_reg) && (_reg) < 0x5000) ?		\
 	 readl((_ah)->ah_sh + (_reg)) :				\
-	 cpu_to_le32(readl((_ah)->ah_sh + (_reg))))
-# else /* AH_LITTLE_ENDIAN */
+	 ({unsigned long __v = __raw_readl((_ah)->ah_sh + 	\
+	  (_reg)); mb(); __v; }))
+#else /* AH_LITTLE_ENDIAN */
 #define _OS_REG_WRITE(_ah, _reg, _val) do {			\
 	writel(_val, (_ah)->ah_sh + (_reg));			\
-	} while (0)
+} while (0)
 #define _OS_REG_READ(_ah, _reg)					\
 	readl((_ah)->ah_sh + (_reg))
-# endif /* AH_BYTE_ORDER */
-#endif /* KERNEL_VERSON(2,6,12) */
+#endif /* AH_BYTE_ORDER */
 
 /* 
 The functions in this section are not intended to be invoked by MadWifi driver
