@@ -1128,7 +1128,8 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 	if (sc->sc_rc->ops->dynamic_proc_register)
 		sc->sc_rc->ops->dynamic_proc_register(vap);
 
-	dev->type = ARPHRD_IEEE80211;
+	/* XXX: VAPs emulate ethernet - true/false/good/bad? */
+	dev->type = ARPHRD_ETHER;
 	if (opmode == IEEE80211_M_MONITOR)
 		/* Use RadioTAP interface type for monitor mode. */
 		dev->type = ARPHRD_IEEE80211_RADIOTAP;
