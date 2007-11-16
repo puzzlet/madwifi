@@ -2063,16 +2063,15 @@ ieee80211_parse_rsn(struct ieee80211vap *vap, u_int8_t *frm,
 void
 ieee80211_saveie(u_int8_t **iep, const u_int8_t *ie)
 {
-	u_int ielen = ie[1] + 2;
 	if ((*iep == NULL) || (ie == NULL) || ((*iep)[1] != ie[1])) {
 		if (*iep != NULL)
 			FREE(*iep, M_DEVBUF);
 		*iep = NULL;
 		if (ie != NULL)
-			MALLOC(*iep, void*, ielen, M_DEVBUF, M_NOWAIT);
+			MALLOC(*iep, void*, ie[1] + 2, M_DEVBUF, M_NOWAIT);
 	}
 	if ((*iep != NULL) && (ie != NULL))
-		memcpy(*iep, ie, ielen);
+		memcpy(*iep, ie, ie[1] + 2);
 }
 EXPORT_SYMBOL(ieee80211_saveie);
 
