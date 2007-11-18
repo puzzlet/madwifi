@@ -430,6 +430,8 @@ struct ath_buf {
 							   has already been handled.  We may receive
 							   multiple interrupts before the rx_tasklet
 							   clears the queue */
+#define ATH_BUFSTATUS_RXTSTAMP          0x00000004      /* RX timestamps needs to be adjusted */
+
 /* DMA state for tx/rx descriptors. */
 struct ath_descdma {
 	const char *dd_name;
@@ -703,6 +705,7 @@ struct ath_softc {
 #endif
 	u_int sc_slottimeconf;			/* manual override for slottime */
 	u_int64_t sc_tsf;			/* TSF at last rx interrupt */
+	u_int64_t sc_last_tsf;
 };
 
 typedef void (*ath_callback) (struct ath_softc *);
