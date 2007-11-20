@@ -995,7 +995,7 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 		int chanStart, n = 0;
 		u_int32_t curChanFlags;
 
-		/* Only pick a random channel if we're in RUN state.  In scan 
+		/* Only pick a random channel if we're in RUN state.  In scan
 		 * state, we don't need to pick a channel
 		 */
 		if (vap->iv_state == IEEE80211_S_RUN) {

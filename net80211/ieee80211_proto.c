@@ -1457,41 +1457,41 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 				/* In WDS mode, allocate and initialize peer node. */
 				if (vap->iv_opmode == IEEE80211_M_WDS) {
 					/* XXX: This is horribly non-atomic. */
-					struct ieee80211_node *wds_ni = 
-						ieee80211_find_node(&ic->ic_sta, 
+					struct ieee80211_node *wds_ni =
+						ieee80211_find_node(&ic->ic_sta,
 								vap->wds_mac);
 
 					if (wds_ni == NULL) {
 						wds_ni = ieee80211_alloc_node_table(
-								vap, 
+								vap,
 								vap->wds_mac);
 						if (wds_ni != NULL)
 							ieee80211_add_wds_addr(
-									&ic->ic_sta, 
-									wds_ni, 
-									vap->wds_mac, 
+									&ic->ic_sta,
+									wds_ni,
+									vap->wds_mac,
 									1);
 						else
 							IEEE80211_DPRINTF(
-									vap, 
+									vap,
 									IEEE80211_MSG_NODE,
 									"%s: Unable to "
 									"allocate node for "
-									"WDS: %s\n", 
+									"WDS: %s\n",
 									__func__,
 									ether_sprintf(
 										vap->wds_mac)
 									);
 					}
-					
+
 					if (wds_ni != NULL) {
 						ieee80211_node_authorize(wds_ni);
-						wds_ni->ni_chan = 
+						wds_ni->ni_chan =
 							vap->iv_bss->ni_chan;
-						wds_ni->ni_capinfo = 
+						wds_ni->ni_capinfo =
 							ni->ni_capinfo;
 						wds_ni->ni_associd = 1;
-						wds_ni->ni_ath_flags = 
+						wds_ni->ni_ath_flags =
 							vap->iv_ath_cap;
 					}
 				}

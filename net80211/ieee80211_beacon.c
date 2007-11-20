@@ -309,7 +309,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 			/* NB: ic_bsschan is in the DSPARMS beacon IE, so must set this
 			 *     prior to the beacon re-init, below. */
 			if (c == NULL) {
-				/* Requested channel invalid; drop the channel switch 
+				/* Requested channel invalid; drop the channel switch
 				 * announcement and do nothing. */
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 						"%s: find channel failure\n", __func__);
@@ -326,7 +326,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 			vap->iv_flags &= ~IEEE80211_F_CHANSWITCH;
 			ic->ic_flags &= ~IEEE80211_F_CHANSWITCH;
 
-			/* NB: Only for the first VAP to get here, and when we have a 
+			/* NB: Only for the first VAP to get here, and when we have a
 			 * valid channel to which to change. */
 			if (c && (ic->ic_curchan != c)) {
 				ic->ic_curchan = c;
