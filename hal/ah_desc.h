@@ -146,7 +146,7 @@ struct ath_rx_status {
 #define	HAL_RX_MORE		0x01	/* more descriptors follow */
 #define	HAL_RX_MORE_AGGR	0x02	/* more frames in aggr */
 #define	HAL_RX_GI		0x04	/* full gi */
-#define	HAL_RX_2040		0x08	/* 40 Mhz */
+#define	HAL_RX_2040		0x08	/* 40 MHz */
 #define	HAL_RX_DELIM_CRC_PRE	0x10	/* crc error in delimiter pre */
 #define	HAL_RX_DELIM_CRC_POST	0x20	/* crc error in delim after */
 #define	HAL_RX_DECRYPT_BUSY	0x40	/* decrypt was too slow */

@@ -396,7 +396,7 @@ typedef enum {
  */
 typedef struct {
 	u_int32_t	channelFlags;	/* see below */
-	u_int16_t	channel;	/* setting in Mhz */
+	u_int16_t	channel;	/* setting in MHz */
 	u_int8_t	privFlags;
 	int8_t		maxRegTxPower;	/* max regulatory tx power in dBm */
 	int8_t		maxTxPower;	/* max true tx power in 0.5 dBm */
