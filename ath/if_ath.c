@@ -400,7 +400,7 @@ enum {
 			ath_grppoll_start(vap, sc->sc_xrpollcount); \
 			ath_hal_setrxfilter(sc->sc_ah, rfilt|HAL_RX_FILTER_XRPOLL); \
 		} \
-   	} while (0)
+	} while (0)
 
 /*
  * Define the scheme that we select MAC address for multiple BSS on the same radio.
@@ -695,7 +695,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	dev->do_ioctl = ath_ioctl;
 	dev->get_stats = ath_getstats;
 	dev->set_mac_address = ath_set_mac_address;
- 	dev->change_mtu = ath_change_mtu;
+	dev->change_mtu = ath_change_mtu;
 	dev->tx_queue_len = ATH_TXBUF - 1;		/* 1 for mgmt frame */
 #ifdef USE_HEADERLEN_RESV
 	dev->hard_header_len += sizeof(struct ieee80211_qosframe) +
@@ -2982,7 +2982,7 @@ hardstart_fail:
 
 	/* Pass control of the skb to the caller (i.e., resources are their
 	 * problem). */
- 	if (requeue)
+	if (requeue)
 		return NETDEV_TX_BUSY;
 
 	/* Otherwise, we have to deal with them. */
@@ -3798,11 +3798,11 @@ ath_beacon_dturbo_update(struct ieee80211vap *vap, int *needmark, u_int8_t dtim)
 	sc->sc_dturbo_bytes = sc->sc_devstats.tx_bytes
 			    + sc->sc_devstats.rx_bytes;
 	if (ic->ic_ath_cap & IEEE80211_ATHC_BOOST) {
- 		/*
-  		* before switching to base mode,
-  		* make sure that the conditions( low rssi, low bw) to switch mode
-  		* hold for some time and time in turbo exceeds minimum turbo time.
-  		*/
+		/*
+		* before switching to base mode,
+		* make sure that the conditions( low rssi, low bw) to switch mode
+		* hold for some time and time in turbo exceeds minimum turbo time.
+		*/
 
 		if (sc->sc_dturbo_tcount >= sc->sc_dturbo_turbo_tmin &&
 		   sc->sc_dturbo_hold ==0 &&
@@ -5480,35 +5480,35 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 
 	skb = bf->bf_skb;
 	if (skb == NULL) {
- 		if (sc->sc_nmonvaps > 0) {
- 			u_int off;
+		if (sc->sc_nmonvaps > 0) {
+			u_int off;
 			unsigned int extra = A_MAX(sizeof(struct ath_rx_radiotap_header),
 						   A_MAX(sizeof(struct wlan_ng_prism2_header),
 							 ATHDESC_HEADER_SIZE));
 
- 			/*
- 			 * Allocate buffer for monitor mode with space for the
+			/*
+			 * Allocate buffer for monitor mode with space for the
 			 * wlan-ng style physical layer header at the start.
- 			 */
- 			skb = dev_alloc_skb(sc->sc_rxbufsize + extra + sc->sc_cachelsz - 1);
- 			if (skb == NULL) {
- 				DPRINTF(sc, ATH_DEBUG_ANY,
+			 */
+			skb = dev_alloc_skb(sc->sc_rxbufsize + extra + sc->sc_cachelsz - 1);
+			if (skb == NULL) {
+				DPRINTF(sc, ATH_DEBUG_ANY,
 					"%s: skbuff alloc of size %u failed\n",
 					__func__,
 					sc->sc_rxbufsize + extra + sc->sc_cachelsz - 1);
- 				sc->sc_stats.ast_rx_nobuf++;
- 				return -ENOMEM;
- 			}
- 			/*
+				sc->sc_stats.ast_rx_nobuf++;
+				return -ENOMEM;
+			}
+			/*
 			 * Reserve space for the Prism header.
  			 */
  			skb_reserve(skb, sizeof(struct wlan_ng_prism2_header));
 			/*
- 			 * Align to cache line.
+			 * Align to cache line.
 			 */
- 			off = ((unsigned long) skb->data) % sc->sc_cachelsz;
- 			if (off != 0)
- 				skb_reserve(skb, sc->sc_cachelsz - off);
+			off = ((unsigned long) skb->data) % sc->sc_cachelsz;
+			if (off != 0)
+				skb_reserve(skb, sc->sc_cachelsz - off);
 		} else {
 			/*
 			 * Cache-line-align.  This is important (for the
@@ -8216,7 +8216,7 @@ ath_mhz2ieee(struct ieee80211com *ic, u_int freq, u_int flags)
 {
 	struct ath_softc *sc = ic->ic_dev->priv;
 
- 	return (ath_hal_mhz2ieee(sc->sc_ah, freq, flags));
+	return (ath_hal_mhz2ieee(sc->sc_ah, freq, flags));
 }
 
 
@@ -8939,9 +8939,9 @@ ath_update_txpow(struct ath_softc *sc)
 	ic->ic_txpowlimit = maxtxpowlimit;
 	ath_hal_settxpowlimit(ah, txpowlimit);
 
- 	/*
+	/*
 	 * Make sure the VAPs change is within limits, clamp it otherwise
- 	 */
+	 */
 	if (ic->ic_newtxpowlimit > ic->ic_txpowlimit)
 		clamped_txpow = ic->ic_txpowlimit;
 	else
@@ -10135,7 +10135,7 @@ ath_print_register_details(const char* name, u_int32_t address, u_int32_t v)
 		printk(KERN_DEBUG "%18s info:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
 			(name == strstr(name, "AR5K_AR5212_") ? (name + strlen("AR5K_AR5212_"))
-			 	: name),
+				: name),
 			(v & HAL_INT_GLOBAL           ?  " HAL_INT_GLOBAL" : ""),
 			(v & HAL_INT_FATAL            ?  " HAL_INT_FATAL"  : ""),
 			(v & (1 << 29)                ?  " (1  << 29)"     : ""),

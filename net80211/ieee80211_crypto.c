@@ -349,7 +349,7 @@ ieee80211_crypto_newkey(struct ieee80211vap *vap,
 				"%s: no h/w support for TKIP MIC, falling back to s/w\n",
 				__func__);
 			flags |= IEEE80211_KEY_SWMIC;
-	    	} else if (!((vap->iv_caps & IEEE80211_C_WME_TKIPMIC)) &&
+		} else if (!((vap->iv_caps & IEEE80211_C_WME_TKIPMIC)) &&
 		    (vap->iv_flags & IEEE80211_F_WME)) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
 				"%s: no h/w support for TKIP MIC when WMM is turned on,"
