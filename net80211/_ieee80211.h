@@ -214,6 +214,11 @@ struct ieee80211_channel {
 #define	IEEE80211_IS_CHAN_QUARTER(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_QUARTER) != 0)
 
+#define	IEEE80211_IS_CHAN_RADAR(_c) \
+	(((_c)->ic_flags & IEEE80211_CHAN_RADAR) != 0)
+#define	IEEE80211_IS_CHAN_PASSIVE(_c) \
+	(((_c)->ic_flags & IEEE80211_CHAN_PASSIVE) != 0)
+
 /* ni_chan encoding for FH phy */
 #define	IEEE80211_FH_CHANMOD		80
 #define	IEEE80211_FH_CHAN(set,pat)	(((set) - 1) * IEEE80211_FH_CHANMOD + (pat))
