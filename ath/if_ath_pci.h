@@ -50,8 +50,8 @@
 #define	PCI_RESTORE_STATE(a,b)	pci_restore_state(a)
 #else
 #define bus_dma_sync_single	pci_dma_sync_single
-#define	PCI_SAVE_STATE(a,b)	pci_save_state(a,b)
-#define	PCI_RESTORE_STATE(a,b)	pci_restore_state(a,b)
+#define	PCI_SAVE_STATE(a,b)	pci_save_state(a, b)
+#define	PCI_RESTORE_STATE(a,b)	pci_restore_state(a, b)
 #endif
 
 #define bus_alloc_consistent	pci_alloc_consistent

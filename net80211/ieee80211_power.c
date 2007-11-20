@@ -82,7 +82,7 @@ ieee80211_power_latevattach(struct ieee80211vap *vap)
 	 * know adhoc mode doesn't support ATIM yet...
 	 */
 	if (vap->iv_opmode == IEEE80211_M_HOSTAP) {
-		vap->iv_tim_len = howmany(vap->iv_max_aid,8) * sizeof(u_int8_t);
+		vap->iv_tim_len = howmany(vap->iv_max_aid, 8) * sizeof(u_int8_t);
 		MALLOC(vap->iv_tim_bitmap, u_int8_t *, vap->iv_tim_len,
 			M_DEVBUF, M_NOWAIT | M_ZERO);
 		if (vap->iv_tim_bitmap == NULL) {

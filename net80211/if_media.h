@@ -367,9 +367,9 @@ struct ifmedia_description {
 #define	IFM_SUBTYPE_TOKENRING_OPTION_DESCRIPTIONS {			\
 	{ IFM_TOK_ETR,	"EarlyTokenRelease" },				\
 	{ IFM_TOK_SRCRT, "SourceRouting" },				\
-	{ IFM_TOK_ALLR,	"AllRoutes" },					\
-	{ IFM_TOK_DTR,	"Dedicated" },					\
-	{ IFM_TOK_CLASSIC,"Classic" },					\
+	{ IFM_TOK_ALLR,	 "AllRoutes" },					\
+	{ IFM_TOK_DTR,	 "Dedicated" },					\
+	{ IFM_TOK_CLASSIC, "Classic" },					\
 	{ IFM_TOK_AUTO,	" " },						\
 	{ 0, NULL },							\
 }

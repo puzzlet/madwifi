@@ -88,7 +88,7 @@ set_quality(struct iw_quality *iq, u_int rssi, int noise)
 #include <linux/interrupt.h>
 #ifdef DECLARE_TASKLET			/* native tasklets */
 #define IEEE80211_TQ_STRUCT tasklet_struct
-#define IEEE80211_INIT_TQUEUE(a,b,c)	tasklet_init((a),(b),(unsigned long)(c))
+#define IEEE80211_INIT_TQUEUE(a,b,c)	tasklet_init((a), (b), (unsigned long)(c))
 #define IEEE80211_SCHEDULE_TQUEUE(a)	tasklet_schedule((a))
 #define IEEE80211_CANCEL_TQUEUE(a)	if (!in_interrupt()) tasklet_kill((a))
 typedef unsigned long IEEE80211_TQUEUE_ARG;
@@ -106,7 +106,7 @@ typedef void *IEEE80211_TQUEUE_ARG;
 #define	tasklet_disable(t)	do { (void) t; local_bh_disable(); } while (0)
 #define	tasklet_enable(t)	do { (void) t; local_bh_enable(); } while (0)
 /* XXX: not supporting cancel in old kernels! */
-#define IEEE80211_CANCEL_TQUEUE(a)	((a),0)
+#define IEEE80211_CANCEL_TQUEUE(a)	((a), 0)
 #endif /* !DECLARE_TASKLET */
 
 #define	IEEE80211_RESCHEDULE	schedule
@@ -137,7 +137,7 @@ typedef spinlock_t ieee80211com_lock_t;
 
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	IEEE80211_LOCK_ASSERT(_ic) \
-	KASSERT(spin_is_locked(&(_ic)->ic_comlock),("ieee80211com not locked!"))
+	KASSERT(spin_is_locked(&(_ic)->ic_comlock), ("ieee80211com not locked!"))
 #else
 #define	IEEE80211_LOCK_ASSERT(_ic)
 #endif
@@ -254,7 +254,7 @@ typedef spinlock_t acl_lock_t;
 
 /* __skb_append got a third parameter in 2.6.14 */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
-#define __skb_append(a,b,c)	__skb_append(a,b)
+#define __skb_append(a,b,c)	__skb_append(a, b)
 #endif
 
 /*
@@ -410,7 +410,7 @@ extern const char *ether_sprintf(const u_int8_t *);
  * Queue write-arounds and support routines.
  */
 extern	struct sk_buff *ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen);
-#define	IF_ENQUEUE(_q,_skb)	skb_queue_tail(_q,_skb)
+#define	IF_ENQUEUE(_q,_skb)	skb_queue_tail(_q, _skb)
 #define	IF_DEQUEUE(_q,_skb)	(_skb = skb_dequeue(_q))
 #define	_IF_QLEN(_q)		skb_queue_len(_q)
 #define	IF_DRAIN(_q)		skb_queue_drain(_q)
