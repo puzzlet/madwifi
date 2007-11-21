@@ -128,12 +128,11 @@ struct ar5212_openbsd_desc {
 void
 ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 {
-	struct ieee80211_cb *cb = (struct ieee80211_cb *) skb->cb;
 	struct ieee80211_phy_params *ph =
-		(struct ieee80211_phy_params *) (skb->cb + sizeof(struct ieee80211_cb));
-	cb->flags = M_RAW;
-	cb->ni = NULL;
-	cb->next = NULL;
+		(struct ieee80211_phy_params *) (SKB_CB(skb) + sizeof(struct ieee80211_cb));
+	SKB_CB(skb)->flags = M_RAW;
+	SKB_CB(skb)->ni = NULL;
+	SKB_CB(skb)->next = NULL;
 	memset(ph, 0, sizeof(struct ieee80211_phy_params));
 
 	/* send at a static rate if it is configured */
