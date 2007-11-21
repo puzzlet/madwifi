@@ -318,14 +318,16 @@ struct ieee80211_cb {
 };
 
 
+#define	SKB_CB(_skb) 		((struct ieee80211_cb *)(_skb)->cb)
+
 #define M_FLAG_SET(_skb, _flag) \
-	(((struct ieee80211_cb *)(_skb)->cb)->flags |= (_flag))
+	(SKB_CB(_skb)->flags |= (_flag))
 #define	M_FLAG_CLR(_skb, _flag) \
-	(((struct ieee80211_cb *)(_skb)->cb)->flags &= ~(_flag))
+	(SKB_CB(_skb)->flags &= ~(_flag))
 #define	M_FLAG_GET(_skb, _flag) \
-	(((struct ieee80211_cb *)(_skb)->cb)->flags & (_flag))
+	(SKB_CB(_skb)->flags & (_flag))
 #define M_FLAG_KEEP_ONLY(_skb, _flag) \
-	(((struct ieee80211_cb *)(_skb)->cb)->flags &= (_flag))
+	(SKB_CB(_skb)->flags &= (_flag))
 
 #define	M_PWR_SAV_SET(skb) M_FLAG_SET((skb), M_PWR_SAV)
 #define	M_PWR_SAV_CLR(skb) M_FLAG_CLR((skb), M_PWR_SAV)
@@ -367,7 +369,7 @@ typedef atomic_t ieee80211_node_ref_count_t;
 #define ieee80211_node_incref(_ni)	atomic_inc(&(_ni)->ni_refcnt)
 #define	ieee80211_node_decref(_ni)	atomic_dec(&(_ni)->ni_refcnt)
 #define	ieee80211_node_dectestref(_ni)	atomic_dec_and_test(&(_ni)->ni_refcnt)
-#define	ieee80211_node_refcnt(_ni)	(_ni)->ni_refcnt.counter
+#define	ieee80211_node_refcnt(_ni)	atomic_read(&(_ni)->ni_refcnt)
 
 #define	le16toh(_x)	le16_to_cpu(_x)
 #define	htole16(_x)	cpu_to_le16(_x)
