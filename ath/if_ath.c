@@ -279,8 +279,6 @@ static int countrycode = -1;
 static int outdoor = -1;
 static int xchanmode = -1;
 
-#define DEV_NAME(_d) ((!_d || !_d->name || !strncmp(_d->name, "wifi%d", 6)) ? "MadWifi" : _d->name)
-
 static const char *hal_status_desc[] = {
 	"No error",
 	"No hardware present or device not yet supported",

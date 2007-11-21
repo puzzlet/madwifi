@@ -92,6 +92,23 @@ Note: Atheros chips use 7 bits when power is specified in half dBm units, with a
 
 #define IEEE80211_SWBMISS_THRESHOLD	10 	/* software beacon miss threshold, in TUs */
 
+#define DEV_NAME(_d) \
+	 ((NULL == _d || NULL == _d->name || 0 == strncmp(_d->name, "wifi%d", 6)) ? \
+	  "MadWifi" : \
+	  _d->name)
+#define VAP_DEV_NAME(_v) \
+	 ((NULL == _v) ? \
+	  "MadWifi" : \
+	  DEV_NAME(_v->iv_dev))
+#define VAP_DEV_NAME(_v) \
+	 ((NULL == _v) ? \
+	  "MadWifi" : \
+	  DEV_NAME(_v->iv_dev))
+#define VAP_IC_DEV_NAME(_v) \
+	 ((NULL == _v || NULL == _v->iv_ic) ? \
+	  "MadWifi" : \
+	  DEV_NAME(_v->iv_ic->ic_dev))
+
 #define	IEEE80211_MS_TO_TU(x)	(((x) * 1000) / 1024)
 #define	IEEE80211_TU_TO_MS(x)	(((x) * 1024) / 1000)
 #define	IEEE80211_TU_TO_JIFFIES(x) ((IEEE80211_TU_TO_MS(x) * HZ) / 1000)
