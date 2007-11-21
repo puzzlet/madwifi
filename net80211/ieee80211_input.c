@@ -707,7 +707,11 @@ ieee80211_input(struct ieee80211_node *ni,
 			/* ether_type must be length as FF frames are always LLC/SNAP encap'd */ 
 			frame_len = ntohs(eh_tmp->ether_type); 
 
-			skb1 = skb_clone(skb, GFP_ATOMIC); /* XXX: GFP_ATOMIC is overkill? */ 
+			skb1 = skb_clone(skb, GFP_ATOMIC);
+			/* Increment reference count after copy */
+			if (NULL != skb1 && SKB_CB(skb)->ni != NULL) {
+				SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+			}
 
 			/* we now have 802.3 MAC hdr followed by 802.2 LLC/SNAP; convert to EthernetII.
 			 * Note that the frame is at least IEEE80211_MIN_LEN, due to the driver code. */
@@ -915,8 +919,11 @@ ieee80211_input_all(struct ieee80211com *ic,
 		if (TAILQ_NEXT(vap, iv_next) != NULL) {
 			skb1 = skb_copy(skb, GFP_ATOMIC);
 			if (skb1 == NULL) {
-				/* XXX stat+msg */
 				continue;
+			}
+			/* We duplicate the reference after skb_copy */
+			if (SKB_CB(skb)->ni != NULL) {
+				SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
 			}
 		} else {
 			skb1 = skb;
@@ -1023,6 +1030,10 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 				 * assemble fragments
 				 */
 				ni->ni_rxfrag = skb_copy(skb, GFP_ATOMIC);
+				/* We duplicate the reference after skb_copy */
+				if (SKB_CB(skb)->ni != NULL) {
+					SKB_CB(ni->ni_rxfrag)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+				}
 				dev_kfree_skb(skb);
 			}
 			/*
@@ -1036,6 +1047,10 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 					(ni->ni_vap->iv_dev->mtu + hdrlen) -
 					(skb_end_pointer(skb) - skb->head),
 					GFP_ATOMIC);
+				/* We duplicate the reference after skb_copy */
+				if (SKB_CB(skb)->ni != NULL && (skb != ni->ni_rxfrag)) {
+					SKB_CB(ni->ni_rxfrag)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+				}
 				dev_kfree_skb(skb);
 			}
 		}
@@ -1077,6 +1092,7 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct net_device *dev = vap->iv_dev;
 	struct ether_header *eh = (struct ether_header *) skb->data;
+	struct ieee80211_node * ni_tmp = NULL;
 
 #ifdef ATH_SUPERG_XR
 	/*
@@ -1094,8 +1110,13 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 	    (vap->iv_flags & IEEE80211_F_NOBRIDGE) == 0) {
 		struct sk_buff *skb1 = NULL;
 
-		if (ETHER_IS_MULTICAST(eh->ether_dhost))
+		if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
 			skb1 = skb_copy(skb, GFP_ATOMIC);
+			/* We duplicate the reference after skb_copy */
+			if (SKB_CB(skb)->ni != NULL) {
+				SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+			}
+		}
 		else {
 			/*
 			 * Check if destination is associated with the
@@ -1124,7 +1145,19 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 
 			skb1->protocol = __constant_htons(ETH_P_802_2);
 			/* XXX insert vlan tag before queue it? */
-			dev_queue_xmit(skb1);
+			ni_tmp = SKB_CB(skb1)->ni; /* remember node so we can free it */
+			if ( dev_queue_xmit(skb1) == NET_XMIT_DROP ) {
+				/* If queue dropped the packet because device was
+				 * too busy */
+				vap->iv_devstats.tx_dropped++;
+				/* node reference was leaked */
+				if (ni_tmp != NULL)
+					ieee80211_unref_node(&ni_tmp);
+			}
+			/* skb is no longer ours, either way after dev_queue_xmit */
+			skb1 = NULL; 
+			/* no need to free node reference */
+			ni_tmp = NULL;
 		}
 	}
 
@@ -1136,11 +1169,34 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 #else
 		skb->protocol = eth_type_trans(skb, dev);
 #endif
+		vap->iv_devstats.rx_packets++;
+		vap->iv_devstats.rx_bytes += skb->len;
 		if (ni->ni_vlan != 0 && vap->iv_vlgrp != NULL) {
 			/* attach vlan tag */
-			vlan_hwaccel_receive_skb(skb, vap->iv_vlgrp, ni->ni_vlan);
-		} else
-			netif_rx(skb);
+			struct ieee80211_node *ni_tmp = SKB_CB(skb)->ni;
+			if (vlan_hwaccel_receive_skb(skb, vap->iv_vlgrp, ni->ni_vlan) == NET_RX_DROP) {
+				/* If netif_rx dropped the packet because 
+				 * device was too busy */
+				if (ni_tmp != NULL) {
+					/* node reference was leaked */
+					ieee80211_unref_node(&ni_tmp);
+				}
+				vap->iv_devstats.rx_dropped++;
+			}
+			skb = NULL; /* SKB is no longer ours */
+		} else {
+			struct ieee80211_node *ni_tmp = SKB_CB(skb)->ni;
+			if (netif_rx(skb) == NET_RX_DROP) {
+				/* If netif_rx dropped the packet because 
+				 * device was too busy */
+				if (ni_tmp != NULL) {
+					/* node reference was leaked */
+					ieee80211_unref_node(&ni_tmp);
+				}
+				vap->iv_devstats.rx_dropped++;
+			}
+			skb = NULL; /* SKB is no longer ours */
+		}
 		dev->last_rx = jiffies;
 	}
 }
@@ -1203,6 +1259,10 @@ ieee80211_decap(struct ieee80211vap *vap, struct sk_buff *skb, int hdrlen)
 
 		/* XXX: does this always work? */
 		tskb = skb_copy(skb, GFP_ATOMIC);
+		/* We duplicate the reference after skb_copy */
+		if (SKB_CB(skb)->ni != NULL) {
+			SKB_CB(tskb)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+		}
 		dev_kfree_skb(skb);
 		skb = tskb;
 	}
@@ -2234,10 +2294,15 @@ forward_mgmt_to_app(struct ieee80211vap *vap, int subtype, struct sk_buff *skb,
 
 	if (filter_type && ((vap->app_filter & filter_type) == filter_type)) {
 		struct sk_buff *skb1;
+		struct ieee80211_node *ni_tmp;
 
 		skb1 = skb_copy(skb, GFP_ATOMIC);
 		if (skb1 == NULL)
 			return;
+		/* We duplicate the reference after skb_copy */
+		if (SKB_CB(skb)->ni != NULL) {
+			SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+		}
 		skb1->dev = dev;
 		skb_reset_mac_header(skb1);
 
@@ -2245,7 +2310,18 @@ forward_mgmt_to_app(struct ieee80211vap *vap, int subtype, struct sk_buff *skb,
 		skb1->pkt_type = PACKET_OTHERHOST;
 		skb1->protocol = __constant_htons(0x0019);  /* ETH_P_80211_RAW */
 
-		netif_rx(skb1);
+		ni_tmp = SKB_CB(skb1)->ni;
+		if (netif_rx(skb1) == NET_RX_DROP) {
+			/* If netif_rx dropped the packet because 
+			 * device was too busy */
+			if (ni_tmp != NULL) {
+				/* node reference was leaked */
+				ieee80211_unref_node(&ni_tmp);
+			}
+			vap->iv_devstats.rx_dropped++;
+		}
+		vap->iv_devstats.rx_packets++;
+		vap->iv_devstats.rx_bytes += skb1->len;
 	}
 }
 
@@ -2288,8 +2364,10 @@ ieee80211_doth_cancel_cs(struct ieee80211vap *vap)
 	del_timer(&vap->iv_csa_timer);
 	if (vap->iv_csa_jiffies)
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-				"channel switch canceled (was: to %u in %u "
-				"tbtt, mode %u)\n", vap->iv_csa_chan->ic_ieee,
+				"channel switch canceled (was: to %3d (%4d MHz) in %u "
+				"TBTT, mode %u)\n",
+				  vap->iv_csa_chan->ic_ieee,
+				  vap->iv_csa_chan->ic_freq,
 				vap->iv_csa_count, vap->iv_csa_mode);
 	vap->iv_csa_jiffies = 0;
 }
@@ -2300,8 +2378,10 @@ ieee80211_doth_switch_channel(struct ieee80211vap *vap)
 	struct ieee80211com *ic = vap->iv_ic;
 
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-			"%s: Channel switch to %d NOW!\n",
-			__func__, vap->iv_csa_chan->ic_ieee);
+			  "%s: Channel switch to %3d (%4d MHz) NOW!\n",
+			  __func__,
+			  vap->iv_csa_chan->ic_ieee,
+			  vap->iv_csa_chan->ic_freq);
 #if 0
 	/* XXX does not belong here? */
 	/* XXX doesn't stop management frames */
@@ -2384,9 +2464,11 @@ ieee80211_parse_csaie(struct ieee80211_node *ni, u_int8_t *frm,
 			/* XXX abuse? */
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 					"%s: channel switch channel "
-					"changed from %u to %u!\n", __func__,
-					vap->iv_csa_chan->ic_ieee,
-					csa_ie->csa_chan);
+					"changed from %3d (%4d MHz) to %u!\n",
+					  __func__,
+					  vap->iv_csa_chan->ic_ieee,
+					  vap->iv_csa_chan->ic_freq,
+					  csa_ie->csa_chan);
 
 			if (vap->iv_csa_count > IEEE80211_CSA_PROTECTION_PERIOD)
 				ieee80211_doth_cancel_cs(vap);
@@ -2497,8 +2579,7 @@ ieee80211_deliver_l2uf(struct ieee80211_node *ni)
 	struct ether_header *eh;
 
 	skb = dev_alloc_skb(sizeof(*l2uf));
-	if (!skb) {
-		printk("ieee80211_deliver_l2uf: no buf available\n");
+	if (skb == NULL) {
 		return;
 	}
 	skb_put(skb, sizeof(*l2uf));
