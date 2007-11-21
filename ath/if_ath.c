@@ -4819,6 +4819,9 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 				~(HAL_BEACON_RESET_TSF | HAL_BEACON_ENA));
 #endif
 		ath_hal_beaconinit(ah, nexttbtt, intval);
+		if (intval & HAL_BEACON_RESET_TSF) {
+			sc->sc_last_tsf = 0;
+		}
 		sc->sc_bmisscount = 0;
 		ath_hal_intrset(ah, sc->sc_imask);
 		/*
