@@ -914,6 +914,8 @@ ieee80211_wme_updateparams_locked(struct ieee80211vap *vap)
 			wme->wme_bssChanParams.cap_info_count);
 }
 
+EXPORT_SYMBOL(ieee80211_wme_updateparams);
+
 void
 ieee80211_wme_updateparams(struct ieee80211vap *vap)
 {

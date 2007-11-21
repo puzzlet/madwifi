@@ -596,6 +596,7 @@ ieee80211_bg_scan(struct ieee80211vap *vap)
 	return scanning;
 }
 EXPORT_SYMBOL(ieee80211_bg_scan);
+EXPORT_SYMBOL(ieee80211_cancel_scan);
 
 /*
  * Cancel any scan currently going on.
