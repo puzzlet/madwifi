@@ -293,7 +293,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 	IEEE80211_LOCK_IRQ(ic);
 
 	if ((ic->ic_flags & IEEE80211_F_DOTH) &&
-			(vap->iv_flags & IEEE80211_F_CHANSWITCH)) {
+	    (vap->iv_flags & IEEE80211_F_CHANSWITCH)) {
 		struct ieee80211_channel *c = 
 			ieee80211_doth_findchan(vap, ic->ic_chanchange_chan);
 		
@@ -549,7 +549,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 
 			len_changed = 1;
 		}
-		memcpy(bo->bo_appie_buf,vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].ie,
+		memcpy(bo->bo_appie_buf, vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].ie,
 			vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].length);
 
 		vap->iv_flags_ext &= ~IEEE80211_FEXT_APPIE_UPDATE;

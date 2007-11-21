@@ -1573,7 +1573,7 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 		    !(vap->iv_flags & IEEE80211_F_XR)) {
 			vap->iv_xrvapstart.function = ieee80211_start_xrvap;
 			vap->iv_xrvapstart.data = (unsigned long) vap->iv_xrvap;
-			mod_timer(&vap->iv_xrvapstart,jiffies+HZ); /* start xr vap on next second */
+			mod_timer(&vap->iv_xrvapstart, jiffies + HZ); /* start xr vap on next second */
 			/* 
 			 * do not let the normal vap automatically bring up XR vap.
 			 * let the timer handler start the XR vap. if you let the

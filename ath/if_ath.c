@@ -2603,15 +2603,15 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 
 	/* XXX check return value? */
 	ath_hal_setuptxdesc(ah, ds,
-			    pktlen, 			/* packet length */
-			    hdrlen, 			/* header length */
-			    atype, 			/* Atheros packet type */
-			    power, 			/* txpower */
-			    txrate, try0, 		/* series 0 rate/tries */
+			    pktlen,			/* packet length */
+			    hdrlen,			/* header length */
+			    atype,			/* Atheros packet type */
+			    power,			/* txpower */
+			    txrate, try0,		/* series 0 rate/tries */
 			    HAL_TXKEYIX_INVALID,	/* key cache index */
-			    antenna, 			/* antenna mode */
-			    flags, 			/* flags */
-			    0, 				/* rts/cts rate */
+			    antenna,			/* antenna mode */
+			    flags,			/* flags */
+			    0,				/* rts/cts rate */
 			    0,				/* rts/cts duration */
 			    0,				/* comp icv len */
 			    0,				/* comp iv len */
@@ -2622,7 +2622,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 		ath_hal_setupxtxdesc(sc->sc_ah, ds,
 			dot11_to_ratecode(sc, rt, ph->rate1), ph->try1, /* series 1 */
 			dot11_to_ratecode(sc, rt, ph->rate2), ph->try2, /* series 2 */
-			dot11_to_ratecode(sc, rt, ph->rate3), ph->try3 	/* series 3 */
+			dot11_to_ratecode(sc, rt, ph->rate3), ph->try3	/* series 3 */
 			);
 	}
 	bf->bf_flags = flags;	/* record for post-processing */
@@ -2631,9 +2631,9 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	ds->ds_data = bf->bf_skbaddr;
 
 	ath_hal_filltxdesc(ah, ds,
-			   skb->len, 	/* segment length */
-			   AH_TRUE, 	/* first segment */
-			   AH_TRUE, 	/* last segment */
+			   skb->len,	/* segment length */
+			   AH_TRUE,	/* first segment */
+			   AH_TRUE,	/* last segment */
 			   ds		/* first descriptor */
 			   );
 
@@ -2735,9 +2735,9 @@ ath_ffstageq_flush(struct ath_softc *sc, struct ath_txq *txq,
 		DPRINTF(sc, ATH_DEBUG_XMIT,				\
 			"%s: stop queue\n", __func__);			\
 		sc->sc_stats.ast_tx_qstop++;				\
-		netif_stop_queue(dev); 					\
+		netif_stop_queue(dev);					\
 		sc->sc_devstopped = 1;					\
-		ATH_SCHEDULE_TQUEUE(&sc->sc_txtq, NULL); 		\
+		ATH_SCHEDULE_TQUEUE(&sc->sc_txtq, NULL);		\
 	}								\
 	ATH_TXBUF_UNLOCK_IRQ(sc);					\
 	if (bf == NULL) {		/* NB: should not happen */	\
@@ -4047,7 +4047,7 @@ ath_beaconq_setup(struct ath_softc *sc)
 	qnum = ath_hal_setuptxqueue(sc->sc_ah, HAL_TX_QUEUE_BEACON, &qi);
 	txq = &sc->sc_txq[qnum];
 	memset(txq, 0, sizeof(struct ath_txq));
-	txq->axq_qnum 		= qnum;
+	txq->axq_qnum		= qnum;
 	STAILQ_INIT(&txq->axq_q);
 	ATH_TXQ_LOCK_INIT(txq);
 	TAILQ_INIT(&txq->axq_stageq);
@@ -4259,26 +4259,26 @@ ath_beacon_setup(struct ath_softc *sc, struct ath_buf *bf)
 	}
 #endif
 	ath_hal_setuptxdesc(ah, ds,
-		skb->len + IEEE80211_CRC_LEN, 	/* frame length */
+		skb->len + IEEE80211_CRC_LEN,	/* frame length */
 		sizeof(struct ieee80211_frame), /* header length */
-		HAL_PKT_TYPE_BEACON, 		/* Atheros packet type */
-		bf->bf_node->ni_txpower, 	/* txpower XXX */
-		rate, 1, 			/* series 0 rate/tries */
-		HAL_TXKEYIX_INVALID, 		/* no encryption */
-		antenna, 			/* antenna mode */
-		flags, 				/* no ack, veol for beacons */
-		ctsrate, 			/* rts/cts rate */
-		ctsduration, 			/* rts/cts duration */
-		0, 				/* comp icv len */
-		0, 				/* comp iv len */
+		HAL_PKT_TYPE_BEACON,		/* Atheros packet type */
+		bf->bf_node->ni_txpower,        /* txpower XXX */
+		rate, 1,			/* series 0 rate/tries */
+		HAL_TXKEYIX_INVALID,		/* no encryption */
+		antenna,			/* antenna mode */
+		flags,				/* no ack, veol for beacons */
+		ctsrate,			/* rts/cts rate */
+		ctsduration,			/* rts/cts duration */
+		0,				/* comp icv len */
+		0,				/* comp iv len */
 		ATH_COMP_PROC_NO_COMP_NO_CCS	/* comp scheme */
 	);
 
 	/* NB: beacon's BufLen must be a multiple of 4 bytes */
 	ath_hal_filltxdesc(ah, ds,
-		roundup(skb->len, 4), 	/* buffer length */
-		AH_TRUE, 		/* first segment */
-		AH_TRUE, 		/* last segment */
+		roundup(skb->len, 4),	/* buffer length */
+		AH_TRUE,		/* first segment */
+		AH_TRUE,		/* last segment */
 		ds			/* first descriptor */
 	);
 
@@ -5616,7 +5616,7 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 	ds->ds_link = bf->bf_daddr;		/* link to self */
 	ds->ds_data = bf->bf_skbaddr;
 	ath_hal_setuprxdesc(ah, ds,
-		skb_tailroom(skb),  		/* buffer size */
+		skb_tailroom(skb),		/* buffer size */
 		0);
 	if (sc->sc_rxlink != NULL)
 		*sc->sc_rxlink = bf->bf_daddr;
@@ -9591,7 +9591,7 @@ enum {
 	ATH_TXANTENNA		= 9,
 	ATH_RXANTENNA		= 10,
 	ATH_DIVERSITY		= 11,
-	ATH_TXINTRPERIOD 	= 12,
+	ATH_TXINTRPERIOD	= 12,
 	ATH_FFTXQMIN		= 18,
 	ATH_XR_POLL_PERIOD 	= 21,
 	ATH_XR_POLL_COUNT 	= 22,
@@ -9780,7 +9780,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			ret = -EINVAL;
 			break;
 		}
-		if(!ret) {
+		if (!ret) {
 			ret = ATH_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos);
 		}
 	}
