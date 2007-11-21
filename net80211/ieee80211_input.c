@@ -60,6 +60,8 @@
 #include <net80211/ieee80211_var.h>
 
 #ifdef IEEE80211_DEBUG
+
+#define BUF_LEN 192 
 /*
  * Decide if a received management frame should be
  * printed when debugging is enabled.  This filters some
@@ -3734,14 +3736,17 @@ ieee80211_getbssid(struct ieee80211vap *vap, const struct ieee80211_frame *wh)
 void
 ieee80211_note(struct ieee80211vap *vap, const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[BUF_LEN];
 	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	printk("%s: %s", vap->iv_dev->name, buf);	/* NB: no \n */
+	printk("%s/%s[%s]: %s", 
+	       VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
+	       ether_sprintf(vap->iv_myaddr), 
+	       buf);	/* NB: no \n */
 }
 EXPORT_SYMBOL(ieee80211_note);
 
@@ -3749,13 +3754,15 @@ void
 ieee80211_note_frame(struct ieee80211vap *vap, const struct ieee80211_frame *wh,
 	const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[BUF_LEN];
 	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s: [%s] %s\n", vap->iv_dev->name,
+	printk("%s/%s[%s]: %s %s\n", 
+		VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
+	        ether_sprintf(vap->iv_myaddr), 
 		ether_sprintf(ieee80211_getbssid(vap, wh)), buf);
 }
 EXPORT_SYMBOL(ieee80211_note_frame);
@@ -3764,13 +3771,16 @@ void
 ieee80211_note_mac(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_LEN],
 	const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[BUF_LEN];
 	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s: [%s] %s\n", vap->iv_dev->name, ether_sprintf(mac), buf);
+	printk("%s/%s[%s]: %s %s\n", 
+	       VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
+	       ether_sprintf(vap->iv_myaddr), 
+	       ether_sprintf(mac), buf);
 }
 EXPORT_SYMBOL(ieee80211_note_mac);
 
@@ -3778,55 +3788,56 @@ static void
 ieee80211_discard_frame(struct ieee80211vap *vap, const struct ieee80211_frame *wh,
 	const char *type, const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[BUF_LEN];
 	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	if (type != NULL)
-		printk("[%s:%s] discard %s frame, %s\n", vap->iv_dev->name,
-			ether_sprintf(ieee80211_getbssid(vap, wh)), type, buf);
-	else
-		printk("[%s:%s] discard frame, %s\n", vap->iv_dev->name,
-			ether_sprintf(ieee80211_getbssid(vap, wh)), buf);
+	printk("%s/%s[%s]: %s discard %s%sframe, %s\n", 
+		VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
+		ether_sprintf(vap->iv_myaddr), 
+		ether_sprintf(ieee80211_getbssid(vap, wh)), 
+		(type != NULL) ? type : "", 
+	        (type != NULL) ? " " : "", 
+		buf);
 }
 
 static void
 ieee80211_discard_ie(struct ieee80211vap *vap, const struct ieee80211_frame *wh,
 	const char *type, const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[BUF_LEN];
 	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	if (type != NULL)
-		printk("[%s:%s] discard %s information element, %s\n",
-			vap->iv_dev->name,
-			ether_sprintf(ieee80211_getbssid(vap, wh)), type, buf);
-	else
-		printk("[%s:%s] discard information element, %s\n",
-			vap->iv_dev->name,
-			ether_sprintf(ieee80211_getbssid(vap, wh)), buf);
+	printk("%s/%s[%s]: %s discard %s%sinformation element, %s\n",
+		VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
+		ether_sprintf(vap->iv_myaddr), 
+		ether_sprintf(ieee80211_getbssid(vap, wh)), 
+		(type != NULL) ? type : "", 
+		(type != NULL) ? " " : "", 
+	        buf);
 }
 
 static void
 ieee80211_discard_mac(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_LEN],
 	const char *type, const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[BUF_LEN];
 	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	if (type != NULL)
-		printk("[%s:%s] discard %s frame, %s\n", vap->iv_dev->name,
-			ether_sprintf(mac), type, buf);
-	else
-		printk("[%s:%s] discard frame, %s\n", vap->iv_dev->name,
-			ether_sprintf(mac), buf);
+	printk("%s/%s[%s]: %s discard %s%sframe, %s\n", 
+	       VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
+	       ether_sprintf(vap->iv_myaddr), 
+	       ether_sprintf(mac), 
+	       (type != NULL) ? type : "", 
+	       (type != NULL) ? " " : "", 
+	       buf);
 }
 #endif /* IEEE80211_DEBUG */
