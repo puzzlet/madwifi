@@ -1610,3 +1610,7 @@ ieee80211_build_countryie(struct ieee80211com *ic)
 #endif
 #undef N
 }
+
+int ath_debug_global = 0;
+EXPORT_SYMBOL(ath_debug_global);
+
