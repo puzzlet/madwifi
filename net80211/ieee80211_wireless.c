@@ -64,6 +64,7 @@
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_linux.h>
+#include "ah.h"
 
 #define	IS_UP(_dev) \
 	(((_dev)->flags & (IFF_RUNNING|IFF_UP)) == (IFF_RUNNING|IFF_UP))
