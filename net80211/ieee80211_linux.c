@@ -137,7 +137,6 @@ struct sk_buff *
 ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 {
 	const u_int align = sizeof(u_int32_t);
-	struct ieee80211_cb *cb;
 	struct sk_buff *skb;
 	u_int len;
 
@@ -148,30 +147,15 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 		if (off != 0)
 			skb_reserve(skb, align - off);
 
-		cb = (struct ieee80211_cb *)skb->cb;
-		cb->ni = NULL;
-		cb->flags = 0;
-		cb->next = NULL;
+		SKB_CB(skb)->ni = NULL;
+		SKB_CB(skb)->flags = 0;
+		SKB_CB(skb)->next = NULL;
 
 		skb_reserve(skb, sizeof(struct ieee80211_frame));
 		*frm = skb_put(skb, pktlen);
 	}
 	return skb;
 }
-
-#if 0
-/*
- * Drain a queue of sk_buffs.
- */
-void
-__skb_queue_drain(struct sk_buff_head *q)
-{
-	struct sk_buff *skb;
-
-	while ((skb = __skb_dequeue(q)) != NULL)
-		dev_kfree_skb(skb);
-}
-#endif
 
 #if IEEE80211_VLAN_TAG_USED
 /*
