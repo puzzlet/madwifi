@@ -471,7 +471,7 @@ enum {
 #define	KEYPRINTF(sc, k, ix, mac)
 #endif /* defined(AR_DEBUG) */
 
-atomic_t ath_buf_counter = ATOMIC_INIT(0);
+static atomic_t ath_buf_counter = ATOMIC_INIT(0);
 
 #define ATH_SETUP_XR_VAP(sc,vap,rfilt) \
 	do { \
