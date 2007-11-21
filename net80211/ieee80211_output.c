@@ -206,6 +206,8 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ieee80211_node *ni = NULL;
 	struct ether_header *eh;
 
+	memset(SKB_CB(skb), 0, sizeof(struct ieee80211_cb));
+
 	/* NB: parent must be up and running */
 	if ((parent->flags & (IFF_RUNNING|IFF_UP)) != (IFF_RUNNING|IFF_UP))
 		goto bad;
@@ -221,6 +223,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 #endif
 		goto bad;
 	}
+	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 		ieee80211_monitor_encap(vap, skb);
 		ieee80211_parent_queue_xmit(skb);
