@@ -269,7 +269,8 @@ runtest(struct ieee80211com *ic, struct ciphertest *t)
 		dumpdata("Plaintext", t->plaintext, t->plaintext_len);
 		goto bad;
 	}
-	dev_kfree_skb(skb);
+	if (skb != NULL)
+		dev_kfree_skb(skb);
 	ieee80211_crypto_delkey(ic, &key);
 	printk("PASS\n");
 	return 1;
