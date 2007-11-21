@@ -66,16 +66,16 @@
 #include "if_media.h"
 #include "if_llc.h"
 
-#include <net80211/ieee80211_radiotap.h>
+#define	AR_DEBUG
+
 #include <net80211/ieee80211_var.h>
+#include <net80211/ieee80211_radiotap.h>
 #include <net80211/ieee80211_monitor.h>
 #include <net80211/ieee80211_rate.h>
 
 #ifdef USE_HEADERLEN_RESV
 #include <net80211/if_llc.h>
 #endif
-
-#define	AR_DEBUG
 
 #include "net80211/if_athproto.h"
 #include "if_athvar.h"
@@ -341,12 +341,24 @@ MODULE_PARM(ath_debug, "i");
 #else
 module_param(ath_debug, int, 0600);
 #endif
-MODULE_PARM_DESC(ath_debug, "Load-time debug output enable");
+MODULE_PARM_DESC(ath_debug, "Load-time driver debug output enable");
 
-#define	IFF_DUMPPKTS(sc, _m) \
-	((sc->sc_debug & _m))
+
+static int	ieee80211_debug = 0;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,52))
+MODULE_PARM(ieee80211_debug, "i");
+#else
+module_param(ieee80211_debug, int, 0600);
+#endif
+MODULE_PARM_DESC(ieee80211_debug, "Load-time 802.11 debug output enable");
+
 static void ath_printrxbuf(const struct ath_buf *, int);
 static void ath_printtxbuf(const struct ath_buf *, int);
+
+#define	DFLAG_ISSET(sc, _m) \
+	(((sc->sc_debug | ath_debug_global) & _m))
+#define	IFF_DUMPPKTS(sc, _m) \
+	DFLAG_ISSET(sc, (_m))
 enum {
 	ATH_DEBUG_XMIT		= 0x00000001,	/* basic xmit operation */
 	ATH_DEBUG_XMIT_DESC	= 0x00000002,	/* xmit descriptors */
@@ -370,15 +382,23 @@ enum {
 	ATH_DEBUG_TURBO		= 0x00400000,	/* turbo/dynamic turbo */
 	ATH_DEBUG_UAPSD		= 0x00800000,	/* uapsd */
 	ATH_DEBUG_DOTH		= 0x01000000,	/* 11.h */
+	ATH_DEBUG_DOTHFILT	= 0x02000000,	/* 11.h radar pulse filter algorithm */
+	ATH_DEBUG_DOTHFILTVBSE	= 0x04000000,	/* 11.h radar pulse filter algorithm - pulse level debug */
+	ATH_DEBUG_DOTHFILTNOSC  = 0x08000000,	/* 11.h radar pulse filter algorithm - disable short circuit of processing after detection */
+	ATH_DEBUG_DOTHPULSES    = 0x10000000,   /* 11.h radar pulse events */
+	ATH_DEBUG_TXBUF         = 0x20000000,   /* TX buffer usage/leak debugging */
+	ATH_DEBUG_SKB           = 0x40000000,   /* SKB usage/leak debugging [applies to all vaps] */
 	ATH_DEBUG_FATAL		= 0x80000000,	/* fatal errors */
-	ATH_DEBUG_ANY		= 0xffffffff
+	ATH_DEBUG_ANY		= 0xffffffff,
+	ATH_DEBUG_GLOBAL	= (ATH_DEBUG_SKB)
 };
-#define	DPRINTF(sc, _m, _fmt, ...) do {				\
-	if (sc->sc_debug & (_m))				\
-		printk(_fmt, __VA_ARGS__);			\
+#define	DPRINTF(sc, _m, _fmt, ...) do {					\
+	if (DFLAG_ISSET(sc, (_m))) {					\
+		printk("%s: " _fmt, DEV_NAME(sc->sc_dev), __VA_ARGS__);	\
+	} 								\
 } while (0)
 #define	KEYPRINTF(sc, ix, hk, mac) do {				\
-	if (sc->sc_debug & ATH_DEBUG_KEYCACHE)			\
+	if (DFLAG_ISSET(sc, ATH_DEBUG_KEYCACHE))		\
 		ath_keyprint(sc, __func__, ix, hk, mac);	\
 } while (0)
 #else /* defined(AR_DEBUG) */
@@ -404,7 +424,7 @@ enum {
  * Define the scheme that we select MAC address for multiple BSS on the same radio.
  * The very first VAP will just use the MAC address from the EEPROM.
  * For the next 3 VAPs, we set the U/L bit (bit 1) in MAC address,
- * and use the next two bits as the index of the VAP.
+ * and use the higher bits as the index of the VAP.
  */
 #define ATH_SET_VAP_BSSID_MASK(bssid_mask)      ((bssid_mask)[0] &= ~(((ATH_BCBUF-1)<<2)|0x02))
 #define ATH_GET_VAP_ID(bssid)                   ((bssid)[0] >> 2)
@@ -428,7 +448,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	u_int8_t csz;
 
 	sc->devid = devid;
-	sc->sc_debug = ath_debug;
+	ath_debug_global = (ath_debug & ATH_DEBUG_GLOBAL);
+	sc->sc_debug 	 = (ath_debug & ~ATH_DEBUG_GLOBAL);
 	DPRINTF(sc, ATH_DEBUG_ANY, "%s: devid 0x%x\n", __func__, devid);
 
 	/*
@@ -713,6 +734,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ic->ic_reset = ath_reset;
 	ic->ic_newassoc = ath_newassoc;
 	ic->ic_updateslot = ath_updateslot;
+	ic->ic_debug = 0;
 
 	ic->ic_wme.wme_update = ath_wme_update;
 	ic->ic_uapsd_flush = ath_uapsd_flush;
@@ -1120,6 +1142,24 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 	vap->iv_key_set = ath_key_set;
 	vap->iv_key_update_begin = ath_key_update_begin;
 	vap->iv_key_update_end = ath_key_update_end;
+	if(sc->sc_default_ieee80211_debug) {
+		/* User specified defaults for new VAPs were provided, so
+		 * use those (only). */
+		vap->iv_debug = (sc->sc_default_ieee80211_debug & ~IEEE80211_MSG_IC);
+	}
+	else {
+		/* MT: If no default VAP debug flags are passed, allow a few to
+		 * transfer down from the driver to new VAPs so we can have load
+		 * time debugging for VAPs too. */
+		vap->iv_debug = 0 |
+			((sc->sc_debug & ATH_DEBUG_RATE) ? IEEE80211_MSG_XRATE  : 0) | 
+			((sc->sc_debug & ATH_DEBUG_XMIT) ? IEEE80211_MSG_OUTPUT : 0) | 
+			((sc->sc_debug & ATH_DEBUG_RECV) ? IEEE80211_MSG_INPUT  : 0) |
+			0
+			;
+	}
+	ic->ic_debug = (sc->sc_default_ieee80211_debug & IEEE80211_MSG_IC);
+
 #ifdef ATH_SUPERG_COMP
 	vap->iv_comp_set = ath_comp_set;
 #endif
@@ -9559,7 +9599,8 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				sc->sc_ledpin = val;
 				break;
 			case ATH_DEBUG:
-				sc->sc_debug = val;
+				sc->sc_debug 	 = (val & ~ATH_DEBUG_GLOBAL);
+				ath_debug_global = (val &  ATH_DEBUG_GLOBAL);
 				break;
 			case ATH_TXANTENNA:
 				/*
@@ -9660,7 +9701,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			ath_hal_getregdomain(ah, &val);
 			break;
 		case ATH_DEBUG:
-			val = sc->sc_debug;
+			val = sc->sc_debug | ath_debug_global;
 			break;
 		case ATH_TXANTENNA:
 			val = sc->sc_txantenna;
@@ -9865,7 +9906,9 @@ ath_dynamic_sysctl_register(struct ath_softc *sc)
 	}
 
 	/* initialize values */
-	sc->sc_debug = ath_debug;
+	ath_debug_global = (ath_debug & ATH_DEBUG_GLOBAL);
+	sc->sc_debug 	 = (ath_debug & ~ATH_DEBUG_GLOBAL);
+	sc->sc_default_ieee80211_debug = ieee80211_debug;
 	sc->sc_txantenna = 0;		/* default to auto-selection */
 	sc->sc_txintrperiod = ATH_TXQ_INTR_PERIOD;
 }

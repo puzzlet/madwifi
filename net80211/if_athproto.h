@@ -68,15 +68,15 @@ struct athl2p_tunnel_hdr {
  * Offset of 8B into cb[] is used to preserve vlan tag info.
  */
 #define ATH_FF_MAGIC_PUT(_skb) \
-	(((struct ieee80211_cb *) (_skb)->cb)->flags |= M_FF)
+	(SKB_CB(_skb)->flags |= M_FF)
 #define ATH_FF_MAGIC_CLR(_skb) \
-	(((struct ieee80211_cb *) (_skb)->cb)->flags &= ~M_FF)
+	(SKB_CB(_skb)->flags &= ~M_FF)
 #define ATH_FF_MAGIC_PRESENT(_skb) \
-	((((struct ieee80211_cb *) (_skb)->cb)->flags & M_FF) != 0)
+	((SKB_CB(_skb)->flags & M_FF) != 0)
 #define ATH_FF_NEXTSKB_PUT(_skb, _next) \
-	(((struct ieee80211_cb *) (_skb)->cb)->next = _next)
+	(SKB_CB(_skb)->next = _next)
 #define ATH_FF_NEXTSKB_GET(_skb) \
-	(((struct ieee80211_cb *) (_skb)->cb)->next)
+	(SKB_CB(_skb)->next)
 
 /*
  * default value for the minimum txq depth required for an ath_buf to be

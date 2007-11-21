@@ -54,6 +54,7 @@
 static const char *progname;
 
 enum {
+	IEEE80211_MSG_NODE_REF	= 0x80000000,   /* node reference counting */
 	IEEE80211_MSG_DEBUG	= 0x40000000,	/* IFF_DEBUG equivalent */
 	IEEE80211_MSG_DUMPPKTS	= 0x20000000,	/* IFF_LINK2 equivalent, dump packets */
 	IEEE80211_MSG_CRYPTO	= 0x10000000,	/* crypto modules */
@@ -79,7 +80,8 @@ enum {
 	IEEE80211_MSG_DOTH	= 0x00000100,	/* 11.h */
 	IEEE80211_MSG_INACT	= 0x00000080,	/* inactivity handling */
 	IEEE80211_MSG_ROAM	= 0x00000040,	/* sta-mode roaming */
-	IEEE80211_MSG_ANY	= 0xffffffff
+	IEEE80211_MSG_ANY	= 0xffffffff,
+	IEEE80211_MSG_IC	= (IEEE80211_MSG_NODE_REF)
 };
 
 static struct {
@@ -87,6 +89,7 @@ static struct {
 	u_int		bit;
 	const char *desc;
 } flags[] = {
+	{ "node_ref",   IEEE80211_MSG_NODE_REF, "node ref counting (affects all devs)" },
 	{ "debug",	IEEE80211_MSG_DEBUG, "IFF_DEBUG equivalent" },
 	{ "dumppkts",	IEEE80211_MSG_DUMPPKTS,  "dump packets" },
 	{ "crypto",	IEEE80211_MSG_CRYPTO, "crypto modules" },

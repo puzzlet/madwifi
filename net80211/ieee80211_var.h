@@ -363,6 +363,8 @@ struct ieee80211com {
 	u_int8_t ic_chanchange_tbtt;
 	u_int8_t ic_chanchange_chan;
 
+	/* Global debug flags applicable to all VAPs */
+	int ic_debug;
 	/* Virtual AP create/delete */
 	struct ieee80211vap *(*ic_vap_create)(struct ieee80211com *,
 		const char *, int, int, struct net_device *);
@@ -416,6 +418,7 @@ struct ieee80211com {
 	unsigned int (*ic_read_register)(struct ieee80211com *, unsigned int, unsigned int*);
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
 };
+
 
 #define MAX_PROC_IEEE80211_SIZE 16383
 #define PROC_IEEE80211_PERM 0644

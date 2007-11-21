@@ -547,6 +547,7 @@ struct ath_softc {
 	struct ath_stats sc_stats;		/* private statistics */
 	int devid;
 	int sc_debug;
+	int sc_default_ieee80211_debug;		/* default debug flags for new VAPs */
 	void (*sc_recv_mgmt)(struct ieee80211_node *, struct sk_buff *, int, int, u_int64_t);
 	void (*sc_node_cleanup)(struct ieee80211_node *);
 	void (*sc_node_free)(struct ieee80211_node *);

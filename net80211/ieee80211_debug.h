@@ -37,13 +37,21 @@
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211.h>
 
+/* Set to true if ANY sc has skb debugging on */
+extern int ath_debug_global;
+enum {
+	GLOBAL_DEBUG_SKB      = 0x40000000,     /* SKB usage/leak debugging,
+	                                           must match ATH_DEBUG_SKB */
+};
+
+#define IEEE80211_MSG_NODE_REF  0x80000000      /* node ref counting */
 #define	IEEE80211_MSG_DEBUG	0x40000000	/* IFF_DEBUG equivalent */
 #define	IEEE80211_MSG_DUMPPKTS	0x20000000	/* IFF_LINK2 equivalent */
 #define	IEEE80211_MSG_CRYPTO	0x10000000	/* crypto work */
 #define	IEEE80211_MSG_INPUT	0x08000000	/* input handling */
 #define	IEEE80211_MSG_XRATE	0x04000000	/* rate set handling */
 #define	IEEE80211_MSG_ELEMID	0x02000000	/* element id parsing */
-#define	IEEE80211_MSG_NODE	0x01000000	/* node handling */
+#define	IEEE80211_MSG_NODE	0x01000000	/* node management */
 #define	IEEE80211_MSG_ASSOC	0x00800000	/* association handling */
 #define	IEEE80211_MSG_AUTH	0x00400000	/* authentication handling */
 #define	IEEE80211_MSG_SCAN	0x00200000	/* scanning */
@@ -65,8 +73,11 @@
 
 #define	IEEE80211_MSG_ANY	0xffffffff	/* anything */
 
+#define IEEE80211_MSG_IC	(IEEE80211_MSG_NODE_REF) /* shared for all VAP */
+
 #ifdef IEEE80211_DEBUG
-#define ieee80211_msg_is_reported(_vap, m)	(!!((_vap)->iv_debug & (m)))
+#define ieee80211_msg_is_reported(_vap, m) \
+	(!!(((_vap)->iv_debug) & (m)))
 #define	IEEE80211_DPRINTF(_vap, _m, _fmt, ...) do {			\
 	if (ieee80211_msg_is_reported(_vap, _m))					\
 		ieee80211_note(_vap, _fmt, __VA_ARGS__);		\

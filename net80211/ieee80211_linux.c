@@ -538,10 +538,13 @@ IEEE80211_SYSCTL_DECL(ieee80211_sysctl_debug, ctl, write, filp, buffer,
 	if (write) {
 		ret = IEEE80211_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer,
 			lenp, ppos);
-		if (ret == 0)
-			vap->iv_debug = val;
+		if (ret == 0) {
+			vap->iv_debug 		= (val & ~IEEE80211_MSG_IC);
+			vap->iv_ic->ic_debug 	= (val &  IEEE80211_MSG_IC);
+		}
 	} else {
-		val = vap->iv_debug;
+		/* VAP specific and 'global' debug flags */
+		val = vap->iv_debug | vap->iv_ic->ic_debug;
 		ret = IEEE80211_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer,
 			lenp, ppos);
 	}
