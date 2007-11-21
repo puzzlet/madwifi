@@ -29,6 +29,9 @@
 #ifndef _NET80211_IEEE80211_LINUX_H_
 #define _NET80211_IEEE80211_LINUX_H_
 
+#define	IEEE80211_DEBUG
+#define	IEEE80211_DEBUG_REFCNT			/* Node reference count debugging */
+
 #include <linux/wireless.h>
 #include <linux/fs.h>
 

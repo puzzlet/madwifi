@@ -35,9 +35,6 @@
 #ifndef _NET80211_IEEE80211_VAR_H_
 #define _NET80211_IEEE80211_VAR_H_
 
-#define	IEEE80211_DEBUG
-#define	IEEE80211_DEBUG_REFCNT			/* Node reference count debugging */
-
 /* Definitions for IEEE 802.11 drivers. */
 #include <net80211/ieee80211_linux.h>
 
