@@ -1092,7 +1092,6 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct net_device *dev = vap->iv_dev;
 	struct ether_header *eh = (struct ether_header *) skb->data;
-	struct ieee80211_node * ni_tmp = NULL;
 
 #ifdef ATH_SUPERG_XR
 	/*
@@ -1139,6 +1138,7 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 			}
 		}
 		if (skb1 != NULL) {
+			struct ieee80211_node *ni_tmp;
 			skb1->dev = dev;
 			skb_reset_mac_header(skb1);
 			skb_set_network_header(skb1, sizeof(struct ether_header));
@@ -1156,8 +1156,6 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 			}
 			/* skb is no longer ours, either way after dev_queue_xmit */
 			skb1 = NULL; 
-			/* no need to free node reference */
-			ni_tmp = NULL;
 		}
 	}
 
