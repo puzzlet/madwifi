@@ -68,6 +68,7 @@ MOD_INSTALL	:= wlan.o wlan_wep.o wlan_tkip.o wlan_ccmp.o wlan_acl.o \
 obj-m		+= $(MOD_INSTALL)
 
 wlan-objs	:= if_media.o \
+		   ieee80211_skb.o \
 		   ieee80211.o ieee80211_beacon.o ieee80211_crypto.o \
 		   ieee80211_crypto_none.o ieee80211_input.o ieee80211_node.o \
 		   ieee80211_output.o ieee80211_power.o ieee80211_proto.o \

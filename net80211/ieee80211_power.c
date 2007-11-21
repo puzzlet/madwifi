@@ -109,16 +109,15 @@ ieee80211_power_vdetach(struct ieee80211vap *vap)
 int
 ieee80211_node_saveq_drain(struct ieee80211_node *ni)
 {
-	struct ieee80211_cb *cb = NULL;
 	struct sk_buff *skb;
 	int qlen;
 
 	IEEE80211_NODE_SAVEQ_LOCK_IRQ(ni);
 	qlen = IEEE80211_NODE_SAVEQ_QLEN(ni);
 	while ((skb = __skb_dequeue(&ni->ni_savedq)) != NULL) {
-		cb = (struct ieee80211_cb *) skb->cb;
-		ieee80211_unref_node(&cb->ni);
-		dev_kfree_skb_any(skb);
+		if (SKB_CB(skb)->ni != NULL)
+			ieee80211_unref_node(&SKB_CB(skb)->ni);
+		ieee80211_dev_kfree_skb(&skb);
 	}
 	IEEE80211_NODE_SAVEQ_UNLOCK_IRQ(ni);
 
@@ -154,7 +153,9 @@ ieee80211_node_saveq_age(struct ieee80211_node *ni)
 				"discard frame, age %u", M_AGE_GET(skb));
 
 			skb = __skb_dequeue(&ni->ni_savedq);
-			dev_kfree_skb_any(skb);
+			if( SKB_CB(skb)->ni != NULL )
+				ieee80211_unref_node(&SKB_CB(skb)->ni);
+			ieee80211_dev_kfree_skb(&skb);
 			discard++;
 		}
 		if (skb != NULL)
@@ -223,7 +224,9 @@ ieee80211_pwrsave(struct ieee80211_node *ni, struct sk_buff *skb)
 		if (ieee80211_msg_dumppkts(vap))
 			ieee80211_dump_pkt(ni->ni_ic, skb->data, skb->len, -1, -1);
 #endif
-		dev_kfree_skb(skb);
+		if( SKB_CB(skb)->ni != NULL )
+			ieee80211_unref_node(&SKB_CB(skb)->ni);
+		ieee80211_dev_kfree_skb(&skb);
 		return;
 	}
 

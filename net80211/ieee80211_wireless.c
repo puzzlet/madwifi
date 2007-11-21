@@ -3281,8 +3281,10 @@ ieee80211_ioctl_setkey(struct net_device *dev, struct iw_request_info *info,
 			return -EINVAL;
 		if (vap->iv_opmode == IEEE80211_M_STA) {
 			ni = ieee80211_ref_node(vap->iv_bss);
-			if (!IEEE80211_ADDR_EQ(ik->ik_macaddr, ni->ni_bssid))
+			if (!IEEE80211_ADDR_EQ(ik->ik_macaddr, ni->ni_bssid)) {
+				ieee80211_unref_node(&ni);
 				return -EADDRNOTAVAIL;
+			}
 		} else
 			ni = ieee80211_find_node(&ic->ic_sta, ik->ik_macaddr);
 		if (ni == NULL)

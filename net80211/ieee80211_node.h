@@ -82,6 +82,8 @@ struct ieee80211_rsnparms {
 struct ieee80211_node_table;
 struct ieee80211com;
 struct ieee80211vap;
+struct ath_buf;
+struct ath_softc;
 
 /*
  * Node specific information.  Note that drivers are expected
@@ -95,7 +97,7 @@ struct ieee80211_node {
 	struct ieee80211_node_table *ni_table;
 	TAILQ_ENTRY(ieee80211_node) ni_list;
 	LIST_ENTRY(ieee80211_node) ni_hash;
-	ieee80211_node_ref_count_t ni_refcnt;
+	atomic_t ni_refcnt;
 	u_int ni_scangen;			/* gen# for timeout scan */
 	u_int8_t ni_authmode;			/* authentication algorithm */
 	u_int16_t ni_flags;			/* special-purpose state */
@@ -246,112 +248,179 @@ struct ieee80211_node_table {
 	struct timer_list nt_wds_aging_timer;	/* timer to age out wds entries */
 };
 
+/* Allocates a new ieee80211_node* that has a reference count of one, and adds it to the node table. */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_alloc_node_table(_vap, _mac) \
+	ieee80211_alloc_node_table_debug(_vap, _mac, __func__, __LINE__)
+struct ieee80211_node *ieee80211_alloc_node_table_debug(struct ieee80211vap *,
+	const u_int8_t *, const char* name, int line);
+#else
 struct ieee80211_node *ieee80211_alloc_node_table(struct ieee80211vap *,
 	const u_int8_t *);
-struct ieee80211_node *ieee80211_dup_bss(struct ieee80211vap *,
-	const u_int8_t *, unsigned char);
-void ieee80211_node_reset(struct ieee80211_node *, struct ieee80211vap *);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+/* Allocates a new ieee80211_node* that has a reference count.  
+ * If tmp is 0, it is added to the node table and the reference is used.
+ * If tmp is 1, then the caller gets to use the reference. */
 #ifdef IEEE80211_DEBUG_REFCNT
-struct ieee80211_node *ieee80211_find_node_debug(struct ieee80211_node_table *,
-	const u_int8_t *, const char *, int);
-struct ieee80211_node *ieee80211_find_rxnode_debug(struct ieee80211com *,
-	const struct ieee80211_frame_min *, const char *, int);
-struct ieee80211_node *ieee80211_find_txnode_debug(struct ieee80211vap *,
-	const u_int8_t *, const char *, int);
-#define	ieee80211_unref_node(_ni) \
-	ieee80211_unref_node_debug(_ni, __func__, __LINE__)
+#define ieee80211_dup_bss(_vap, _mac, _tmp) \
+	ieee80211_dup_bss_debug(_vap, _mac, _tmp, __func__, __LINE__)
+struct ieee80211_node *ieee80211_dup_bss_debug(struct ieee80211vap *,
+	const u_int8_t *, unsigned char tmp, const char*, int);
+#else
+struct ieee80211_node *ieee80211_dup_bss(struct ieee80211vap *,
+	const u_int8_t *, unsigned char tmp);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+void ieee80211_node_reset(struct ieee80211_node *, struct ieee80211vap *);
+
+/* Returns a ieee80211_node* with refcount incremented, if found */
+#ifdef IEEE80211_DEBUG_REFCNT
 #define	ieee80211_find_node(_nt, _mac) \
 	ieee80211_find_node_debug(_nt, _mac, __func__, __LINE__)
-#define	ieee80211_find_rxnode(_nt, _wh) \
-	ieee80211_find_rxnode_debug(_nt, _wh, __func__, __LINE__)
-#define	ieee80211_find_txnode(_nt, _mac) \
-	ieee80211_find_txnode_debug(_nt, _mac, __func__, __LINE__)
+struct ieee80211_node *ieee80211_find_node_debug(struct ieee80211_node_table *,
+	const u_int8_t *, const char *, int);
 #else
-
 struct ieee80211_node *ieee80211_find_node(struct ieee80211_node_table *,
 	const u_int8_t *);
-struct ieee80211_node * ieee80211_find_rxnode(struct ieee80211com *,
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+/* Returns a ieee80211_node* with refcount incremented, if found */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define	ieee80211_find_rxnode(_nt, _wh) \
+	ieee80211_find_rxnode_debug(_nt, _wh, __func__, __LINE__)
+struct ieee80211_node *ieee80211_find_rxnode_debug(struct ieee80211com *,
+	const struct ieee80211_frame_min *, const char *, int);
+#else
+struct ieee80211_node *ieee80211_find_rxnode(struct ieee80211com *,
 	const struct ieee80211_frame_min *);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+/* Returns a ieee80211_node* with refcount incremented, if found */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define	ieee80211_find_txnode(_nt, _mac) \
+	ieee80211_find_txnode_debug(_nt, _mac, __func__, __LINE__)
+struct ieee80211_node *ieee80211_find_txnode_debug(struct ieee80211vap *,
+	const u_int8_t *, const char *, int);
+#else
 struct ieee80211_node *ieee80211_find_txnode(struct ieee80211vap *,
 	const u_int8_t *);
-#endif
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 
-void _ieee80211_free_node(struct ieee80211_node *);
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_free_node(_ni) \
+	ieee80211_free_node_debug(_ni, __func__, __LINE__)
+void ieee80211_free_node_debug(struct ieee80211_node *ni, const char *func, int line);
+#else
+void ieee80211_free_node(struct ieee80211_node *ni);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 
 /* Reference counting only needs to be locked out against the transitions,
  * 0->1 and 1->0 (i.e., when we do not own the reference we are getting).
  * This only happens when finding the a node reference from the node table,
  * which is locked seperately. Thus, we do not need to lock the follwoing 
- * functions. */
+ * functions. 
+ * Increment the reference counter for ieee80211_node*
+ */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_ref_node(_ni) \
+	ieee80211_ref_node_debug(_ni, __func__, __LINE__)
+struct ieee80211_node *
+ieee80211_ref_node_debug(struct ieee80211_node *ni, const char *func, int line);
+#else
+struct ieee80211_node *
+ieee80211_ref_node(struct ieee80211_node *ni);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+#define PASS_NODE(_ni) \
+	ieee80211_pass_node(&_ni)
 
 static __inline struct ieee80211_node *
-ieee80211_ref_node(struct ieee80211_node *ni)
-{
-	ieee80211_node_incref(ni);
-	return ni;
-}
-
-static __inline struct ieee80211_node *
-_ieee80211_pass_node(struct ieee80211_node **pni) {
+ieee80211_pass_node(struct ieee80211_node **pni) {
 	struct ieee80211_node *tmp = *pni;
 	*pni = NULL;
 	return (tmp);
 }
 
-#define PASS_NODE(_ni) \
-	_ieee80211_pass_node(&_ni)
-
-static __inline int
-_ieee80211_unref_node(struct ieee80211_node *ni) {
-	if (ieee80211_node_dectestref(ni)) {
-		_ieee80211_free_node(ni);
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-static __inline void
+/* Decrement ieee80211_node* refcunt, and relinquish the pointer. */
 #ifdef IEEE80211_DEBUG_REFCNT
-ieee80211_unref_node_debug(struct ieee80211_node **pni, const char *func, int line)
+#define ieee80211_unref_node(_pni) \
+	ieee80211_unref_node_debug(_pni, __func__, __LINE__)
+void
+ieee80211_unref_node_debug(struct ieee80211_node **pni, const char *func, int line);
 #else
-ieee80211_unref_node(struct ieee80211_node **pni)
-#endif
-{
-	struct ieee80211_node *ni = *pni;
-#ifdef IEEE80211_DEBUG_REFCNT
-	IEEE80211_DPRINTF(ni->ni_vap, IEEE80211_MSG_NODE,
-		"%s (%s:%u) %p<%s> refcnt %d\n", __func__, func, line, ni,
-		 ether_sprintf(ni->ni_macaddr), ieee80211_node_refcnt(ni) - 1);
-#endif
-	_ieee80211_unref_node(ni);
-	*pni = NULL;			/* guard against use */
-}
+void
+ieee80211_unref_node(struct ieee80211_node **pni);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 
+/* Increments reference count of ieee80211_node *ni */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_add_wds_addr(_table, _node, _mac, _static) \
+	ieee80211_add_wds_addr_debug(_table, _node, _mac, _static, __func__, __LINE__)
+int ieee80211_add_wds_addr_debug(struct ieee80211_node_table *, struct ieee80211_node *,
+	const u_int8_t *, u_int8_t, const char* func, int line);
+#else
 int ieee80211_add_wds_addr(struct ieee80211_node_table *, struct ieee80211_node *,
 	const u_int8_t *, u_int8_t);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+/* Decrements reference count of ieee80211_node *ni */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_remove_wds_addr(_table, _mac) \
+	ieee80211_remove_wds_addr_debug(_table, _mac, __func__, __LINE__)
+void ieee80211_remove_wds_addr_debug(struct ieee80211_node_table *, const u_int8_t *,
+			       const char* func, int line);
+#else
 void ieee80211_remove_wds_addr(struct ieee80211_node_table *, const u_int8_t *);
-void ieee80211_del_wds_node(struct ieee80211_node_table *,
-	struct ieee80211_node *);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+/* Decrements reference count of node, if found */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_del_wds_node(_table, _node) \
+	ieee80211_del_wds_node_debug(_table, _node, __func__, __LINE__)
+void ieee80211_del_wds_node_debug(struct ieee80211_node_table *, struct ieee80211_node *,
+			    const char* func, int line);
+#else
+void ieee80211_del_wds_node(struct ieee80211_node_table *, struct ieee80211_node *);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+/* Increments reference count of node, if found */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_find_wds_node(_table, _mac) \
+	ieee80211_find_wds_node_debug(_table, _mac, __func__, __LINE__)
+struct ieee80211_node *ieee80211_find_wds_node_debug(struct ieee80211_node_table *,
+	const u_int8_t *, const char* func, int line);
+#else
 struct ieee80211_node *ieee80211_find_wds_node(struct ieee80211_node_table *,
 	const u_int8_t *);
-
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 typedef void ieee80211_iter_func(void *, struct ieee80211_node *);
 void ieee80211_iterate_nodes(struct ieee80211_node_table *,
 	ieee80211_iter_func *, void *);
 void ieee80211_iterate_dev_nodes(struct net_device *,
 	struct ieee80211_node_table *, ieee80211_iter_func *, void *);
-
 void	ieee80211_dump_node(struct ieee80211_node_table *,
 	struct ieee80211_node *);
 void	ieee80211_dump_nodes(struct ieee80211_node_table *);
-
+/* Returns a node with refcount of one.  Caller must release that reference */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_fakeup_adhoc_node(_vap, _mac) \
+	ieee80211_fakeup_adhoc_node_debug(_vap, _mac, __func__, __LINE__)
+struct ieee80211_node *ieee80211_fakeup_adhoc_node_debug(struct ieee80211vap *,
+	const u_int8_t macaddr[], const char*, int);
+#else
 struct ieee80211_node *ieee80211_fakeup_adhoc_node(struct ieee80211vap *,
 	const u_int8_t macaddr[]);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 struct ieee80211_scanparams;
+/* Returns a node with refcount of one.  Caller must release that reference */
 struct ieee80211_node *ieee80211_add_neighbor(struct ieee80211vap *,
 	const struct ieee80211_frame *, const struct ieee80211_scanparams *);
+/* Increments reference count of node */
 void ieee80211_node_join(struct ieee80211_node *, int);
+/* Decrements reference count of node */
 void ieee80211_node_leave(struct ieee80211_node *);
 u_int8_t ieee80211_getrssi(struct ieee80211com *);
+int32_t ieee80211_get_node_count(struct ieee80211com *);
 #endif /* _NET80211_IEEE80211_NODE_H_ */
+

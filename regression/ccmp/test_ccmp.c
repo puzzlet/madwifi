@@ -612,7 +612,7 @@ runtest(struct ieee80211com *ic, struct ciphertest *t)
 	 * Craft frame from plaintext data.
 	 */
 	cip = key.wk_cipher;
-	skb = dev_alloc_skb(t->plaintext_len +
+	skb = ieee80211_dev_alloc_skb(t->plaintext_len +
 		cip->ic_header + cip->ic_trailer);
 	if (skb == NULL) {
 		printk("FAIL: unable to allocate skbuff\n");
@@ -667,13 +667,13 @@ runtest(struct ieee80211com *ic, struct ciphertest *t)
 			t->plaintext, sizeof(t->plaintext));
 		goto bad;
 	}
-	dev_kfree_skb(skb);
+	ieee80211_dev_kfree_skb(&skb);
 	ieee80211_crypto_delkey(ic, &key);
 	printk("PASS\n");
 	return 1;
 bad:
 	if (skb != NULL)
-		dev_kfree_skb(skb);
+		ieee80211_dev_kfree_skb(&skb);
 	ieee80211_crypto_delkey(ic, &key);
 	return 0;
 }

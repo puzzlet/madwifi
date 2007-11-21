@@ -134,14 +134,22 @@ if_printf(struct net_device *dev, const char *fmt, ...)
  * can use this interface too.
  */
 struct sk_buff *
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_getmgtframe_debug(u_int8_t **frm, u_int pktlen, const char* func, int line)
+#else
 ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
+#endif
 {
 	const u_int align = sizeof(u_int32_t);
 	struct sk_buff *skb;
 	u_int len;
 
 	len = roundup(sizeof(struct ieee80211_frame) + pktlen, 4);
-	skb = dev_alloc_skb(len + align - 1);
+#ifdef IEEE80211_DEBUG_REFCNT
+	skb = ieee80211_dev_alloc_skb_debug(len + align - 1, func, line);
+#else
+	skb = ieee80211_dev_alloc_skb(len + align - 1);
+#endif
 	if (skb != NULL) {
 		u_int off = ((unsigned long) skb->data) % align;
 		if (off != 0)
@@ -156,6 +164,11 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 	}
 	return skb;
 }
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_getmgtframe_debug);
+#else
+EXPORT_SYMBOL(ieee80211_getmgtframe);
+#endif 
 
 #if IEEE80211_VLAN_TAG_USED
 /*

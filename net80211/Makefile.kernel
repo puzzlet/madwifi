@@ -43,7 +43,7 @@ wlan-objs	:= if_media.o \
 		   ieee80211_crypto_none.o ieee80211_input.o ieee80211_node.o \
 		   ieee80211_output.o ieee80211_proto.o ieee80211_power.o \
 		   ieee80211_scan.o ieee80211_wireless.o ieee80211_linux.o \
-		   ieee80211_monitor.o ieee80211_rate.o
+		   ieee80211_monitor.o ieee80211_rate.o ieee80211_skb.o
 wlan_wep-objs	:= ieee80211_crypto_wep.o
 wlan_tkip-objs	:= ieee80211_crypto_tkip.o
 wlan_ccmp-objs	:= ieee80211_crypto_ccmp.o
@@ -59,7 +59,8 @@ export-objs	:= if_media.o \
 		   ieee80211_output.o ieee80211_power.o ieee80211_proto.o \
 		   ieee80211_scan.o ieee80211_wireless.o ieee80211_linux.o \
 		   ieee80211_crypto_wep.o ieee80211_crypto_tkip.o \
-		   ieee80211_crypto_ccmp.o ieee80211_xauth.o ieee80211_rate.o
+		   ieee80211_crypto_ccmp.o ieee80211_xauth.o ieee80211_rate.o \
+		   ieee80211_skb.o
 list-multi	:= wlan.o wlan_wep.o wlan_tkip.o wlan_ccmp.o wlan_acl.o \
 		   $(MOD_AUTH) $(MOD_SCAN)
 

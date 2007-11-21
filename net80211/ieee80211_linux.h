@@ -314,6 +314,9 @@ struct ieee80211_cb {
 #define	M_PWR_SAV	0x04			/* bypass power save handling */
 #define M_UAPSD		0x08			/* frame flagged for u-apsd handling */
 #define M_RAW           0x10
+#ifdef IEEE80211_DEBUG_REFCNT
+	int tracked;
+#endif
 	struct sk_buff *next;			/* fast frame sk_buf chain */
 };
 
@@ -353,23 +356,6 @@ struct ieee80211com;
 struct ieee80211vap;
 
 int ieee80211_load_module(const char *);
-
-/*
- * Node reference counting definitions.
- *
- * ieee80211_node_initref	initialize the reference count to 1
- * ieee80211_node_incref	add a reference
- * ieee80211_node_decref	remove a reference
- * ieee80211_node_dectestref	remove a reference and return 1 if this
- *				is the last reference, otherwise 0
- * ieee80211_node_refcnt	reference count for printing (only)
- */
-typedef atomic_t ieee80211_node_ref_count_t;
-#define ieee80211_node_initref(_ni)	atomic_set(&(_ni)->ni_refcnt, 1)
-#define ieee80211_node_incref(_ni)	atomic_inc(&(_ni)->ni_refcnt)
-#define	ieee80211_node_decref(_ni)	atomic_dec(&(_ni)->ni_refcnt)
-#define	ieee80211_node_dectestref(_ni)	atomic_dec_and_test(&(_ni)->ni_refcnt)
-#define	ieee80211_node_refcnt(_ni)	atomic_read(&(_ni)->ni_refcnt)
 
 #define	le16toh(_x)	le16_to_cpu(_x)
 #define	htole16(_x)	cpu_to_le16(_x)
@@ -414,7 +400,15 @@ extern const char *ether_sprintf(const u_int8_t *);
 /*
  * Queue write-arounds and support routines.
  */
-extern	struct sk_buff *ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen);
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_getmgtframe(_ppfrm, _pktlen) \
+	ieee80211_getmgtframe_debug(_ppfrm, _pktlen, __func__, __LINE__)
+extern struct sk_buff * ieee80211_getmgtframe_debug(u_int8_t **frm, u_int pktlen, 
+						    const char* func, int line);
+#else
+extern struct sk_buff * ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen);
+#endif
+
 #define	IF_ENQUEUE(_q,_skb)	skb_queue_tail(_q, _skb)
 #define	IF_DEQUEUE(_q,_skb)	(_skb = skb_dequeue(_q))
 #define	_IF_QLEN(_q)		skb_queue_len(_q)

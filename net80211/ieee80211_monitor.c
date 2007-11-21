@@ -388,8 +388,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 		case ARPHRD_IEEE80211_PRISM: {
 			struct wlan_ng_prism2_header *ph;
 			if (skb_headroom(skb1) < sizeof(struct wlan_ng_prism2_header)) {
-				dev_kfree_skb(skb1);
-				skb1 = NULL;
+				ieee80211_dev_kfree_skb(&skb1);
 				break;
 			}
 
@@ -456,8 +455,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				struct ath_tx_radiotap_header *th;
 				if (skb_headroom(skb1) < sizeof(struct ath_tx_radiotap_header)) {
 					printk("%s:%d %s\n", __FILE__, __LINE__, __func__);
-					dev_kfree_skb(skb1);
-					skb1 = NULL;
+					ieee80211_dev_kfree_skb(&skb1);
 					break;
 				}
 
@@ -486,8 +484,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				struct ath_rx_radiotap_header *th;
 				if (skb_headroom(skb1) < sizeof(struct ath_rx_radiotap_header)) {
 					printk("%s:%d %s\n", __FILE__, __LINE__, __func__);
-					dev_kfree_skb(skb1);
-					skb1 = NULL;
+					ieee80211_dev_kfree_skb(&skb1);
 					break;
 				}
 
@@ -547,8 +544,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 		case ARPHRD_IEEE80211_ATHDESC: {
 			if (skb_headroom(skb1) < ATHDESC_HEADER_SIZE) {
 				printk("%s:%d %s\n", __FILE__, __LINE__, __func__);
-				dev_kfree_skb(skb1);
-				skb1 = NULL;
+				ieee80211_dev_kfree_skb(&skb1);
 				break;
 			}
 			memcpy(skb_push(skb1, ATHDESC_HEADER_SIZE), ds, ATHDESC_HEADER_SIZE);

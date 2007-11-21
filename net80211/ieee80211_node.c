@@ -65,17 +65,44 @@
 #define	IEEE80211_AID_ISSET(_vap, _b) \
 	((_vap)->iv_aid_bitmap[IEEE80211_AID(_b) / 32] & (1 << (IEEE80211_AID(_b) % 32)))
 
+#ifdef IEEE80211_DEBUG_REFCNT
+#define ieee80211_alloc_node(_vap, _mac) \
+	ieee80211_alloc_node_debug(_vap, _mac, __func__, __LINE__)
+static struct ieee80211_node *ieee80211_alloc_node_debug(struct ieee80211vap *, const u_int8_t *, const char* func, int line);
+#else
 static struct ieee80211_node *ieee80211_alloc_node(struct ieee80211vap *, const u_int8_t *);
+#endif
 
 static int ieee80211_sta_join1(struct ieee80211_node *);
 
+#ifdef IEEE80211_DEBUG_REFCNT
+static struct ieee80211_node *node_alloc_debug(struct ieee80211vap *, const char* func, int line);
+static void node_cleanup_debug(struct ieee80211_node *, const char* func, int line);
+static void node_free_debug(struct ieee80211_node *, const char* func, int line);
+#else /* #ifdef IEEE80211_DEBUG_REFCNT */
 static struct ieee80211_node *node_alloc(struct ieee80211vap *);
 static void node_cleanup(struct ieee80211_node *);
 static void node_free(struct ieee80211_node *);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+
+static int32_t node_count(struct ieee80211com *ic);
 static u_int8_t node_getrssi(const struct ieee80211_node *);
 
-static void _node_table_leave(struct ieee80211_node_table *, struct ieee80211_node *);
-static void _node_table_join(struct ieee80211_node_table *, struct ieee80211_node *);
+#ifdef IEEE80211_DEBUG_REFCNT
+#define node_table_leave_locked(_table, _node) \
+	node_table_leave_locked_debug(_table, _node, __func__, __LINE__)
+static void node_table_leave_locked_debug(struct ieee80211_node_table *, struct ieee80211_node *, const char* func, int line);
+#else
+static void node_table_leave_locked(struct ieee80211_node_table *, struct ieee80211_node *);
+#endif
+
+#ifdef IEEE80211_DEBUG_REFCNT
+#define node_table_join_locked(_table, _node) \
+	node_table_join_locked_debug(_table, _node, __func__, __LINE__)
+static void node_table_join_locked_debug(struct ieee80211_node_table *, struct ieee80211_node *, const char* func, int line);
+#else
+static void node_table_join_locked(struct ieee80211_node_table *, struct ieee80211_node *);
+#endif
 
 static void ieee80211_node_timeout(unsigned long);
 
@@ -99,9 +126,17 @@ ieee80211_node_attach(struct ieee80211com *ic)
 	ic->ic_inact.expires = jiffies + IEEE80211_INACT_WAIT * HZ;
 	add_timer(&ic->ic_inact);
 
+#ifdef IEEE80211_DEBUG_REFCNT
+	ic->ic_node_alloc_debug = node_alloc_debug;
+	ic->ic_node_free_debug = node_free_debug;
+	ic->ic_node_cleanup_debug = node_cleanup_debug;
+#else
 	ic->ic_node_alloc = node_alloc;
 	ic->ic_node_free = node_free;
 	ic->ic_node_cleanup = node_cleanup;
+#endif
+
+	ic->ic_node_count = node_count;
 	ic->ic_node_getrssi = node_getrssi;
 }
 
@@ -239,7 +274,7 @@ ieee80211_node_set_chan(struct ieee80211com *ic, struct ieee80211_node *ni)
 }
 
 static __inline void
-copy_bss(struct ieee80211_node *nbss, const struct ieee80211_node *obss)
+copy_bss_state(struct ieee80211_node *nbss, const struct ieee80211_node *obss)
 {
 	/* propagate useful state */
 	nbss->ni_authmode = obss->ni_authmode;
@@ -273,15 +308,11 @@ ieee80211_create_ibss(struct ieee80211vap* vap, struct ieee80211_channel *chan)
 		}
 	}
 
-	IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE, "%s: %p<%s> refcnt %d\n",
-		__func__, vap->iv_bss, ether_sprintf(vap->iv_bss->ni_macaddr),
-		ieee80211_node_refcnt(ni));
-
 	IEEE80211_ADDR_COPY(ni->ni_bssid, vap->iv_myaddr);
 	ni->ni_esslen = vap->iv_des_ssid[0].len;
 	memcpy(ni->ni_essid, vap->iv_des_ssid[0].ssid, ni->ni_esslen);
 	if (vap->iv_bss != NULL)
-		copy_bss(ni, vap->iv_bss);
+		copy_bss_state(ni, vap->iv_bss);
 	ni->ni_intval = ic->ic_lintval;
 #ifdef ATH_SUPERG_XR
 	if (vap->iv_flags & IEEE80211_F_XR) {
@@ -351,28 +382,22 @@ void
 ieee80211_reset_bss(struct ieee80211vap *vap)
 {
 	struct ieee80211com *ic = vap->iv_ic;
-	struct ieee80211_node *ni, *obss;
+	struct ieee80211_node *ni = NULL;
+	struct ieee80211_node *obss = vap->iv_bss;
 
-	IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE, "%s: old bss %p<%s> refcnt %d\n",
-		__func__, vap->iv_bss, ether_sprintf(vap->iv_bss->ni_macaddr),
-		ieee80211_node_refcnt(vap->iv_bss));
-
+	/* Recreate the node table */
 	ieee80211_node_table_reset(&ic->ic_sta, vap);
 	/* XXX multi-bss wrong */
 	ieee80211_reset_erp(ic, ic->ic_curmode);
 
 	ni = ieee80211_alloc_node_table(vap, vap->iv_myaddr);
 	KASSERT(ni != NULL, ("unable to setup inital BSS node"));
-	obss = vap->iv_bss;
+
 	/* New reference for caller */
 	vap->iv_bss = ieee80211_ref_node(ni);
 
-	IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE, "%s: new bss %p<%s> refcnt %d\n",
-		__func__, vap->iv_bss, ether_sprintf(vap->iv_bss->ni_macaddr),
-		ieee80211_node_refcnt(vap->iv_bss));
-
 	if (obss != NULL) {
-		copy_bss(ni, obss);
+		copy_bss_state(ni, obss);
 		ni->ni_intval = ic->ic_lintval;
 		/* Caller's reference */
 		ieee80211_unref_node(&obss);
@@ -685,10 +710,6 @@ ieee80211_sta_join(struct ieee80211vap *vap,
 	ieee80211_setup_rates(ni, se->se_rates, se->se_xrates,
 		IEEE80211_F_DOSORT | IEEE80211_F_DONEGO | IEEE80211_F_DODEL);
 
-	IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
-	"%s: %p<%s> refcnt %d\n", __func__, ni, ether_sprintf(ni->ni_macaddr),
-	ieee80211_node_refcnt(ni));
-
 	return ieee80211_sta_join1(PASS_NODE(ni));
 }
 EXPORT_SYMBOL(ieee80211_sta_join);
@@ -732,19 +753,37 @@ ieee80211_node_table_init(struct ieee80211com *ic, struct ieee80211_node_table *
 	mod_timer(&nt->nt_wds_aging_timer, jiffies + HZ * WDS_AGING_TIMER_VAL);
 }
 
-static __inline void _node_table_join(struct ieee80211_node_table *nt, struct ieee80211_node *ni) {
+static __inline 
+void 
+#ifdef IEEE80211_DEBUG_REFCNT
+node_table_join_locked_debug(struct ieee80211_node_table *nt, struct ieee80211_node *ni, const char* func, int line) 
+#else
+node_table_join_locked(struct ieee80211_node_table *nt, struct ieee80211_node *ni) 
+#endif
+{
 	struct ieee80211_node *tni = NULL;
 	IEEE80211_NODE_TABLE_LOCK_ASSERT(nt);
 
 	ni->ni_table = nt;
+#ifdef IEEE80211_DEBUG_REFCNT
+	tni = ieee80211_ref_node_debug(ni, func, line);
+#else
 	tni = ieee80211_ref_node(ni);
+#endif
 	TAILQ_INSERT_TAIL(&nt->nt_node, tni, ni_list);
 	tni = NULL;
 	
 	LIST_INSERT_HEAD(&nt->nt_hash[IEEE80211_NODE_HASH(ni->ni_macaddr)], ni, ni_hash);
 }
 
-static __inline void _node_table_leave(struct ieee80211_node_table *nt, struct ieee80211_node *ni) {
+static __inline 
+void 
+#ifdef IEEE80211_DEBUG_REFCNT
+node_table_leave_locked_debug(struct ieee80211_node_table *nt, struct ieee80211_node *ni, const char* func, int line) 
+#else
+node_table_leave_locked(struct ieee80211_node_table *nt, struct ieee80211_node *ni) 
+#endif
+{
 	struct ieee80211_node *hni;
 	IEEE80211_NODE_TABLE_LOCK_ASSERT(nt);
 
@@ -753,20 +792,29 @@ static __inline void _node_table_leave(struct ieee80211_node_table *nt, struct i
 		LIST_REMOVE(ni, ni_hash);
 	}
 	ni->ni_table = NULL;
-	_ieee80211_unref_node(ni);
+#ifdef IEEE80211_DEBUG_REFCNT
+	ieee80211_unref_node_debug(&ni, func, line);
+#else
+	ieee80211_unref_node(&ni);
+#endif
+	
 }
 
 /* This is overridden by ath_node_alloc in ath/if_ath.c, and so
  * should never get called.
  */
 static struct ieee80211_node *
+#ifdef IEEE80211_DEBUG_REFCNT
+node_alloc_debug(struct ieee80211vap *vap, const char* func, int line)
+#else
 node_alloc(struct ieee80211vap *vap)
+#endif
 {
 	struct ieee80211_node *ni;
-
 	MALLOC(ni, struct ieee80211_node *, sizeof(struct ieee80211_node),
 		M_80211_NODE, M_NOWAIT | M_ZERO);
-
+	printk("%s: ERROR, this function should never be called!", __func__);
+	dump_stack();
 	return ni;
 }
 
@@ -779,7 +827,11 @@ node_alloc(struct ieee80211vap *vap)
  * Context: hwIRQ, softIRQ and process context
  */
 static void
+#ifdef IEEE80211_DEBUG_REFCNT
+node_cleanup_debug(struct ieee80211_node *ni, const char* func, int line)
+#else
 node_cleanup(struct ieee80211_node *ni)
+#endif
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 
@@ -788,10 +840,12 @@ node_cleanup(struct ieee80211_node *ni)
 		if (vap->iv_opmode != IEEE80211_M_STA)
 			vap->iv_ps_sta--;
 		ni->ni_flags &= ~IEEE80211_NODE_PWR_MGT;
+#ifdef IEEE80211_DEBUG_REFCNT
 		IEEE80211_NOTE(vap, IEEE80211_MSG_POWER, ni,
-			"power save mode off, %u STAs in PS mode",
+			"%s (%s%d): power save mode off, %u STAs in PS mode",
+			__func__, func, line,
 			vap->iv_ps_sta);
-
+#endif
 		if (ni->ni_flags & IEEE80211_NODE_UAPSD_TRIG) {
 			ni->ni_flags &= ~IEEE80211_NODE_UAPSD_TRIG;
 			IEEE80211_LOCK_IRQ(ni->ni_ic);
@@ -822,17 +876,77 @@ node_cleanup(struct ieee80211_node *ni)
 	 */
 
 	if (ni->ni_rxfrag != NULL) {
-		dev_kfree_skb_any(ni->ni_rxfrag);
-		ni->ni_rxfrag = NULL;
+#ifdef IEEE80211_DEBUG_REFCNT
+		ieee80211_dev_kfree_skb_debug(&ni->ni_rxfrag, func, line);
+#else
+		ieee80211_dev_kfree_skb(&ni->ni_rxfrag);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	}
 	ieee80211_crypto_delkey(vap, &ni->ni_ucastkey, ni);
 	ni->ni_rxkeyoff = 0;
 }
 
-static void
-node_free(struct ieee80211_node *ni)
+static void node_print_message(
+		int show_counter, 
+		int refcnt_adjust,
+		const struct ieee80211_node *ni, 
+#ifdef IEEE80211_DEBUG_REFCNT
+		const char* func1, int line1,
+#endif
+		const char* func2, int line2,
+		const char* message,
+		...)
 {
-	KASSERT(ieee80211_node_refcnt(ni) == 0, ("node being free whilst still referenced"));
+	va_list args;
+	int adjusted_refcount = atomic_read(&ni->ni_refcnt) + refcnt_adjust;
+	char node_count[32] = { '\0' };
+	char expanded_message[1024] = { '\0' };
+
+	if (0 == (ni->ni_ic->ic_debug & IEEE80211_MSG_NODE_REF))
+		return;
+
+	if (adjusted_refcount == 0)
+		show_counter = 1;
+
+	if (show_counter) {
+		snprintf(node_count, 
+			 sizeof(node_count), 
+			 "[#NODES=%05d] ", 
+			 atomic_read(&ni->ni_ic->ic_node_counter));
+	}
+	va_start(args, message);
+	vsnprintf(expanded_message, sizeof(expanded_message), message, args);
+#ifdef IEEE80211_DEBUG_REFCNT
+	printk("%s/%s: %s%s:%d -> %s:%d %s [node %p<%s>%s%s%s%s, refs=%02d]\n",
+#else
+	       printk("%s/%s: %s%s:%d %s [node %p<%s>%s%s%s%s, refs=%02d]\n",
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+		ni->ni_ic->ic_dev->name,
+	        ni->ni_vap->iv_dev->name, 
+		node_count,
+#ifdef IEEE80211_DEBUG_REFCNT
+		func1, line1, 
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+		func2, line2, 
+		expanded_message,
+		ni, ether_sprintf(ni->ni_macaddr), 
+		ni->ni_table != NULL ? " in " : "",
+		ni->ni_table != NULL ? ni->ni_table->nt_name : "",
+		ni->ni_table != NULL ? " table" : "",
+		ni->ni_table != NULL ? "" : " (not in any tables)",
+		adjusted_refcount);
+	va_end(args);
+}
+EXPORT_SYMBOL(node_print_message);
+
+static void
+#ifdef IEEE80211_DEBUG_REFCNT
+node_free_debug(struct ieee80211_node *ni, const char* func, int line)
+#else
+node_free(struct ieee80211_node *ni)
+#endif
+{
+	KASSERT(atomic_read(&ni->ni_refcnt) == 0, ("node being free whilst still referenced"));
 
 	if (ni->ni_challenge != NULL)
 		FREE(ni->ni_challenge, M_DEVBUF);
@@ -849,6 +963,12 @@ node_free(struct ieee80211_node *ni)
 	FREE(ni, M_80211_NODE);
 }
 
+static int32_t
+node_count(struct ieee80211com *ic)
+{
+	return atomic_read(&ic->ic_node_counter);
+}
+
 static u_int8_t
 node_getrssi(const struct ieee80211_node *ni)
 {
@@ -863,16 +983,27 @@ node_getrssi(const struct ieee80211_node *ni)
  * used by the routines below to create entries with a
  * specific purpose.
  * Dont assume a BSS?
+ * MT: Allocates a new ieee80211_node* that has a reference count of one, and adds it to the node table.
  */
 struct ieee80211_node *
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_alloc_node_table_debug(struct ieee80211vap *vap,
+	const u_int8_t *macaddr,
+	const char* func, int line)
+#else
 ieee80211_alloc_node_table(struct ieee80211vap *vap,
 	const u_int8_t *macaddr)
+#endif
 {
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ieee80211_node_table *nt = &ic->ic_sta;
 	struct ieee80211_node *ni;
 
+#ifdef IEEE80211_DEBUG_REFCNT
+	ni = ieee80211_alloc_node_debug(vap, macaddr, func, line);
+#else
 	ni = ieee80211_alloc_node(vap, macaddr);
+#endif
 	if (ni != NULL) {
 		ni->ni_inact = ni->ni_inact_reload = nt->nt_inact_init;
 
@@ -880,13 +1011,21 @@ ieee80211_alloc_node_table(struct ieee80211vap *vap,
 		IEEE80211_NODE_SAVEQ_INIT(ni, "unknown");
 
 		IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
-		_node_table_join(nt, ni);
+#ifdef IEEE80211_DEBUG_REFCNT
+		node_table_join_locked_debug(nt, ni, func, line);
+#else
+		node_table_join_locked(nt, ni);
+#endif
 		IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 	}
 
 	return ni;
 }
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_alloc_node_table_debug);
+#else
 EXPORT_SYMBOL(ieee80211_alloc_node_table);
+#endif
 
 /* Allocate a node structure and initialise specialised structures
  * This function does not add the node to the node table, thus this
@@ -894,20 +1033,23 @@ EXPORT_SYMBOL(ieee80211_alloc_node_table);
  * This is useful when sending one off errors or request denials.
  */
 static struct ieee80211_node *
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_alloc_node_debug(struct ieee80211vap *vap, const u_int8_t *macaddr, const char* func, int line)
+#else
 ieee80211_alloc_node(struct ieee80211vap *vap, const u_int8_t *macaddr)
+#endif
 {
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ieee80211_node *ni;
 
 	/* This always allocates zeroed memoery */
+#ifdef IEEE80211_DEBUG_REFCNT
+	ni = ic->ic_node_alloc_debug(vap, func, line);
+#else
 	ni = ic->ic_node_alloc(vap);
+#endif 
 	if (ni != NULL) {
-		IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
-		"%s: %p<%s> refcnt %d\n", __func__, ni, ether_sprintf(macaddr),
-		ieee80211_node_refcnt(ni)+1);
-
-		ieee80211_node_initref(ni);		/* mark referenced */
-
+		atomic_set(&ni->ni_refcnt, 1);
 		IEEE80211_ADDR_COPY(ni->ni_macaddr, macaddr);
 
 		ni->ni_chan = IEEE80211_CHAN_ANYC;
@@ -920,17 +1062,33 @@ ieee80211_alloc_node(struct ieee80211vap *vap, const u_int8_t *macaddr)
 
 		ni->ni_vap = vap;
 		ni->ni_ic = ic;
+		atomic_inc(&ni->ni_ic->ic_node_counter);
+		node_print_message(1 /* show counter */, 
+				   0 /* adjust refcount */, 
+				   ni, 
+#ifdef IEEE80211_DEBUG_REFCNT
+				   func, line, 
+#endif
+				   __func__, __LINE__, 
+				   "alloc" /* message */);
 	} else {
 		/* XXX msg */
 		vap->iv_stats.is_rx_nodealloc++;
 	}
+
 	return ni;
 }
 
 /* Add wds address to the node table */
 int
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_add_wds_addr_debug(struct ieee80211_node_table *nt,
+	struct ieee80211_node *ni, const u_int8_t *macaddr, u_int8_t wds_static,
+	const char* func, int line)
+#else
 ieee80211_add_wds_addr(struct ieee80211_node_table *nt,
 	struct ieee80211_node *ni, const u_int8_t *macaddr, u_int8_t wds_static)
+#endif
 {
 	int hash;
 	struct ieee80211_wds_addr *wds;
@@ -949,16 +1107,29 @@ ieee80211_add_wds_addr(struct ieee80211_node_table *nt,
 	IEEE80211_ADDR_COPY(wds->wds_macaddr, macaddr);
 
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
+#ifdef IEEE80211_DEBUG_REFCNT
+	wds->wds_ni = ieee80211_ref_node_debug(ni, func, line);
+#else
 	wds->wds_ni = ieee80211_ref_node(ni);
+#endif
 	LIST_INSERT_HEAD(&nt->nt_wds_hash[hash], wds, wds_hash);
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 	return 0;
 }
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_add_wds_addr_debug);
+#else
 EXPORT_SYMBOL(ieee80211_add_wds_addr);
+#endif
 
 /* remove wds address from the wds hash table */
 void
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_remove_wds_addr_debug(struct ieee80211_node_table *nt, const u_int8_t *macaddr, 
+			   const char* func, int line)
+#else
 ieee80211_remove_wds_addr(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
+#endif
 {
 	int hash;
 	struct ieee80211_wds_addr *wds, *twds;
@@ -968,18 +1139,31 @@ ieee80211_remove_wds_addr(struct ieee80211_node_table *nt, const u_int8_t *macad
 	LIST_FOREACH_SAFE(wds, &nt->nt_wds_hash[hash], wds_hash, twds) {
 		if (IEEE80211_ADDR_EQ(wds->wds_macaddr, macaddr)) {
 			LIST_REMOVE(wds, wds_hash);
+#ifdef IEEE80211_DEBUG_REFCNT
+			ieee80211_unref_node_debug(&wds->wds_ni, func, line);
+#else
 			ieee80211_unref_node(&wds->wds_ni);
+#endif
 			FREE(wds, M_80211_WDS);
 			break;
 		}
 	}
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 }
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_remove_wds_addr_debug);
+#else
 EXPORT_SYMBOL(ieee80211_remove_wds_addr);
+#endif
 
 /* Remove node references from wds table */
 void
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_del_wds_node_debug(struct ieee80211_node_table *nt, struct ieee80211_node *ni, 
+			const char* func, int line)
+#else
 ieee80211_del_wds_node(struct ieee80211_node_table *nt, struct ieee80211_node *ni)
+#endif
 {
 	int hash;
 	struct ieee80211_wds_addr *wds, *twds;
@@ -989,14 +1173,22 @@ ieee80211_del_wds_node(struct ieee80211_node_table *nt, struct ieee80211_node *n
 		LIST_FOREACH_SAFE(wds, &nt->nt_wds_hash[hash], wds_hash, twds) {
 			if (wds->wds_ni == ni) {
 				LIST_REMOVE(wds, wds_hash);
+#ifdef IEEE80211_DEBUG_REFCNT
+				ieee80211_unref_node_debug(&wds->wds_ni, func, line);
+#else
 				ieee80211_unref_node(&wds->wds_ni);
+#endif
 				FREE(wds, M_80211_WDS);
 			}
 		}
 	}
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 }
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_del_wds_node_debug);
+#else
 EXPORT_SYMBOL(ieee80211_del_wds_node);
+#endif
 
 static void
 ieee80211_node_wds_ageout(unsigned long data)
@@ -1025,21 +1217,38 @@ ieee80211_node_wds_ageout(unsigned long data)
 
 /*
  * Add the specified station to the station table.
- */
+ * MT: Allocates a new ieee80211_node* that has a reference count of one
+ * If tmp is 0, it is added to the node table and the reference is used.
+ * If tmp is 1, then the caller gets to use the reference. */
 struct ieee80211_node *
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_dup_bss_debug(struct ieee80211vap *vap, const u_int8_t *macaddr,
+		unsigned char tmp, const char* func, int line)
+#else
 ieee80211_dup_bss(struct ieee80211vap *vap, const u_int8_t *macaddr,
 		unsigned char tmp)
+#endif
 {
 	struct ieee80211_node *ni;
 
 	/* FIXME: Hack */
-	if (tmp)
+	if (tmp) {
+#ifdef IEEE80211_DEBUG_REFCNT
+		ni = ieee80211_alloc_node_debug(vap, macaddr, func, line);
+#else
 		ni = ieee80211_alloc_node(vap, macaddr);
-	else
+#endif
+	}
+	else {
+#ifdef IEEE80211_DEBUG_REFCNT
+		ni = ieee80211_alloc_node_table_debug(vap, macaddr, func, line);
+#else
 		ni = ieee80211_alloc_node_table(vap, macaddr);
+#endif
+	}
 
 	if (ni != NULL) {
-		copy_bss(ni, vap->iv_bss);
+		copy_bss_state(ni, vap->iv_bss);
 		IEEE80211_ADDR_COPY(ni->ni_bssid, vap->iv_bss->ni_bssid);
 		/* Do this only for nodes that already have a BSS. Otherwise
 		 * ic_bsschan is not set and we get a KASSERT failure.
@@ -1050,7 +1259,13 @@ ieee80211_dup_bss(struct ieee80211vap *vap, const u_int8_t *macaddr,
 }
 
 static struct ieee80211_node *
-_ieee80211_find_wds_node(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_find_wds_node_locked_debug(struct ieee80211_node_table *nt, 
+			 const u_int8_t *macaddr, const char* func, int line)
+#else
+ieee80211_find_wds_node_locked(struct ieee80211_node_table *nt, 
+			 const u_int8_t *macaddr)
+#endif
 {
 	struct ieee80211_wds_addr *wds;
 	int hash;
@@ -1061,19 +1276,29 @@ _ieee80211_find_wds_node(struct ieee80211_node_table *nt, const u_int8_t *macadd
 		if (IEEE80211_ADDR_EQ(wds->wds_macaddr, macaddr)) {
 			if (wds->wds_agingcount != WDS_AGING_STATIC)
 				wds->wds_agingcount = WDS_AGING_COUNT; /* reset the aging count */
+#ifdef IEEE80211_DEBUG_REFCNT
+			return ieee80211_ref_node_debug(wds->wds_ni, func, line);
+#else
 			return ieee80211_ref_node(wds->wds_ni);
+#endif
 		}
 	}
 	return NULL;
 }
 
 /* NB: A node reference is acquired here; the caller MUST release it. */
+#ifdef IEEE80211_DEBUG_REFCNT
+#define	ieee80211_find_node_locked(nt, mac) \
+	ieee80211_find_node_locked_debug(nt, mac, __func__, __LINE__)
+#endif
+	
 static struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
-_ieee80211_find_node_debug(struct ieee80211_node_table *nt,
+ieee80211_find_node_locked_debug(struct ieee80211_node_table *nt,
 	const u_int8_t *macaddr, const char *func, int line)
 #else
-_ieee80211_find_node(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
+ieee80211_find_node_locked(struct ieee80211_node_table *nt,
+	const u_int8_t *macaddr)
 #endif
 {
 	struct ieee80211_node *ni;
@@ -1085,14 +1310,11 @@ _ieee80211_find_node(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
 	hash = IEEE80211_NODE_HASH(macaddr);
 	LIST_FOREACH(ni, &nt->nt_hash[hash], ni_hash) {
 		if (IEEE80211_ADDR_EQ(ni->ni_macaddr, macaddr)) {
-			ieee80211_ref_node(ni);	/* mark referenced */
 #ifdef IEEE80211_DEBUG_REFCNT
-			IEEE80211_DPRINTF(ni->ni_vap, IEEE80211_MSG_NODE,
-				"%s (%s:%u) %p<%s> refcnt %d\n", __func__,
-				func, line,
-				ni, ether_sprintf(ni->ni_macaddr),
-				ieee80211_node_refcnt(ni));
-#endif
+			ieee80211_ref_node_debug(ni, func, line);
+#else
+			ieee80211_ref_node(ni);
+#endif 
 			return ni;
 		}
 	}
@@ -1101,27 +1323,40 @@ _ieee80211_find_node(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
 	   nodes. */
 	LIST_FOREACH(wds, &nt->nt_wds_hash[hash], wds_hash) {
 		if (IEEE80211_ADDR_EQ(wds->wds_macaddr, macaddr)) {
+#ifdef IEEE80211_DEBUG_REFCNT
+			return ieee80211_ref_node_debug(wds->wds_ni, func, line);
+#else
 			return ieee80211_ref_node(wds->wds_ni);
+#endif 
 		}
 	}
 	return NULL;
 }
-#ifdef IEEE80211_DEBUG_REFCNT
-#define	_ieee80211_find_node(nt, mac) \
-	_ieee80211_find_node_debug(nt, mac, func, line)
-#endif
 
 struct ieee80211_node *
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_find_wds_node_debug(struct ieee80211_node_table *nt, const u_int8_t *macaddr, 
+			 const char* func, int line)
+#else
 ieee80211_find_wds_node(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
+#endif
 {
 	struct ieee80211_node *ni;
 
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
-	ni = _ieee80211_find_wds_node(nt, macaddr);
+#ifdef IEEE80211_DEBUG_REFCNT
+	ni = ieee80211_find_wds_node_locked_debug(nt, macaddr, func, line);
+#else
+	ni = ieee80211_find_wds_node_locked(nt, macaddr);
+#endif
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 	return ni;
 }
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_find_wds_node_debug);
+#else
 EXPORT_SYMBOL(ieee80211_find_wds_node);
+#endif
 
 struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -1134,7 +1369,11 @@ ieee80211_find_node(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
 	struct ieee80211_node *ni;
 
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
-	ni = _ieee80211_find_node(nt, macaddr);
+#ifdef IEEE80211_DEBUG_REFCNT
+	ni = ieee80211_find_node_locked_debug(nt, macaddr, func, line);
+#else
+	ni = ieee80211_find_node_locked(nt, macaddr);
+#endif
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 	return ni;
 }
@@ -1143,6 +1382,7 @@ EXPORT_SYMBOL(ieee80211_find_node_debug);
 #else
 EXPORT_SYMBOL(ieee80211_find_node);
 #endif
+
 
 /*
  * Fake up a node; this handles node discovery in adhoc mode.
@@ -1153,8 +1393,14 @@ EXPORT_SYMBOL(ieee80211_find_node);
  * Caller must ieee80211_ref_node()
  */
 struct ieee80211_node *
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_fakeup_adhoc_node_debug(struct ieee80211vap *vap,
+	const u_int8_t macaddr[IEEE80211_ADDR_LEN],
+	const char* func, int line)
+#else
 ieee80211_fakeup_adhoc_node(struct ieee80211vap *vap,
 	const u_int8_t macaddr[IEEE80211_ADDR_LEN])
+#endif
 {
 	struct ieee80211_node *ni;
 
@@ -1166,10 +1412,6 @@ ieee80211_fakeup_adhoc_node(struct ieee80211vap *vap,
 			vap->iv_ic->ic_newassoc(ni, 1);
 		/* XXX not right for 802.1x/WPA */
 		ieee80211_node_authorize(ni);
-
-		IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
-		"%s: %p<%s> refcnt %d\n", __func__, ni, ether_sprintf(macaddr),
-		ieee80211_node_refcnt(ni));
 	}
 	return ni;
 }
@@ -1228,10 +1470,6 @@ ieee80211_add_neighbor(struct ieee80211vap *vap, const struct ieee80211_frame *w
 			if (vap->iv_flags & IEEE80211_F_SHPREAMBLE)
 				ni->ni_capinfo |= IEEE80211_CAPINFO_SHORT_PREAMBLE;
 		}
-
-		IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
-		"%s: %p<%s> refcnt %d\n", __func__, ni, ether_sprintf(ni->ni_macaddr),
-		ieee80211_node_refcnt(ni));
 	}
 	return ni;
 }
@@ -1264,9 +1502,17 @@ ieee80211_find_rxnode(struct ieee80211com *ic,
 	nt = &ic->ic_sta;
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
 	if (IS_CTL(wh) && !IS_PSPOLL(wh) /*&& !IS_RTS(ah)*/)
-		ni = _ieee80211_find_node(nt, wh->i_addr1);
+#ifdef IEEE80211_DEBUG_REFCNT
+		ni = ieee80211_find_node_debug(nt, wh->i_addr1, func, line);
+#else
+		ni = ieee80211_find_node(nt, wh->i_addr1);
+#endif
 	else
-		ni = _ieee80211_find_node(nt, wh->i_addr2);
+#ifdef IEEE80211_DEBUG_REFCNT
+		ni = ieee80211_find_node_debug(nt, wh->i_addr2, func, line);
+#else
+		ni = ieee80211_find_node(nt, wh->i_addr2);
+#endif
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 
 	return ni;
@@ -1294,20 +1540,29 @@ ieee80211_find_txnode(struct ieee80211vap *vap, const u_int8_t *mac)
 #endif
 {
 	struct ieee80211_node_table *nt;
-	struct ieee80211_node *ni;
+	struct ieee80211_node *ni = NULL;
 
 	/*
 	 * The destination address should be in the node table
 	 * unless we are operating in station mode or this is a
 	 * multicast/broadcast frame.
 	 */
-	if (vap->iv_opmode == IEEE80211_M_STA || IEEE80211_IS_MULTICAST(mac))
+	if (vap->iv_opmode == IEEE80211_M_STA || IEEE80211_IS_MULTICAST(mac)) {
+#ifdef IEEE80211_DEBUG_REFCNT
+		return ieee80211_ref_node_debug(vap->iv_bss, func, line);
+#else
 		return ieee80211_ref_node(vap->iv_bss);
+#endif
+	}
 
 	/* XXX: Can't hold lock across dup_bss due to recursive locking. */
 	nt = &vap->iv_ic->ic_sta;
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
-	ni = _ieee80211_find_node(nt, mac);
+#ifdef IEEE80211_DEBUG_REFCNT
+	ni = ieee80211_find_node_locked_debug(nt, mac, func, line);
+#else
+	ni = ieee80211_find_node_locked(nt, mac);
+#endif
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 
 	if (ni == NULL) {
@@ -1316,11 +1571,22 @@ ieee80211_find_txnode(struct ieee80211vap *vap, const u_int8_t *mac)
 			/*
 			 * In adhoc mode cons up a node for the destination.
 			 * Note that we need an additional reference for the
-			 * caller to be consistent with _ieee80211_find_node.
+			 * caller to be consistent with ieee80211_find_node.
 			 */
+#ifdef IEEE80211_DEBUG_REFCNT
+			ni = ieee80211_fakeup_adhoc_node_debug(vap, mac, 
+							       func, line);
+#else
 			ni = ieee80211_fakeup_adhoc_node(vap, mac);
-			if (ni != NULL)
-				(void) ieee80211_ref_node(ni);
+#endif
+
+			if (ni != NULL) {
+#ifdef IEEE80211_DEBUG_REFCNT
+				ieee80211_ref_node_debug(ni, func, line);
+#else
+				ieee80211_ref_node(ni);
+#endif
+			}
 		} else {
 			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_OUTPUT, mac,
 				"no node, discard frame (%s)", __func__);
@@ -1333,30 +1599,42 @@ ieee80211_find_txnode(struct ieee80211vap *vap, const u_int8_t *mac)
 EXPORT_SYMBOL(ieee80211_find_txnode_debug);
 #else
 EXPORT_SYMBOL(ieee80211_find_txnode);
-#endif
+#endif 
 
 /* Context: hwIRQ, softIRQ and process context
  */
 void
-_ieee80211_free_node(struct ieee80211_node *ni)
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_free_node_debug(struct ieee80211_node *ni, const char *func, int line)
+#else /* #ifdef IEEE80211_DEBUG_REFCNT */
+ieee80211_free_node(struct ieee80211_node *ni)
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
 	struct ieee80211vap *vap = ni->ni_vap;
-#ifdef IEEE80211_DEBUG
-	struct ieee80211_node_table *nt = ni->ni_table;
+
+	atomic_dec(&ni->ni_ic->ic_node_counter);
+	node_print_message(1 /* show counter */, 
+			   0 /* adjust refcount */, 
+			   ni, 
+#ifdef IEEE80211_DEBUG_REFCNT
+			   func, line, 
 #endif
-
-	IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
-		"%s: %p<%s> in %s table, refcnt %d\n", __func__, ni,
-		ether_sprintf(ni->ni_macaddr),
-		nt != NULL ? nt->nt_name : "<gone>",
-		ieee80211_node_refcnt(ni));
-
+			   __func__, __LINE__, 
+			   "free" /* message */);
 	if (vap->iv_aid_bitmap != NULL)
 		IEEE80211_AID_CLR(vap, ni->ni_associd);
 
+#ifdef IEEE80211_DEBUG_REFCNT
+	vap->iv_ic->ic_node_free_debug(ni, func, line);
+#else
 	vap->iv_ic->ic_node_free(ni);
+#endif
 }
-EXPORT_SYMBOL(_ieee80211_free_node);
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_free_node_debug);
+#else
+EXPORT_SYMBOL(ieee80211_free_node);
+#endif
 
 static void _reset_node(void *arg, struct ieee80211_node *ni)
 {
@@ -1394,7 +1672,11 @@ ieee80211_node_table_cleanup(struct ieee80211_node_table *nt)
 			if (vap->iv_aid_bitmap != NULL)
 				IEEE80211_AID_CLR(vap, ni->ni_associd);
 		}
+#ifdef IEEE80211_DEBUG_REFCNT
+		ic->ic_node_cleanup_debug(ni, __func__, __LINE__);
+#else
 		ic->ic_node_cleanup(ni);
+#endif
 	}
 	del_timer(&nt->nt_wds_aging_timer);
 	IEEE80211_SCAN_LOCK_DESTROY(nt);
@@ -1439,8 +1721,7 @@ restart:
 		 */
 		if (ni->ni_rxfrag != NULL &&
 		    jiffies > ni->ni_rxfragstamp + HZ) {
-			dev_kfree_skb(ni->ni_rxfrag);
-			ni->ni_rxfrag = NULL;
+			ieee80211_dev_kfree_skb(&ni->ni_rxfrag);
 		}
 		/*
 		 * Special case ourself; we may be idle for extended periods
@@ -1492,7 +1773,7 @@ restart:
 			IEEE80211_NOTE(ni->ni_vap,
 				IEEE80211_MSG_INACT | IEEE80211_MSG_NODE, ni,
 				"station timed out due to inactivity (refcnt %u)",
-				ieee80211_node_refcnt(ni));
+				atomic_read(&ni->ni_refcnt));
 			/*
 			 * Send a deauthenticate frame and drop the station.
 			 * We grab a reference before unlocking the table so
@@ -1578,8 +1859,8 @@ ieee80211_dump_node(struct ieee80211_node_table *nt, struct ieee80211_node *ni)
 {
 	int i;
 
-	printf("0x%p: mac %s refcnt %d\n", ni,
-		ether_sprintf(ni->ni_macaddr), ieee80211_node_refcnt(ni));
+	printf("0x%p: mac %s (refcnt %d)\n", ni,
+		ether_sprintf(ni->ni_macaddr), atomic_read(&ni->ni_refcnt));
 	printf("\tscangen %u authmode %u flags 0x%x\n",
 		ni->ni_scangen, ni->ni_authmode, ni->ni_flags);
 	printf("\tassocid 0x%x txpower %u vlan %u\n",
@@ -1841,7 +2122,7 @@ ieee80211_node_leave(struct ieee80211_node *ni)
 
 	IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC | IEEE80211_MSG_DEBUG, ni,
 		"station with aid %d leaves (refcnt %u)",
-		IEEE80211_NODE_AID(ni), ieee80211_node_refcnt(ni));
+		IEEE80211_NODE_AID(ni), atomic_read(&ni->ni_refcnt));
 
 	/* From this point onwards we can no longer find the node,
 	 * so no more references are generated
@@ -1849,7 +2130,7 @@ ieee80211_node_leave(struct ieee80211_node *ni)
 	ieee80211_remove_wds_addr(nt, ni->ni_macaddr);
 	ieee80211_del_wds_node(nt, ni);
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
-	_node_table_leave(nt, ni);
+	node_table_leave_locked(nt, ni);
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 
 	/*
@@ -1898,7 +2179,12 @@ ieee80211_node_leave(struct ieee80211_node *ni)
 	 */
 	ieee80211_sta_leave(ni);
 done:
+	/* Run a cleanup */
+#ifdef IEEE80211_DEBUG_REFCNT
+	ic->ic_node_cleanup_debug(ni, __func__, __LINE__);
+#else
 	ic->ic_node_cleanup(ni);
+#endif
 }
 EXPORT_SYMBOL(ieee80211_node_leave);
 
@@ -1963,3 +2249,114 @@ ieee80211_node_reset(struct ieee80211_node *ni, struct ieee80211vap *vap)
 	ni->ni_vap = vap;
 	ni->ni_ic = vap->iv_ic;
 }
+EXPORT_SYMBOL(ieee80211_node_reset);
+
+struct ieee80211_node *
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_ref_node_debug(struct ieee80211_node *ni, const char *func, int line)
+#else
+ieee80211_ref_node(struct ieee80211_node *ni)
+#endif 
+{
+	if (ni == NULL) {
+		printk(KERN_ERR "%s: NULL node.\n", __func__);
+		dump_stack();
+		return ni;
+	}
+	if (atomic_read(&ni->ni_refcnt) < 1) {
+		node_print_message(0 /* show counter */, 
+				   0 /* adjust refcount */, 
+				   ni, 
+#ifdef IEEE80211_DEBUG_REFCNT
+				   func, line, 
+#endif
+				   __func__, __LINE__, 
+				   "attempt to access node with invalid refcount of %d."
+				   "  No changes made." /* message */,
+				   atomic_read(&ni->ni_refcnt));
+		dump_stack();
+		return ni;
+	}
+	atomic_inc(&ni->ni_refcnt);
+	node_print_message(0 /* show counter */, 
+			   0 /* adjust refcount */, 
+			   ni, 
+#ifdef IEEE80211_DEBUG_REFCNT
+			   func, line, 
+#endif
+			   __func__, __LINE__, 
+			   "ref" /* message */);
+	return ni;
+}
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_ref_node_debug);
+#else
+EXPORT_SYMBOL(ieee80211_ref_node);
+#endif
+
+void
+#ifdef IEEE80211_DEBUG_REFCNT
+ieee80211_unref_node_debug(struct ieee80211_node **pni, const char *func, int line)
+#else
+ieee80211_unref_node(struct ieee80211_node **pni)
+#endif 
+{
+	struct ieee80211_node *ni = NULL;
+	if (pni == NULL) {
+		printk(KERN_ERR "%s: NULL ieee80211_node**\n", __func__);
+		dump_stack();
+		return;
+	}
+	ni = *pni;
+	if (ni == NULL) {
+		printk(KERN_ERR "%s: NULL ieee80211_node*\n", __func__);
+		dump_stack();
+		return;
+	}
+	if (atomic_read(&ni->ni_refcnt) < 1) {
+		node_print_message(0 /* show counter */, 
+				   0 /* adjust refcount */, 
+				   ni, 
+#ifdef IEEE80211_DEBUG_REFCNT
+				   func, line, 
+#endif
+				   __func__, __LINE__, 
+				   "attempt to access node with invalid refcount of %d."
+				   "  No changes made." /* message */,
+				   atomic_read(&ni->ni_refcnt));
+		dump_stack();
+		return;
+	}
+
+	node_print_message(0 /* show counter */, 
+			   -1 /* adjust refcount */, 
+			   ni, 
+#ifdef IEEE80211_DEBUG_REFCNT
+			   func, line, 
+#endif
+			   __func__, __LINE__, 
+			   "unref" /* message */);
+
+	if(atomic_dec_and_test(&ni->ni_refcnt)) {
+#ifdef IEEE80211_DEBUG_REFCNT
+		ieee80211_free_node_debug(ni, func, line);
+#else /* #ifdef IEEE80211_DEBUG_REFCNT */
+		ieee80211_free_node(ni);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+	}
+	*pni = NULL;
+}
+#ifdef IEEE80211_DEBUG_REFCNT
+EXPORT_SYMBOL(ieee80211_unref_node_debug);
+#else
+EXPORT_SYMBOL(ieee80211_unref_node);
+#endif
+
+int32_t 
+ieee80211_get_node_count(struct ieee80211com *ic)
+{
+	return node_count(ic);
+}
+EXPORT_SYMBOL(ieee80211_get_node_count);
+
+

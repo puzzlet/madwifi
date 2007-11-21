@@ -266,6 +266,7 @@ struct ieee80211vap {
  */
 #include <net80211/ieee80211_debug.h>
 #include <net80211/ieee80211_node.h>
+#include <net80211/ieee80211_skb.h>
 
 struct ieee80211com {
 	struct net_device *ic_dev;		/* associated device */
@@ -365,6 +366,9 @@ struct ieee80211com {
 
 	/* Global debug flags applicable to all VAPs */
 	int ic_debug;
+	/* used for reference tracking/counting.  Nodes are shared between VAPs,
+	 * so we put this here. */
+	atomic_t ic_node_counter;
 	/* Virtual AP create/delete */
 	struct ieee80211vap *(*ic_vap_create)(struct ieee80211com *,
 		const char *, int, int, struct net_device *);
@@ -389,9 +393,17 @@ struct ieee80211com {
 	void (*ic_newassoc)(struct ieee80211_node *, int);
 
 	/* Node state management */
+	int32_t (*ic_node_count)(struct ieee80211com *);
+#ifdef IEEE80211_DEBUG_REFCNT
+	struct ieee80211_node *(*ic_node_alloc_debug)(struct ieee80211vap *, const char* func, int line);
+	void (*ic_node_cleanup_debug)(struct ieee80211_node *, const char* func, int line);
+	void (*ic_node_free_debug)(struct ieee80211_node *, const char* func, int line);
+#else
 	struct ieee80211_node *(*ic_node_alloc)(struct ieee80211vap *);
-	void (*ic_node_free)(struct ieee80211_node *);
 	void (*ic_node_cleanup)(struct ieee80211_node *);
+	void (*ic_node_free)(struct ieee80211_node *);
+#endif
+
 	u_int8_t (*ic_node_getrssi)(const struct ieee80211_node *);
 	u_int8_t (*ic_node_move_data)(const struct ieee80211_node *);
 

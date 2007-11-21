@@ -198,7 +198,6 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
 	struct ieee80211_frame *wh;
-	struct ieee80211_cb *cb = NULL;
 	struct sk_buff *skb;
 	int pktlen;
 	u_int8_t *frm;
@@ -256,8 +255,7 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 		return NULL;
 	}
 
-	cb = (struct ieee80211_cb *)skb->cb;
-	cb->ni = ieee80211_ref_node(ni);
+	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
 
 	frm = ieee80211_beacon_init(ni, bo, frm);
 
@@ -292,6 +290,8 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 
 	IEEE80211_LOCK_IRQ(ic);
 
+	/* Check if we need to change channel right now */
+
 	if ((ic->ic_flags & IEEE80211_F_DOTH) &&
 	    (vap->iv_flags & IEEE80211_F_CHANSWITCH)) {
 		struct ieee80211_channel *c = 
@@ -306,11 +306,11 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 					"%s: reinit beacon\n", __func__);
 
-			/* NB: ic_bsschan is in the DSPARMS beacon IE, so must set this
-			 *     prior to the beacon re-init, below. */
+			/* NB: ic_bsschan is in the DSPARMS beacon IE, so must
+			 * set this prior to the beacon re-init, below. */
 			if (c == NULL) {
-				/* Requested channel invalid; drop the channel switch
-				 * announcement and do nothing. */
+				/* Requested channel invalid; drop the channel
+				 * switch announcement and do nothing. */
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 						"%s: find channel failure\n", __func__);
 			} else
@@ -326,8 +326,8 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 			vap->iv_flags &= ~IEEE80211_F_CHANSWITCH;
 			ic->ic_flags &= ~IEEE80211_F_CHANSWITCH;
 
-			/* NB: Only for the first VAP to get here, and when we have a
-			 * valid channel to which to change. */
+			/* NB: Only for the first VAP to get here, and when we
+			 * have a valid channel to which to change. */
 			if (c && (ic->ic_curchan != c)) {
 				ic->ic_curchan = c;
 				ic->ic_set_channel(ic);

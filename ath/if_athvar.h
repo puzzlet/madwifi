@@ -213,6 +213,8 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 
 /* free buffer threshold to restart net dev */
 #define	ATH_TXBUF_FREE_THRESHOLD  (ATH_TXBUF / 20)
+/* number of TX buffers reserved for mgt frames */
+#define ATH_TXBUF_MGT_RESERVED	  5 	
 
 #define TAIL_DROP_COUNT 50             /* maximum number of queued frames allowed */
 
@@ -549,8 +551,13 @@ struct ath_softc {
 	int sc_debug;
 	int sc_default_ieee80211_debug;		/* default debug flags for new VAPs */
 	void (*sc_recv_mgmt)(struct ieee80211_node *, struct sk_buff *, int, int, u_int64_t);
+#ifdef IEEE80211_DEBUG_REFCNT
+	void (*sc_node_cleanup_debug)(struct ieee80211_node *, const char* func, int line);
+	void (*sc_node_free_debug)(struct ieee80211_node *, const char* func, int line);
+#else /* #ifdef IEEE80211_DEBUG_REFCNT */
 	void (*sc_node_cleanup)(struct ieee80211_node *);
 	void (*sc_node_free)(struct ieee80211_node *);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	void *sc_bdev;				/* associated bus device */
 	struct ath_hal *sc_ah;			/* Atheros HAL */
 	spinlock_t sc_hal_lock;                 /* hardware access lock */

@@ -184,7 +184,7 @@ tkip_test(struct ieee80211com *ic)
 	 * and then check it against the reference data.
 	 */
 	cip = key.wk_cipher;
-	skb = dev_alloc_skb(sizeof(ref_plaintext) +
+	skb = ieee80211_dev_alloc_skb(sizeof(ref_plaintext) +
 		cip->ic_miclen + cip->ic_header + cip->ic_trailer);
 	if (skb == NULL) {
 		printk("unable to allocate skbuff\n");
@@ -299,7 +299,7 @@ tkip_test(struct ieee80211com *ic)
 	printk("802.11i TKIP test vectors passed\n");
 bad:
 	if (skb != NULL)
-		dev_kfree_skb(skb);
+		ieee80211_dev_kfree_skb(&skb);
 	ieee80211_crypto_delkey(ic, &key);
 }
 

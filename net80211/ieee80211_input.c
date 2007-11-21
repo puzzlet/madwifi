@@ -729,7 +729,7 @@ ieee80211_input(struct ieee80211_node *ni,
 						ni->ni_macaddr, "data", "%s", "Decapsulation error");
 				vap->iv_stats.is_rx_decap++;
 				IEEE80211_NODE_STAT(ni, rx_decap);
-				dev_kfree_skb(skb1);
+				ieee80211_dev_kfree_skb(&skb1);
 				goto err;
 			}
 
@@ -826,7 +826,7 @@ err:
 	vap->iv_devstats.rx_errors++;
 out:
 	if (skb != NULL)
-		dev_kfree_skb(skb);
+		ieee80211_dev_kfree_skb(&skb);
 	return type;
 #undef HAS_SEQ
 }
@@ -937,7 +937,7 @@ ieee80211_input_all(struct ieee80211com *ic,
 		ieee80211_unref_node(&ni);
 	}
 	if (skb != NULL)		/* no vaps, reclaim skb */
-		dev_kfree_skb(skb);
+		ieee80211_dev_kfree_skb(&skb);
 	return type;
 }
 EXPORT_SYMBOL(ieee80211_input_all);
@@ -979,7 +979,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 		 * here and just bail
 		 */
 		/* XXX need msg+stat */
-		dev_kfree_skb(skb);
+		ieee80211_dev_kfree_skb(&skb);
 		return NULL;
 	}
 
@@ -1014,7 +1014,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 			 * Unrelated fragment or no space for it,
 			 * clear current fragments
 			 */
-			dev_kfree_skb(ni->ni_rxfrag);
+			ieee80211_dev_kfree_skb(&ni->ni_rxfrag);
 			ni->ni_rxfrag = NULL;
 		}
 	}
@@ -1034,7 +1034,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 				if (SKB_CB(skb)->ni != NULL) {
 					SKB_CB(ni->ni_rxfrag)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
 				}
-				dev_kfree_skb(skb);
+				ieee80211_dev_kfree_skb(&skb);
 			}
 			/*
 			 * Check that we have enough space to hold
@@ -1051,7 +1051,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 				if (SKB_CB(skb)->ni != NULL && (skb != ni->ni_rxfrag)) {
 					SKB_CB(ni->ni_rxfrag)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
 				}
-				dev_kfree_skb(skb);
+				ieee80211_dev_kfree_skb(&skb);
 			}
 		}
 	} else {
@@ -1072,7 +1072,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 			*(__le16 *) lwh->i_seq = *(__le16 *) wh->i_seq;
 		}
 		/* we're done with the fragment */
-		dev_kfree_skb(skb);
+		ieee80211_dev_kfree_skb(&skb);
 	}
 
 	if (more_frag) {
@@ -1261,7 +1261,7 @@ ieee80211_decap(struct ieee80211vap *vap, struct sk_buff *skb, int hdrlen)
 		if (SKB_CB(skb)->ni != NULL) {
 			SKB_CB(tskb)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
 		}
-		dev_kfree_skb(skb);
+		ieee80211_dev_kfree_skb(&skb);
 		skb = tskb;
 	}
 	return skb;
@@ -1318,10 +1318,6 @@ ieee80211_auth_open(struct ieee80211_node *ni, struct ieee80211_frame *wh,
 				ni = ieee80211_dup_bss(vap, wh->i_addr2, 0);
 				if (ni == NULL)
 					return;
-
-				IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
-				"%s: %p<%s> refcnt %d\n", __func__, ni, ether_sprintf(ni->ni_macaddr),
-				ieee80211_node_refcnt(ni));
 				tmpnode = 1;
 			}
 			IEEE80211_SEND_MGMT(ni,	IEEE80211_FC0_SUBTYPE_AUTH,
@@ -1359,10 +1355,6 @@ ieee80211_auth_open(struct ieee80211_node *ni, struct ieee80211_frame *wh,
 			ni = ieee80211_dup_bss(vap, wh->i_addr2, 0);
 			if (ni == NULL)
 				return;
-
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
-			"%s: %p<%s> refcnt %d\n", __func__, ni, ether_sprintf(ni->ni_macaddr),
-			ieee80211_node_refcnt(ni));
 			tmpnode = 1;
 		}
 
@@ -1545,13 +1537,6 @@ ieee80211_auth_shared(struct ieee80211_node *ni, struct ieee80211_frame *wh,
 					/* NB: no way to return an error */
 					return;
 				}
-
-				IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
-						"%s: %p<%s> refcnt %d\n", 
-						__func__, ni, 
-						ether_sprintf(ni->ni_macaddr),
-						ieee80211_node_refcnt(ni));
-
 				allocbs = 1;
 			}
 
@@ -2576,7 +2561,7 @@ ieee80211_deliver_l2uf(struct ieee80211_node *ni)
 	struct l2_update_frame *l2uf;
 	struct ether_header *eh;
 
-	skb = dev_alloc_skb(sizeof(*l2uf));
+	skb = ieee80211_dev_alloc_skb(sizeof(*l2uf));
 	if (skb == NULL) {
 		return;
 	}
@@ -3118,7 +3103,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 			IEEE80211_SEND_MGMT(ni,
 				IEEE80211_FC0_SUBTYPE_PROBE_RESP, 0);
 		}
-		if (allocbs && vap->iv_opmode != IEEE80211_M_IBSS) {
+		if (allocbs) {
 			/*
 			 * Temporary node created just to send a
 			 * response, reclaim immediately
@@ -3236,6 +3221,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		 *	[tlv] ssid
 		 *	[tlv] supported rates
 		 *	[tlv] extended supported rates
+		 *	[tlv] supported channels
 		 *	[tlv] wpa or RSN
 		 *      [tlv] WME
 		 *	[tlv] Atheros Advanced Capabilities
