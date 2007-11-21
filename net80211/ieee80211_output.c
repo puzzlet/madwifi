@@ -298,6 +298,7 @@ bad:
 
 void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 	struct ieee80211vap *vap = skb->dev->priv;
+	struct ieee80211_node *ni;
 
 	vap->iv_devstats.tx_packets++;
 	vap->iv_devstats.tx_bytes += skb->len;
@@ -305,7 +306,22 @@ void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 
 	/* Dispatch the packet to the parent device */
 	skb->dev = vap->iv_ic->ic_dev;
-	(void) dev_queue_xmit(skb);
+
+	ni = SKB_CB(skb)->ni;
+	if ( dev_queue_xmit(skb) == NET_XMIT_DROP ) {
+		/* If queue dropped the packet because device was
+		 * too busy */
+		vap->iv_devstats.tx_dropped++;
+		if (ni != NULL) {
+			/* node reference was leaked */
+			ieee80211_unref_node(&ni);
+		}
+	}
+	else {
+		/* node reference was not leaked, forget about it */
+		ni = NULL;
+	}
+	skb = NULL; /* skb is no longer ours */
 }
 
 /*
@@ -601,7 +617,12 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 				need_tailroom += cip->ic_miclen;
 	}
 
-	skb = skb_unshare(skb, GFP_ATOMIC);
+	if (skb_shared(skb)) {
+		/* Take our own reference to the node in the clone */
+		ieee80211_ref_node(SKB_CB(skb)->ni);
+		/* Unshare the node, decrementing users in the old skb */
+		skb = skb_unshare(skb, GFP_ATOMIC);
+	}
 
 #ifdef ATH_SUPERG_FF
 	if (isff) {
@@ -619,6 +640,10 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 		if (skb_headroom(skb) < need_headroom) {
 			struct sk_buff *tmp = skb;
 			skb = skb_realloc_headroom(skb, need_headroom);
+			/* Increment reference count after copy */
+			if (NULL != skb && SKB_CB(tmp)->ni != NULL) {
+				SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
+			}
 			dev_kfree_skb(tmp);
 			if (skb == NULL) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
@@ -653,6 +678,10 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 			struct sk_buff *tmp = skb2;
 
 			skb2 = skb_realloc_headroom(skb2, inter_headroom);
+			/* Increment reference count after copy */
+			if (NULL != skb2 && SKB_CB(tmp)->ni != NULL) {
+				SKB_CB(skb2)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
+			}
 			dev_kfree_skb(tmp);
 			if (skb2 == NULL) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
@@ -689,6 +718,10 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 	} else if (skb_headroom(skb) < need_headroom) {
 		struct sk_buff *tmp = skb;
 		skb = skb_realloc_headroom(skb, need_headroom);
+		/* Increment reference count after copy */
+		if (NULL != skb && SKB_CB(tmp)->ni != NULL) {
+			SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
+		}
 		dev_kfree_skb(tmp);
 		if (skb == NULL) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
