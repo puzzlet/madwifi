@@ -204,7 +204,6 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *parent = ic->ic_dev;
 	struct ieee80211_node *ni = NULL;
-	struct ieee80211_cb *cb;
 	struct ether_header *eh;
 
 	/* NB: parent must be up and running */
@@ -222,10 +221,6 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 #endif
 		goto bad;
 	}
-
-	cb = (struct ieee80211_cb *)skb->cb;
-	memset(cb, 0, sizeof(struct ieee80211_cb));
-
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 		ieee80211_monitor_encap(vap, skb);
 		ieee80211_parent_queue_xmit(skb);
@@ -256,7 +251,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		goto bad;
 	}
 
-	cb->ni = ieee80211_ref_node(ni);
+	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
 
 	/* power-save checks */
 	if (WME_UAPSD_AC_CAN_TRIGGER(skb->priority, ni)) {
@@ -282,9 +277,8 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	    vap->iv_xrvap->iv_sta_assoc) {
 		struct sk_buff *skb1 = skb_clone(skb, GFP_ATOMIC);
 		if (skb1) {
-			cb = (struct ieee80211_cb *)skb1->cb;
-			memset(cb, 0, sizeof(struct ieee80211_cb));
-			cb->ni = ieee80211_find_txnode(vap->iv_xrvap, 
+			memset(SKB_CB(skb1), 0, sizeof(struct ieee80211_cb));
+			SKB_CB(skb1)->ni = ieee80211_find_txnode(vap->iv_xrvap, 
 						       eh->ether_dhost);
 			ieee80211_parent_queue_xmit(skb1);
 		}
@@ -391,11 +385,10 @@ ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
 	struct ieee80211_frame *wh;
-	struct ieee80211_cb *cb = (struct ieee80211_cb *)skb->cb;
 
 	KASSERT(ni != NULL, ("null node"));
 
-	cb->ni = ni;
+	SKB_CB(skb)->ni = ni;
 
 	wh = (struct ieee80211_frame *)
 		skb_push(skb, sizeof(struct ieee80211_frame));
@@ -404,8 +397,8 @@ ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type)
 		vap->iv_myaddr, ni->ni_macaddr, ni->ni_bssid);
 	/* XXX power management */
 
-	if ((cb->flags & M_LINK0) != 0 && ni->ni_challenge != NULL) {
-		cb->flags &= ~M_LINK0;
+	if ((SKB_CB(skb)->flags & M_LINK0) != 0 && ni->ni_challenge != NULL) {
+		SKB_CB(skb)->flags &= ~M_LINK0;
 		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_AUTH, wh->i_addr1,
 			"encrypting frame (%s)", __func__);
 		wh->i_fc[1] |= IEEE80211_FC1_PROT;
@@ -442,7 +435,6 @@ ieee80211_send_nulldata(struct ieee80211_node *ni)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
 	struct sk_buff *skb;
-	struct ieee80211_cb *cb;
 	struct ieee80211_frame *wh;
 	u_int8_t *frm;
 
@@ -481,8 +473,7 @@ ieee80211_send_nulldata(struct ieee80211_node *ni)
 
 	/* XXX assign some priority; this probably is wrong */
 	skb->priority = WME_AC_BE;
-	cb = (struct ieee80211_cb *)skb->cb;
-	cb->ni = PASS_NODE(ni);
+	SKB_CB(skb)->ni = PASS_NODE(ni);
 
 	(void) ic->ic_mgtstart(ic, skb);	/* cheat */
 
@@ -499,7 +490,6 @@ ieee80211_send_qosnulldata(struct ieee80211_node *ni, int ac)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
 	struct sk_buff *skb;
-	struct ieee80211_cb *cb;
 	struct ieee80211_qosframe *qwh;
 	u_int8_t *frm;
 	int tid;
@@ -510,8 +500,7 @@ ieee80211_send_qosnulldata(struct ieee80211_node *ni, int ac)
 		vap->iv_stats.is_tx_nobuf++;
 		return -ENOMEM;
 	}
-	cb = (struct ieee80211_cb *)skb->cb;
-	cb->ni = ieee80211_ref_node(ni);
+	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
 
 	skb->priority = ac;
 	qwh = (struct ieee80211_qosframe *)skb_push(skb, sizeof(struct ieee80211_qosframe));
@@ -1606,7 +1595,7 @@ ieee80211_add_athAdvCap(u_int8_t *frm, u_int8_t capability, u_int16_t defaultKey
  */
 #ifdef ATH_SUPERG_XR
 u_int8_t *
-ieee80211_add_xr_param(u_int8_t *frm,struct ieee80211vap *vap)
+ieee80211_add_xr_param(u_int8_t *frm, struct ieee80211vap *vap)
 {
 	static const u_int8_t oui[6] = {(ATH_OUI & 0xff), ((ATH_OUI >>8) & 0xff),
 					((ATH_OUI >> 16) & 0xff), ATH_OUI_TYPE_XR,
@@ -1693,7 +1682,6 @@ ieee80211_send_probereq(struct ieee80211_node *ni,
 	struct ieee80211com *ic = ni->ni_ic;
 	enum ieee80211_phymode mode;
 	struct ieee80211_frame *wh;
-	struct ieee80211_cb *cb;
 	struct sk_buff *skb;
 	u_int8_t *frm;
 
@@ -1732,8 +1720,7 @@ ieee80211_send_probereq(struct ieee80211_node *ni,
 
 	skb_trim(skb, frm - skb->data);
 
-	cb = (struct ieee80211_cb *)skb->cb;
-	cb->ni = ieee80211_ref_node(ni);
+	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
 
 	wh = (struct ieee80211_frame *)
 		skb_push(skb, sizeof(struct ieee80211_frame));
@@ -1959,11 +1946,9 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 			memcpy(&((__le16 *)frm)[4], ni->ni_challenge,
 				IEEE80211_CHALLENGE_LEN);
 			if (arg == IEEE80211_AUTH_SHARED_RESPONSE) {
-				struct ieee80211_cb *cb =
-					(struct ieee80211_cb *)skb->cb;
 				IEEE80211_NOTE(vap, IEEE80211_MSG_AUTH, ni,
 					"request encrypt frame (%s)", __func__);
-				cb->flags |= M_LINK0; /* WEP-encrypt, please */
+				SKB_CB(skb)->flags |= M_LINK0; /* WEP-encrypt, please */
 			}
 		}
 
@@ -2211,12 +2196,10 @@ ieee80211_send_pspoll(struct ieee80211_node *ni)
 	struct ieee80211com *ic = ni->ni_ic;
 	struct sk_buff *skb;
 	struct ieee80211_ctlframe_addr2 *wh;
-	struct ieee80211_cb *cb;
 
 	skb = dev_alloc_skb(sizeof(struct ieee80211_ctlframe_addr2));
-	if (skb == NULL) return;
-	cb = (struct ieee80211_cb *)skb->cb;
-	cb->ni = ieee80211_ref_node(ni);
+
+	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
 	skb->priority = WME_AC_VO;
 
 	wh = (struct ieee80211_ctlframe_addr2 *) skb_put(skb, sizeof(struct ieee80211_ctlframe_addr2));
