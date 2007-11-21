@@ -11468,10 +11468,11 @@ ath_return_txbuf_locked_debug(struct ath_softc *sc, struct ath_buf **buf, const 
 ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **buf) 
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
-	u_int32_t bufaddr = 0;
+	void *bufaddr;
+
 	if ((buf == NULL) || ((*buf) == NULL)) 
 		return;
-	bufaddr = (u_int32_t)*buf;
+	bufaddr = (void *)*buf;
 #ifdef IEEE80211_DEBUG_REFCNT
 	cleanup_ath_buf_debug(sc, (*buf), BUS_DMA_TODEVICE, func, line);
 #else
@@ -11483,8 +11484,7 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **buf)
 	DPRINTF(sc, ATH_DEBUG_TXBUF, 
 		"[TXBUF=%03d/%03d] %s:%d -> %s:%d returned txbuf %p.\n", 
 		ath_get_buffer_count(), ATH_TXBUF,
-		func, line, __func__, __LINE__,
-		(void*)bufaddr);
+		func, line, __func__, __LINE__, bufaddr);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	if (sc->sc_devstopped) {
 		++sc->sc_reapcount;
