@@ -587,7 +587,11 @@ struct ath_softc {
 			sc_stagbeacons:1,	/* use staggered beacons */
 			sc_dfswait:1,		/* waiting on channel for radar detect */
 			sc_ackrate:1,		/* send acks at high bitrate */
-			sc_hasintmit:1;		/* Interference mitigation */
+			sc_hasintmit:1,		/* Interference mitigation */
+			sc_txcont:1;        	/* Is continuous transmit enabled? */
+	unsigned int sc_txcont_power; /* Continuous transmit power in 0.5dBm units */
+	unsigned int sc_txcont_rate;  /* Continuous transmit rate in Mbps */
+
 	/* rate tables */
 	const HAL_RATE_TABLE *sc_rates[IEEE80211_MODE_MAX];
 	const HAL_RATE_TABLE *sc_currates;	/* current rate table */

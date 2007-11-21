@@ -618,7 +618,21 @@ enum {
 	IEEE80211_PARAM_REGCLASS		= 59,	/* enable regclass ids in country IE */
 	IEEE80211_PARAM_DROPUNENC_EAPOL		= 60,	/* drop unencrypted eapol frames */
 	IEEE80211_PARAM_SHPREAMBLE		= 61,	/* Short Preamble */
-	IEEE80211_PARAM_DUMPREGS		= 62,   /* Pretty printed dump of Atheros hardware registers */
+	IEEE80211_PARAM_DUMPREGS		= 62,	/* Pretty printed dump of Atheros hardware registers */
+	IEEE80211_PARAM_DOTH_ALGORITHM		= 63,	/* spectrum management algorithm */
+	IEEE80211_PARAM_DOTH_MINCOM   		= 64,	/* minimum number of common channels */
+	IEEE80211_PARAM_DOTH_SLCG		= 65,	/* permil of Stations Lost per Channel Gained */
+	IEEE80211_PARAM_DOTH_SLDG		= 66,	/* permil of Stations Lost per rssi Db Gained */
+	IEEE80211_PARAM_TXCONT			= 67,	/* continuous transmit mode (boolean) */
+	IEEE80211_PARAM_TXCONT_RATE		= 68,	/* continuous transmit mode data rate (in mbit/sec) - will use closest match from current rate table */
+	IEEE80211_PARAM_TXCONT_POWER		= 69,	/* power level in units of 0.5dBm */
+	IEEE80211_PARAM_DFS_TESTMODE		= 70,	/* do not perform DFS actions (i.e. markng DFS and channel change on interference), just report them via debug. */
+	IEEE80211_PARAM_DFS_CHANCHECKTIME	= 71,	/* how long do we wait for chan availability
+							   scans ?
+							   FCC requires 60s, so that is the default. */
+	IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD	= 72,	/* DFS no-occupancy limit - how long do we stay
+							   off a channel once radar is detected?
+							   FCC requires 30m, so that is the default. */
 };
 
 #define	SIOCG80211STATS			(SIOCDEVPRIVATE+2)

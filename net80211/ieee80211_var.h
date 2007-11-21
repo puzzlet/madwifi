@@ -403,6 +403,14 @@ struct ieee80211com {
 	/* U-APSD support */
 	void (*ic_uapsd_flush)(struct ieee80211_node *);
 
+	/* continuous transmission support */
+	void (*ic_set_txcont)(struct ieee80211com *, int);
+	int (*ic_get_txcont)(struct ieee80211com *);
+	void (*ic_set_txcont_power)(struct ieee80211com *, u_int);
+	int (*ic_get_txcont_power)(struct ieee80211com *);
+	void (*ic_set_txcont_rate)(struct ieee80211com *, u_int);
+	u_int (*ic_get_txcont_rate)(struct ieee80211com *);
+
 	/* Set coverage class */
 	void (*ic_set_coverageclass)(struct ieee80211com *);
 
@@ -418,7 +426,6 @@ struct ieee80211com {
 	unsigned int (*ic_read_register)(struct ieee80211com *, unsigned int, unsigned int*);
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
 };
-
 
 #define MAX_PROC_IEEE80211_SIZE 16383
 #define PROC_IEEE80211_PERM 0644

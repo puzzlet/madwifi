@@ -1417,6 +1417,66 @@ done:
 }
 
 static int
+ieee80211_get_txcont(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	params[0] = ic->ic_get_txcont(ic);
+	return 0;
+}
+
+static int
+ieee80211_get_txcont_rate(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	params[0] = ic->ic_get_txcont_rate(ic);
+	return 0;
+}
+
+static int
+ieee80211_set_txcont(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	ic->ic_set_txcont(ic, params[1]);
+	return 0;
+}
+
+static int
+ieee80211_set_txcont_rate(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	ic->ic_set_txcont_rate(ic, params[1]);
+	return 0;
+}
+
+static int
+ieee80211_set_txcont_power(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	ic->ic_set_txcont_power(ic, params[1]);
+	return 0;
+}
+
+static int
+ieee80211_get_txcont_power(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	params[0] = ic->ic_get_txcont_power(ic);
+	return 0;
+}
+
+static int
 ieee80211_ioctl_giwtxpow(struct net_device *dev, struct iw_request_info *info,
 	struct iw_param *rrq, char *extra)
 {
@@ -2445,6 +2505,15 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 	case IEEE80211_PARAM_GENREASSOC:
 		IEEE80211_SEND_MGMT(vap->iv_bss, IEEE80211_FC0_SUBTYPE_REASSOC_REQ, 0);
 		break;
+	case IEEE80211_PARAM_TXCONT:
+		ieee80211_set_txcont(dev, info, w, extra);
+		break;
+	case IEEE80211_PARAM_TXCONT_RATE:
+		ieee80211_set_txcont_rate(dev, info, w, extra);
+		break;
+	case IEEE80211_PARAM_TXCONT_POWER:
+		ieee80211_set_txcont_power(dev, info, w, extra);
+		break;
 	case IEEE80211_PARAM_COMPRESSION:
 		retv = ieee80211_setathcap(vap, IEEE80211_ATHC_COMP, value);
 		break;
@@ -2848,6 +2917,15 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		break;
 	case IEEE80211_PARAM_PWRTARGET:
 		param[0] = ic->ic_curchanmaxpwr;
+		break;
+	case IEEE80211_PARAM_TXCONT:
+		ieee80211_get_txcont(dev, info, w, extra);
+		break;
+	case IEEE80211_PARAM_TXCONT_RATE:
+		ieee80211_get_txcont_rate(dev, info, w, extra);
+		break;
+	case IEEE80211_PARAM_TXCONT_POWER:
+		ieee80211_get_txcont_power(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_PUREG:
 		param[0] = (vap->iv_flags & IEEE80211_F_PUREG) != 0;
@@ -5140,6 +5218,19 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_doth_pwrtgt" },
 	{ IEEE80211_PARAM_GENREASSOC,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "doth_reassoc" },
+	/* continuous transmission (for regulatory agency testing) */
+	{ IEEE80211_PARAM_TXCONT,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "txcont" },
+	{ IEEE80211_PARAM_TXCONT,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_txcont" },
+	{ IEEE80211_PARAM_TXCONT_RATE,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "txcontrate" },
+	{ IEEE80211_PARAM_TXCONT_RATE,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_txcontrate" },
+	{ IEEE80211_PARAM_TXCONT_POWER,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "txcontpower" },
+	{ IEEE80211_PARAM_TXCONT_POWER,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_txcontpower" },
 	{ IEEE80211_PARAM_COMPRESSION,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "compression" },
 	{ IEEE80211_PARAM_COMPRESSION, 0,

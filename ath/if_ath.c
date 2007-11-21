@@ -264,6 +264,22 @@ static void ath_check_dfs_clear(unsigned long);
 static const char *ath_get_hal_status_desc(HAL_STATUS status);
 static int ath_rcv_dev_event(struct notifier_block *, unsigned long, void *);
 
+
+/*
+Regulatory agency testing - continuous transmit support
+*/
+static void txcont_on(struct ieee80211com *ic);
+static void txcont_off(struct ieee80211com *ic);
+
+static int ath_get_txcont(struct ieee80211com *);
+static void ath_set_txcont(struct ieee80211com *, int);
+
+static int ath_get_txcont_power(struct ieee80211com *);
+static void ath_set_txcont_power(struct ieee80211com *, unsigned int);
+
+static unsigned int ath_get_txcont_rate(struct ieee80211com *);
+static void ath_set_txcont_rate(struct ieee80211com *ic, unsigned int new_rate);
+
 static int ath_calinterval = ATH_SHORT_CALINTERVAL;		/*
 								 * calibrate every 30 secs in steady state
 								 * but check every second at first.
@@ -922,6 +938,16 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
 	ic->ic_vap_create = ath_vap_create;
 	ic->ic_vap_delete = ath_vap_delete;
+
+
+	ic->ic_set_txcont           = ath_set_txcont;
+	ic->ic_get_txcont           = ath_get_txcont;
+
+	ic->ic_set_txcont_power     = ath_set_txcont_power;
+	ic->ic_get_txcont_power     = ath_get_txcont_power;
+
+	ic->ic_set_txcont_rate      = ath_set_txcont_rate;
+	ic->ic_get_txcont_rate      = ath_get_txcont_rate;
 
 	ic->ic_scan_start = ath_scan_start;
 	ic->ic_scan_end = ath_scan_end;
@@ -8154,21 +8180,28 @@ ath_calibrate(unsigned long arg)
 	struct net_device *dev = (struct net_device *) arg;
 	struct ath_softc *sc = dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
+	struct ieee80211com *ic = &sc->sc_ic;
 	/* u_int32_t nchans; */
 	HAL_BOOL isIQdone = AH_FALSE;
 
 	sc->sc_stats.ast_per_cal++;
-
-	DPRINTF(sc, ATH_DEBUG_CALIBRATE, "%s: channel %u/%x\n",
-		__func__, sc->sc_curchan.channel, sc->sc_curchan.channelFlags);
+	DPRINTF(sc, ATH_DEBUG_CALIBRATE, "%s: channel %u/%x - periodic recalibration\n", __func__, sc->sc_curchan.channel, sc->sc_curchan.channelFlags);
 
 	if (ath_hal_getrfgain(ah) == HAL_RFGAIN_NEED_CHANGE) {
 		/*
 		 * Rfgain is out of bounds, reset the chip
 		 * to load new gain values.
 		 */
+		int txcont_was_active = sc->sc_txcont;
+		DPRINTF(sc, ATH_DEBUG_RESET | ATH_DEBUG_CALIBRATE | ATH_DEBUG_DOTH,
+			"%s: %s: Forcing reset() for (ath_hal_getrfgain(ah) == "
+			"HAL_RFGAIN_NEED_CHANGE)\n", DEV_NAME(dev), __func__);
 		sc->sc_stats.ast_per_rfgain++;
 		ath_reset(dev);
+		/* Turn txcont back on as necessary */
+		if (txcont_was_active)
+			ath_set_txcont(ic, txcont_was_active);
+
 	}
 	if (!ath_hal_calibrate(ah, &sc->sc_curchan, &isIQdone)) {
 		DPRINTF(sc, ATH_DEBUG_ANY,
@@ -8178,10 +8211,22 @@ ath_calibrate(unsigned long arg)
 	}
 
 	ath_hal_process_noisefloor(ah);
-	if (isIQdone == AH_TRUE)
-		ath_calinterval = ATH_LONG_CALINTERVAL;
-	else
-		ath_calinterval = ATH_SHORT_CALINTERVAL;
+	if (isIQdone == AH_TRUE) {
+		/* Unless user has overridden calibration interval,
+		 * upgrade to less frequent calibration */
+		if (ath_calinterval == ATH_SHORT_CALINTERVAL)
+			ath_calinterval = ATH_LONG_CALINTERVAL;
+	}
+	else {
+		/* Unless user has overridden calibration interval,
+		 * downgrade to more frequent calibration */
+		if (ath_calinterval == ATH_LONG_CALINTERVAL)
+			ath_calinterval = ATH_SHORT_CALINTERVAL;
+	}
+
+	DPRINTF(sc, ATH_DEBUG_CALIBRATE, "%s: channel %u/%x -- IQ %s.\n",
+		__func__, sc->sc_curchan.channel, sc->sc_curchan.channelFlags,
+		isIQdone ? "done" : "not done" );
 
 	sc->sc_cal_ch.expires = jiffies + (ath_calinterval * HZ);
 	add_timer(&sc->sc_cal_ch);
@@ -8281,8 +8326,8 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		HAL_LED_INIT,	/* IEEE80211_S_INIT */
 		HAL_LED_SCAN,	/* IEEE80211_S_SCAN */
 		HAL_LED_AUTH,	/* IEEE80211_S_AUTH */
-		HAL_LED_ASSOC, 	/* IEEE80211_S_ASSOC */
-		HAL_LED_RUN, 	/* IEEE80211_S_RUN */
+		HAL_LED_ASSOC,	/* IEEE80211_S_ASSOC */
+		HAL_LED_RUN,	/* IEEE80211_S_RUN */
 	};
 
 	DPRINTF(sc, ATH_DEBUG_STATE, "%s: %s: %s -> %s\n", __func__, DEV_NAME(dev),
@@ -8290,6 +8335,7 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		ieee80211_state_name[nstate]);
 
 	del_timer(&sc->sc_cal_ch);		/* periodic calibration timer */
+
 	ath_hal_setledstate(ah, leds[nstate]);	/* set LED */
 	netif_stop_queue(dev);			/* before we do anything else */
 
@@ -8314,6 +8360,10 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		 * Notify the rate control algorithm.
 		 */
 		sc->sc_rc->ops->newstate(vap, nstate);
+		sc->sc_txcont = 0;
+		sc->sc_txcont_rate = 0;
+		sc->sc_txcont_power = -1;
+
 		goto done;
 	}
 	ni = vap->iv_bss;
@@ -8374,6 +8424,9 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			 * transition from RUN->RUN that means we may
 			 * be called with beacon transmission active.
 			 */
+			DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
+				"%s: ath_hal_stoptxdma sc_bhalq:%d\n",
+				__func__, sc->sc_bhalq);
 			ath_hal_stoptxdma(ah, sc->sc_bhalq);
 
 			/* Set default key index for static wep case */
@@ -8425,7 +8478,7 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			break;
 		case IEEE80211_M_WDS:
 			wds_ni = ieee80211_find_txnode(vap, vap->wds_mac);
-			if (wds_ni) {
+			if (wds_ni != NULL) {
 				/* XXX no rate negotiation; just dup */
 				wds_ni->ni_rates = vap->iv_bss->ni_rates;
 				/* Depending on the sequence of bringing up devices
@@ -8492,14 +8545,10 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		avp->av_dfswait_run = 0; /* reset the dfs wait flag */
 	}
 done:
-	/*
-	 * Invoke the parent method to complete the work.
-	 */
+	/* Invoke the parent method to complete the work. */
 	error = avp->av_newstate(vap, nstate, arg);
 
-	/*
-	 * Finally, start any timers.
-	 */
+	/* Finally, start any timers. */
 	if (nstate == IEEE80211_S_RUN) {
 		/* start periodic recalibration timer */
 		mod_timer(&sc->sc_cal_ch, jiffies + (ath_calinterval * HZ));
@@ -8519,14 +8568,12 @@ bad:
 	return error;
 }
 
-/*
- * periodically checks for the HAL to set
+/* periodically checks for the HAL to set
  * CHANNEL_DFS_CLEAR flag on current channel.
  * if the flag is set and a VAP is waiting for it, push
  * transition the VAP to RUN state.
  *
- * Context: Timer (softIRQ)
- */
+ * Context: Timer (softIRQ) */
 static void
 ath_check_dfs_clear(unsigned long data )
 {
@@ -10070,6 +10117,532 @@ ath_get_hal_status_desc(HAL_STATUS status)
 		return hal_status_desc[status];
 	else
 		return "";
+}
+
+/* Adjust the ratecode used for continuous transmission to the closest rate to the one specified (rounding down) */
+static int
+ath_get_txcont_adj_ratecode(struct ath_softc *sc)
+{
+	const HAL_RATE_TABLE *rt    = sc->sc_currates;
+	int closest_rate_ix         = sc->sc_minrateix;
+	int j;
+
+	if (0 != sc->sc_txcont_rate) {
+		/* Find closest rate to specified rate */
+		for (j = sc->sc_minrateix; j < rt->rateCount; j++) {
+			if (((sc->sc_txcont_rate * 1000) >= rt->info[j].rateKbps) &&
+				(rt->info[j].rateKbps >= rt->info[closest_rate_ix].rateKbps)) {
+				closest_rate_ix = j;
+			}
+		}
+	}
+	/* Diagnostic */
+	if (0 == sc->sc_txcont_rate) {
+		printk(KERN_INFO "%s: %s: Using default rate of %dM.\n", DEV_NAME(sc->sc_dev),
+				__func__, (rt->info[closest_rate_ix].rateKbps / 1000));
+	} else if (sc->sc_txcont_rate == (rt->info[closest_rate_ix].rateKbps / 1000)) {
+		printk(KERN_INFO "%s: %s: Using requested rate of %dM.\n",
+				DEV_NAME(sc->sc_dev), __func__, sc->sc_txcont_rate);
+	} else {
+		printk(KERN_INFO "%s: %s: Rounded down requested rate of %dM to %dM.\n",
+				DEV_NAME(sc->sc_dev), __func__, sc->sc_txcont_rate,
+				(rt->info[closest_rate_ix].rateKbps / 1000));
+	}
+	return rt->info[closest_rate_ix].rateCode;
+}
+
+/*
+Configure the radio for continuous transmission
+*/
+static void
+txcont_configure_radio(struct ieee80211com *ic)
+{
+	struct net_device           *dev = ic->ic_dev;
+	struct ath_softc            *sc = dev->priv;
+	struct ath_hal              *ah = sc->sc_ah;
+	struct ieee80211_wme_state  *wme = &ic->ic_wme;
+	struct ieee80211vap         *vap = TAILQ_FIRST(&ic->ic_vaps);
+
+	HAL_STATUS status;
+	int q;
+
+	if (IFF_RUNNING != (ic->ic_dev->flags & IFF_RUNNING)) {
+		printk(KERN_ERR "%s: %s: Cannot enable txcont when interface is"
+			" not in running state.\n", DEV_NAME(dev), __func__);
+		sc->sc_txcont = 0;
+		return;
+	}
+
+	ath_hal_intrset(ah, 0);
+	{
+		int ac;
+
+		/* Prepare to reconfigure */
+		ic->ic_caps  &= ~IEEE80211_C_SHPREAMBLE;
+		ic->ic_coverageclass = 0;
+		ic->ic_flags &= ~IEEE80211_F_DOTH;
+		ic->ic_flags &= ~IEEE80211_F_SHPREAMBLE;
+		ic->ic_flags &= ~IEEE80211_F_TXPOW_FIXED;
+		ic->ic_flags |= IEEE80211_F_USEBARKER;
+		ic->ic_flags_ext &= ~IEEE80211_FEXT_COUNTRYIE;
+		ic->ic_flags_ext &= ~IEEE80211_FEXT_MARKDFS;
+		ic->ic_flags_ext &= ~IEEE80211_FEXT_REGCLASS;
+		ic->ic_protmode = IEEE80211_PROT_NONE;
+		ic->ic_roaming = IEEE80211_ROAMING_DEVICE;
+		vap->iv_flags &= ~IEEE80211_F_BGSCAN;
+		vap->iv_flags &= ~IEEE80211_F_DROPUNENC;
+		vap->iv_flags &= ~IEEE80211_F_NOBRIDGE;
+		vap->iv_flags &= ~IEEE80211_F_PRIVACY;
+		vap->iv_flags |= IEEE80211_F_PUREG;
+		vap->iv_flags |= IEEE80211_F_WME;
+		vap->iv_flags_ext &= ~IEEE80211_FEXT_UAPSD;
+		vap->iv_flags_ext &= ~IEEE80211_FEXT_WDS;
+		vap->iv_ic->ic_flags |= IEEE80211_F_WME; /* XXX needed by ic_reset */
+		vap->iv_mcast_rate = 54000;
+		vap->iv_uapsdinfo = 0;
+		vap->iv_ath_cap |= IEEE80211_ATHC_BURST;
+		vap->iv_ath_cap |= IEEE80211_ATHC_FF;
+		vap->iv_ath_cap &= ~IEEE80211_ATHC_AR;
+		vap->iv_ath_cap &= ~IEEE80211_ATHC_COMP;
+		vap->iv_des_ssid[0].len = 0;
+		vap->iv_des_nssid = 1;
+		sc->sc_txantenna = sc->sc_defant = sc->sc_mcastantenna = sc->sc_rxotherant = 1;
+		sc->sc_diversity = 0;
+		memset(vap->iv_des_ssid[0].ssid, 0, IEEE80211_ADDR_LEN);
+		ath_hal_setdiversity(sc->sc_ah, 0);
+
+		for (ac = 0; ac < WME_NUM_AC; ac++) {
+
+			/* AIFSN = 1 */
+			wme->wme_wmeBssChanParams.cap_wmeParams[ac].wmep_aifsn     =
+			    wme->wme_bssChanParams.cap_wmeParams[ac].wmep_aifsn        =
+			    wme->wme_wmeChanParams.cap_wmeParams[ac].wmep_aifsn        =
+			    wme->wme_chanParams.cap_wmeParams[ac].wmep_aifsn           =
+			    1;
+
+			/*  CWMIN = 1                                                */
+			wme->wme_wmeBssChanParams.cap_wmeParams[ac].wmep_logcwmin  =
+			    wme->wme_bssChanParams.cap_wmeParams[ac].wmep_logcwmin     =
+			    wme->wme_wmeChanParams.cap_wmeParams[ac].wmep_logcwmin     =
+			    wme->wme_chanParams.cap_wmeParams[ac].wmep_logcwmin        =
+			    1;
+
+			/*  CWMAX = 1                                                */
+			wme->wme_wmeBssChanParams.cap_wmeParams[ac].wmep_logcwmax  =
+			    wme->wme_bssChanParams.cap_wmeParams[ac].wmep_logcwmax     =
+			    wme->wme_wmeChanParams.cap_wmeParams[ac].wmep_logcwmax     =
+			    wme->wme_chanParams.cap_wmeParams[ac].wmep_logcwmax        =
+			    1;
+
+			/*  ACM = 1                                                  */
+			wme->wme_wmeBssChanParams.cap_wmeParams[ac].wmep_acm       =
+			    wme->wme_bssChanParams.cap_wmeParams[ac].wmep_acm          =
+			    0;
+
+			/*  NOACK = 1                                                */
+			wme->wme_wmeChanParams.cap_wmeParams[ac].wmep_noackPolicy  =
+			    wme->wme_chanParams.cap_wmeParams[ac].wmep_noackPolicy     =
+			    1;
+
+			/*  TXOPLIMIT = 8192 */
+			wme->wme_wmeBssChanParams.cap_wmeParams[ac].wmep_txopLimit =
+			    wme->wme_bssChanParams.cap_wmeParams[ac].wmep_txopLimit    =
+			    wme->wme_wmeChanParams.cap_wmeParams[ac].wmep_txopLimit    =
+			    wme->wme_chanParams.cap_wmeParams[ac].wmep_txopLimit       =
+			    IEEE80211_US_TO_TXOP(8192);
+		}
+		ieee80211_cancel_scan(vap);	/* anything current */
+		ieee80211_wme_updateparams(vap);
+		/*  reset the WNIC */
+		if (!ath_hal_reset(ah, sc->sc_opmode, &sc->sc_curchan, AH_TRUE, &status)) {
+			printk(KERN_ERR "%s: ath_hal_reset failed: '%s' "
+					"(HAL status %u) in %s at %s:%d\n",
+					DEV_NAME(dev), ath_get_hal_status_desc(status),
+					status,  __func__, __FILE__, __LINE__);
+		}
+		ath_update_txpow(sc);
+
+#ifdef ATH_SUPERG_DYNTURBO
+		/*  Turn on dynamic turbo if necessary -- before we get into our own implementation -- and before we configures */
+		if ((!IEEE80211_IS_CHAN_STURBO(ic->ic_bsschan)) &&
+				(IEEE80211_ATHC_TURBOP &
+					TAILQ_FIRST(&ic->ic_vaps)->iv_ath_cap) &&
+				(IEEE80211_IS_CHAN_ANYG(ic->ic_bsschan) ||
+				 IEEE80211_IS_CHAN_A(ic->ic_bsschan))) {
+			u_int32_t newflags = ic->ic_bsschan->ic_flags;
+			if (( IEEE80211_ATHC_TURBOP & TAILQ_FIRST(&ic->ic_vaps)->iv_ath_cap )) {
+				DPRINTF(sc, ATH_DEBUG_TURBO, "%s: Enabling dynamic turbo...\n",
+						DEV_NAME(dev));
+				ic->ic_ath_cap |= IEEE80211_ATHC_BOOST;
+				sc->sc_ignore_ar = 1;
+				newflags |= IEEE80211_CHAN_TURBO;
+			} else {
+				DPRINTF(sc, ATH_DEBUG_TURBO, "%s: Disabling dynamic turbo...\n",
+						DEV_NAME(dev));
+				ic->ic_ath_cap &= ~IEEE80211_ATHC_BOOST;
+				newflags &= ~IEEE80211_CHAN_TURBO;
+			}
+			ieee80211_dturbo_switch(ic, newflags);
+			/*  Keep interupts off, just in case... */
+			ath_hal_intrset(ah, 0);
+		}
+#endif /* #ifdef ATH_SUPERG_DYNTURBO */
+		/* clear pending tx frames picked up after reset */
+		ath_draintxq(sc);
+		/* stop receive side */
+		ath_stoprecv(sc);
+		ath_hal_setrxfilter(ah, 0);
+		ath_hal_setmcastfilter(ah, 0, 0);
+		ath_set_ack_bitrate(sc, sc->sc_ackrate);
+		netif_wake_queue(dev);		/* restart xmit */
+
+		if (ar_device(sc->devid) == 5212 || ar_device(sc->devid) == 5213) {
+			/* registers taken from openhal */
+#define AR5K_AR5212_TXCFG				0x0030
+#define AR5K_AR5212_TXCFG_TXCONT_ENABLE			0x00000080
+#define AR5K_AR5212_RSSI_THR				0x8018
+#define AR5K_AR5212_PHY_NF				0x9864
+#define AR5K_AR5212_ADDAC_TEST				0x8054
+#define AR5K_AR5212_DIAG_SW				0x8048
+#define AR5K_AR5212_DIAG_SW_IGNOREPHYCS			0x00100000
+#define AR5K_AR5212_DIAG_SW_IGNORENAV			0x00200000
+#define AR5K_AR5212_DCU_GBL_IFS_SIFS			0x1030
+#define AR5K_AR5212_DCU_GBL_IFS_SIFS_M			0x0000ffff
+#define AR5K_AR5212_DCU_GBL_IFS_EIFS			0x10b0
+#define AR5K_AR5212_DCU_GBL_IFS_EIFS_M			0x0000ffff
+#define AR5K_AR5212_DCU_GBL_IFS_SLOT			0x1070
+#define AR5K_AR5212_DCU_GBL_IFS_SLOT_M			0x0000ffff
+#define AR5K_AR5212_DCU_GBL_IFS_MISC			0x10f0
+#define	AR5K_AR5212_DCU_GBL_IFS_MISC_LFSR_SLICE		0x00000007
+#define	AR5K_AR5212_DCU_GBL_IFS_MISC_TURBO_MODE		0x00000008
+#define	AR5K_AR5212_DCU_GBL_IFS_MISC_SIFS_DUR_USEC	0x000003f0
+#define	AR5K_AR5212_DCU_GBL_IFS_MISC_USEC_DUR		0x000ffc00
+#define	AR5K_AR5212_DCU_GBL_IFS_MISC_DCU_ARB_DELAY	0x00300000
+#define	AR5K_AR5212_DCU_MISC_POST_FR_BKOFF_DIS		0x00200000
+#define	AR5K_AR5212_DCU_CHAN_TIME_DUR			0x000fffff
+#define	AR5K_AR5212_DCU_CHAN_TIME_ENABLE		0x00100000
+#define	AR5K_AR5212_QCU(_n, _a)		                (((_n) << 2) + _a)
+#define	AR5K_AR5212_DCU(_n, _a)		                AR5K_AR5212_QCU(_n, _a)
+#define AR5K_AR5212_DCU_MISC(_n)			AR5K_AR5212_DCU(_n, 0x1100)
+#define AR5K_AR5212_DCU_CHAN_TIME(_n)			AR5K_AR5212_DCU(_n, 0x10c0)
+			/* NB: This section of direct hardware access contains
+			 * a continuous transmit mode derived by reverse
+			 * engineering. Many of the settings may be unnecessary
+			 * to achieve the end result. Additional testing,
+			 * selectively commenting out register writes below may
+			 * result in simpler code with the same results. */
+
+			/*  Set RSSI threshold to extreme, hear nothing */
+			OS_REG_WRITE(ah, AR5K_AR5212_RSSI_THR, 0xffffffff);
+			/*  Blast away at noise floor, assuming AGC has
+			 *  already set it... we want to trash it. */
+			OS_REG_WRITE(ah, AR5K_AR5212_PHY_NF,   0xffffffff);
+			/* Enable continuous transmit mode / DAC test mode */
+			OS_REG_WRITE(ah, AR5K_AR5212_ADDAC_TEST,
+					OS_REG_READ(ah, AR5K_AR5212_ADDAC_TEST) | 1);
+			/* Ignore real and virtual carrier sensing, and reception */
+			OS_REG_WRITE(ah, AR5K_AR5212_DIAG_SW,
+					OS_REG_READ(ah, AR5K_AR5212_DIAG_SW) |
+					AR5K_AR5212_DIAG_SW_IGNOREPHYCS |
+					AR5K_AR5212_DIAG_SW_IGNORENAV);
+			/*  Set SIFS to rediculously small value...  */
+			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_SIFS,
+					(OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_SIFS) &
+					 ~AR5K_AR5212_DCU_GBL_IFS_SIFS_M) | 1);
+			/*  Set EIFS to rediculously small value...  */
+			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_EIFS,
+					(OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_EIFS) &
+					 ~AR5K_AR5212_DCU_GBL_IFS_EIFS_M) | 1);
+			/*  Set slot time to rediculously small value...  */
+			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_SLOT,
+					(OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_SLOT) &
+					 ~AR5K_AR5212_DCU_GBL_IFS_SLOT_M) | 1);
+			OS_REG_WRITE(ah, AR5K_AR5212_DCU_GBL_IFS_MISC,
+			    OS_REG_READ(ah, AR5K_AR5212_DCU_GBL_IFS_MISC) &
+			    ~AR5K_AR5212_DCU_GBL_IFS_MISC_SIFS_DUR_USEC &
+			    ~AR5K_AR5212_DCU_GBL_IFS_MISC_USEC_DUR &
+			    ~AR5K_AR5212_DCU_GBL_IFS_MISC_DCU_ARB_DELAY &
+			    ~AR5K_AR5212_DCU_GBL_IFS_MISC_LFSR_SLICE);
+
+			/*  Disable queue backoff (default was like 256 or 0x100) */
+			for (q = 0; q < 4; q++) {
+				OS_REG_WRITE(ah, AR5K_AR5212_DCU_MISC(q), AR5K_AR5212_DCU_MISC_POST_FR_BKOFF_DIS);
+				/*  Set the channel time (burst time) to the highest setting the register can take, forget this compliant 8192 limit... */
+				OS_REG_WRITE(ah, AR5K_AR5212_DCU_CHAN_TIME(q), AR5K_AR5212_DCU_CHAN_TIME_ENABLE | AR5K_AR5212_DCU_CHAN_TIME_DUR);
+			}
+			/*  Set queue full to continuous */
+			OS_REG_WRITE(ah, AR5K_AR5212_TXCFG, OS_REG_READ(ah, AR5K_AR5212_TXCFG) | AR5K_AR5212_TXCFG_TXCONT_ENABLE);
+#undef AR5K_AR5212_TXCFG
+#undef AR5K_AR5212_TXCFG_TXCONT_ENABLE
+#undef AR5K_AR5212_RSSI_THR
+#undef AR5K_AR5212_PHY_NF
+#undef AR5K_AR5212_ADDAC_TEST
+#undef AR5K_AR5212_DIAG_SW
+#undef AR5K_AR5212_DIAG_SW_IGNOREPHYCS
+#undef AR5K_AR5212_DIAG_SW_IGNORENAV
+#undef AR5K_AR5212_DCU_GBL_IFS_SIFS
+#undef AR5K_AR5212_DCU_GBL_IFS_SIFS_M
+#undef AR5K_AR5212_DCU_GBL_IFS_EIFS
+#undef AR5K_AR5212_DCU_GBL_IFS_EIFS_M
+#undef AR5K_AR5212_DCU_GBL_IFS_SLOT
+#undef AR5K_AR5212_DCU_GBL_IFS_SLOT_M
+#undef AR5K_AR5212_DCU_GBL_IFS_MISC
+#undef AR5K_AR5212_DCU_GBL_IFS_MISC_LFSR_SLICE
+#undef AR5K_AR5212_DCU_GBL_IFS_MISC_TURBO_MODE
+#undef AR5K_AR5212_DCU_GBL_IFS_MISC_SIFS_DUR_USEC
+#undef AR5K_AR5212_DCU_GBL_IFS_MISC_USEC_DUR
+#undef AR5K_AR5212_DCU_GBL_IFS_MISC_DCU_ARB_DELAY
+#undef AR5K_AR5212_DCU_MISC_POST_FR_BKOFF_DIS
+#undef AR5K_AR5212_DCU_CHAN_TIME_DUR
+#undef AR5K_AR5212_DCU_CHAN_TIME_ENABLE
+#undef AR5K_AR5212_QCU
+#undef AR5K_AR5212_DCU
+#undef AR5K_AR5212_DCU_MISC
+#undef AR5K_AR5212_DCU_CHAN_TIME
+		}
+
+		/* Disable beacons and beacon miss interrupts */
+		sc->sc_beacons = 0;
+		sc->sc_imask &= ~(HAL_INT_SWBA | HAL_INT_BMISS);
+
+		/* Enable continuous transmit register bit */
+		sc->sc_txcont = 1;
+	}
+	ath_hal_intrset(ah, sc->sc_imask);
+}
+
+/* Queue a self-looped packet for the specified hardware queue. */
+static void
+txcont_queue_packet(struct ieee80211com *ic, struct ath_txq* txq)
+{
+	struct net_device *dev             = ic->ic_dev;
+	struct ath_softc *sc               = dev->priv;
+	struct ath_hal *ah                 = sc->sc_ah;
+	struct ath_buf *bf                 = NULL;
+	struct sk_buff *skb                = NULL;
+	unsigned int i;
+	/* maximum supported size, subtracting headers and required slack */
+	unsigned int datasz                = 4028;
+	struct ieee80211_frame* wh         = NULL;
+	unsigned char *data                = NULL;
+	unsigned char *crc                 = NULL;
+
+	if (IFF_RUNNING != (ic->ic_dev->flags & IFF_RUNNING) || (0 == sc->sc_txcont)) {
+		printk(KERN_ERR "%s: %s: Refusing to queue self linked frame "
+				"when txcont is not enabled.\n", DEV_NAME(dev), __func__);
+		return;
+	}
+
+	ath_hal_intrset(ah, 0);
+	{
+		ATH_TXBUF_LOCK_IRQ(sc);
+		bf  = STAILQ_FIRST(&sc->sc_txbuf);
+		STAILQ_REMOVE_HEAD(&sc->sc_txbuf, bf_list);
+		ATH_TXBUF_UNLOCK_IRQ(sc);
+
+		skb = alloc_skb(datasz + sizeof(struct ieee80211_frame) + IEEE80211_CRC_LEN, GFP_ATOMIC);
+		wh  = (struct ieee80211_frame*)skb_put(skb, sizeof(struct ieee80211_frame));
+		if (NULL == skb) {
+			BUG();
+		}
+		if (NULL == bf) {
+			printk(KERN_ERR "%s: %s: STAILQ_FIRST(&sc->sc_txbuf) returned null!\n", DEV_NAME(dev), __func__);
+			BUG();
+		}
+
+		/*  Define the SKB format */
+		data   = skb_put(skb, datasz);
+
+		/*  NB: little endian */
+
+		/*  11110000 (protocol = 00, type = 00 "management",
+		 *  subtype = 1111 "reserved/undocumented" */
+		wh->i_fc[0]    = 0xf0;
+		/* leave out to/from DS, frag., retry, pwr mgt, more data,
+		 * protected frame, and order bit */
+		wh->i_fc[1]    = 0x00;
+		/* NB: Duration is left at zero, for broadcast frames. */
+		wh->i_dur      = 0;
+		/*  DA (destination address) */
+		wh->i_addr1[0] = wh->i_addr1[1] = wh->i_addr1[2] =
+			wh->i_addr1[3] = wh->i_addr1[4] = wh->i_addr1[5] = 0xff;
+		/*  BSSID */
+		wh->i_addr2[0] = wh->i_addr2[1] = wh->i_addr2[2] =
+			wh->i_addr2[3] = wh->i_addr2[4] = wh->i_addr2[5] = 0xff;
+		/*  SA (source address) */
+		wh->i_addr3[0] = wh->i_addr3[1] = wh->i_addr3[2] =
+			wh->i_addr3[3] = wh->i_addr3[4] = wh->i_addr3[5] = 0x00;
+		/*  Sequence is zero for now, let the hardware assign this or
+		 *  not, depending on how we setup flags (below) */
+		wh->i_seq[0]   = 0x00;
+		wh->i_seq[1]   = 0x00;
+
+		/*  Initialize the data */
+		if (datasz % 4)	BUG();
+		for (i = 0; i < datasz; i+=4) {
+			data[i+0] = 0x00;
+			data[i+1] = 0xff;
+			data[i+2] = 0x00;
+			data[i+3] = 0xff;
+		}
+
+		/*  Add space for the CRC */
+		crc    = skb_put(skb, IEEE80211_CRC_LEN);
+
+		/*  Clear  */
+		crc[0] = crc[1] = crc[2] = crc[3] = 0x00;
+
+		/*  Initialize the selfed-linked frame */
+		bf->bf_skb      = skb;
+		bf->bf_skbaddr  = bus_map_single(sc->sc_bdev, bf->bf_skb->data,
+				bf->bf_skb->len, BUS_DMA_TODEVICE);
+		bf->bf_flags    = HAL_TXDESC_CLRDMASK | HAL_TXDESC_NOACK;
+		bf->bf_node     = NULL;
+		bf->bf_desc->ds_link = bf->bf_daddr;
+		bf->bf_desc->ds_data = bf->bf_skbaddr;
+
+		ath_hal_setuptxdesc(ah,
+		    bf->bf_desc,		     /* the descriptor */
+		    skb->len,			     /* packet length */
+		    sizeof(struct ieee80211_frame),  /* header length */
+		    HAL_PKT_TYPE_NORMAL,	     /* Atheros packet type */
+		    sc->sc_txcont_power,	     /* txpower in 0.5dBm increments, range 0-n depending upon card typically 60-100 max */
+		    ath_get_txcont_adj_ratecode(sc),  /* series 0 rate */
+		    0,				     /* series 0 retries */
+		    HAL_TXKEYIX_INVALID,	     /* key cache index */
+		    sc->sc_txantenna,		     /* antenna mode */
+		    bf->bf_flags,		     /* flags */
+		    0,				     /* rts/cts rate */
+		    0,				     /* rts/cts duration */
+		    0,				     /* comp icv len */
+		    0,				     /* comp iv len */
+		    ATH_COMP_PROC_NO_COMP_NO_CCS     /* comp scheme */
+		    );
+
+		ath_hal_filltxdesc(ah,
+		    bf->bf_desc,	/* Descriptor to fill */
+		    skb->len,		/* buffer length */
+		    AH_TRUE,		/* is first segment */
+		    AH_TRUE,		/* is last segment */
+		    bf->bf_desc		/* first descriptor */
+		    );
+
+		/*  Byteswap (as necessary) */
+		ath_desc_swap(bf->bf_desc);
+		/*  queue the self-linked frame */
+		ath_tx_txqaddbuf(sc, NULL,	/* node */
+		    txq,			/* hardware queue */
+		    bf,				/* atheros buffer */
+		    bf->bf_desc,		/* last descriptor */
+		    bf->bf_skb->len		/* frame length */
+		    );
+		ath_hal_txstart(ah, txq->axq_qnum);
+	}
+	ath_hal_intrset(ah, sc->sc_imask);
+}
+
+/* Turn on continuous transmission */
+static void
+txcont_on(struct ieee80211com *ic)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = dev->priv;
+
+	if (IFF_RUNNING != (ic->ic_dev->flags & IFF_RUNNING)) {
+		printk(KERN_ERR "%s: %s: Cannot enable txcont when interface is not in running state.\n", DEV_NAME(dev), __func__);
+		sc->sc_txcont = 0;
+		return;
+	}
+
+	txcont_configure_radio(ic);
+	txcont_queue_packet(ic, sc->sc_ac2q[WME_AC_BE]);
+	txcont_queue_packet(ic, sc->sc_ac2q[WME_AC_BK]);
+	txcont_queue_packet(ic, sc->sc_ac2q[WME_AC_VI]);
+	txcont_queue_packet(ic, sc->sc_ac2q[WME_AC_VO]);
+}
+
+/* Turn off continuous transmission */
+static void
+txcont_off(struct ieee80211com *ic)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = dev->priv;
+
+	if(TAILQ_FIRST(&ic->ic_vaps)->iv_opmode != IEEE80211_M_WDS)
+		sc->sc_beacons = 1;
+	ath_reset(sc->sc_dev);
+
+	sc->sc_txcont = 0;
+}
+
+/* Is continuous transmission mode enabled?  It may not actually be
+ * transmitting if the interface is down, for example. */
+static int
+ath_get_txcont(struct ieee80211com *ic)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = dev->priv;
+	return sc->sc_txcont;
+}
+
+/* Set transmission mode on/off... but know that it may not actually start if
+ * the interface is down, for example. */
+static void
+ath_set_txcont(struct ieee80211com *ic, int on)
+{
+	on ? txcont_on(ic) : txcont_off(ic);
+}
+
+/* Set the transmission power to be used during continuous transmission in
+ * units of 0.5dBm ranging from 0 to 127. */
+static void
+ath_set_txcont_power(struct ieee80211com *ic, unsigned int txpower)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = dev->priv;
+	int new_txcont_power = txpower > IEEE80211_TXPOWER_MAX ? IEEE80211_TXPOWER_MAX : txpower;
+	if (sc->sc_txcont_power != new_txcont_power) {
+		/*  update */
+		sc->sc_txcont_power = new_txcont_power;
+		/*  restart continuous transmit if necessary */
+		if (sc->sc_txcont) {
+			txcont_on(ic);
+		}
+	}
+}
+
+/* See ath_set_txcont_power for details. */
+static int
+ath_get_txcont_power(struct ieee80211com *ic)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = dev->priv;
+	return sc->sc_txcont_power ? sc->sc_txcont_power : 0; /* VERY conservative default */
+}
+
+/* Set the transmission rate to be used for continuous transmissions(in Mbps) */
+	static void
+ath_set_txcont_rate(struct ieee80211com *ic, unsigned int new_rate)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = dev->priv;
+	if (sc->sc_txcont_rate != new_rate) {
+		/*  NOTE: This value is sanity checked and dropped down to closest rate in txcont_on. */
+		sc->sc_txcont_rate = new_rate;
+		/*  restart continuous transmit if necessary */
+		if (sc->sc_txcont) {
+			txcont_on(ic);
+		}
+	}
+}
+
+/* See ath_set_txcont_rate for details. */
+	static unsigned int
+ath_get_txcont_rate(struct ieee80211com *ic)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = dev->priv;
+	return sc->sc_txcont_rate ? sc->sc_txcont_rate : 0;
 }
 
 static int
