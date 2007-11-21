@@ -128,6 +128,10 @@ extern void * __ahdecl ath_hal_memcpy(void *, const void *, size_t);
 #define	abs(_a)			__builtin_abs(_a)
 #endif
 
+#ifndef labs
+#define	labs(_a)		__builtin_labs(_a)
+#endif
+
 struct ath_hal;
 extern	u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
 #define	OS_GETUPTIME(_ah)	ath_hal_getuptime(_ah)
