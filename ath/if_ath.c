@@ -1291,8 +1291,7 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 		/* Use RadioTAP interface type for monitor mode. */
 		dev->type = ARPHRD_IEEE80211_RADIOTAP;
 
-	if ((flags & IEEE80211_CLONE_BSSID) &&
-	    opmode != IEEE80211_M_WDS && sc->sc_hasbmask) {
+	if ((flags & IEEE80211_CLONE_BSSID) && sc->sc_hasbmask) {
 		struct ieee80211vap *v;
 		unsigned int id_mask, id;
 
