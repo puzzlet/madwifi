@@ -132,7 +132,7 @@
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
-typedef unsigned __nocast gfp_t;
+typedef int gfp_t;
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16)
