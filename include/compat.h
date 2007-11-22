@@ -131,6 +131,10 @@
 #define __iomem
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
+typedef unsigned __nocast gfp_t;
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16)
 static inline int timeval_compare(struct timeval *lhs, struct timeval *rhs)
 {
