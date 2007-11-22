@@ -4279,7 +4279,7 @@ ieee80211_ioctl_siwmlme(struct net_device *dev,
 
 	memset(&mlme, 0, sizeof(mlme));
 
-switch (wextmlme->cmd) {
+	switch (wextmlme->cmd) {
 	case IW_MLME_DEAUTH:
 		mlme.im_op = IEEE80211_MLME_DEAUTH;
 		break;
@@ -4512,7 +4512,7 @@ siwauth_roaming_control(struct net_device *dev,
 	int args[2];
 
 	args[0] = IEEE80211_PARAM_ROAMING;
-switch (roam) {
+	switch (roam) {
 	case IW_AUTH_ROAMING_ENABLE:
 		args[1] = IEEE80211_ROAMING_AUTO;
 		break;
@@ -4551,7 +4551,7 @@ ieee80211_ioctl_siwauth(struct net_device *dev,
 {
 	int rc = -EOPNOTSUPP;
 
-switch (erq->flags & IW_AUTH_INDEX) {
+	switch (erq->flags & IW_AUTH_INDEX) {
 	case IW_AUTH_WPA_VERSION:
 		rc = siwauth_wpa_version(dev, info, erq, buf);
 		break;
