@@ -1771,6 +1771,7 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 	struct ieee80211com *ic = ni->ni_ic;
 	struct sk_buff *skb;
 	u_int8_t *frm;
+	int frm_len;
 	u_int16_t capinfo;
 	ieee80211_keyix_t def_keyindex;
 	int has_challenge, is_shared_key, ret, timer, status;
@@ -1798,8 +1799,7 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 		 *	[tlv] Atheros Advanced Capabilities
 		 *	[tlv] AtherosXR parameters
 		 */
-		skb = ieee80211_getmgtframe(&frm,
-			  8
+		frm_len = 8
 			+ sizeof(u_int16_t)
 			+ sizeof(u_int16_t)
 			+ 2 + IEEE80211_NWID_LEN
@@ -1815,12 +1815,12 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 			+ (vap->iv_flags & IEEE80211_F_WPA ?
 				2 * sizeof(struct ieee80211_ie_wpa) : 0)
 			+ sizeof(struct ieee80211_ie_athAdvCap)
+			+ vap->app_ie[IEEE80211_APPIE_FRAME_PROBE_RESP].length;
 #ifdef ATH_SUPERG_XR
-			+ (vap->iv_ath_cap & IEEE80211_ATHC_XR ?	/* XR */
-				sizeof(struct ieee80211_xr_param) : 0)
+		if (vap->iv_ath_cap & IEEE80211_ATHC_XR)
+			frm_len += sizeof(struct ieee80211_xr_param);
 #endif
-			+ vap->app_ie[IEEE80211_APPIE_FRAME_PROBE_RESP].length
-		);
+		skb = ieee80211_getmgtframe(&frm, frm_len);
 		if (skb == NULL)
 			senderr(ENOMEM, is_tx_nobuf);
 
