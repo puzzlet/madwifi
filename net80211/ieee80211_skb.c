@@ -626,7 +626,7 @@ int netif_rx_debug(struct sk_buff *skb, const char* func, int line) {
 	return netif_rx(untrack_skb(skb, 0, func, line, __func__, __LINE__));
 }
 
-struct sk_buff * alloc_skb_debug(unsigned int length, int gfp_mask,
+struct sk_buff * alloc_skb_debug(unsigned int length, gfp_t gfp_mask,
 		const char *func, int line) {
 	return track_skb(alloc_skb(length, gfp_mask), 0 /* users_adjustment */,
 			 func, line, __func__, __LINE__);
@@ -641,7 +641,7 @@ struct sk_buff * dev_alloc_skb_debug(unsigned int length,
 
 
 
-struct sk_buff * skb_clone_debug(struct sk_buff *skb, int pri, 
+struct sk_buff * skb_clone_debug(struct sk_buff *skb, gfp_t pri, 
 			       const char *func, int line) 
 {
 	return track_skb(
@@ -649,7 +649,7 @@ struct sk_buff * skb_clone_debug(struct sk_buff *skb, int pri,
 			 func, line, __func__, __LINE__);
 }
 
-struct sk_buff * skb_copy_debug(struct sk_buff *skb, int pri, 
+struct sk_buff * skb_copy_debug(struct sk_buff *skb, gfp_t pri, 
 	       const char *func, int line)
 {
 	return track_skb(
@@ -675,7 +675,7 @@ struct sk_buff * skb_realloc_headroom_debug(struct sk_buff *skb, unsigned int he
 			func, line, __func__, __LINE__);
 }
 
-struct sk_buff * pskb_copy_debug(struct sk_buff *skb, int pri,
+struct sk_buff * pskb_copy_debug(struct sk_buff *skb, gfp_t pri,
 		const char *func, int line)
 {
 	return track_skb(
@@ -690,7 +690,7 @@ int dev_queue_xmit_debug(struct sk_buff *skb,
 	return dev_queue_xmit(untrack_skb(skb, 0, func, line, __func__, __LINE__));
 }
 
-struct sk_buff * skb_share_check_debug(struct sk_buff *skb, int pri,
+struct sk_buff * skb_share_check_debug(struct sk_buff *skb, gfp_t pri,
 		      const char *func, int line)
 {
 	might_sleep_if(pri & __GFP_WAIT);
@@ -713,7 +713,7 @@ void  kfree_skb_fast_debug(struct sk_buff *skb,
 	unref_skb(skb, UNREF_USE_DEV_KFREE_SKB_ANY, func, line, __func__, __LINE__);
 }
 
-struct sk_buff *  skb_unshare_debug(struct sk_buff *skb, int pri,
+struct sk_buff *  skb_unshare_debug(struct sk_buff *skb, gfp_t pri,
 		  const char *func, int line)
 {
 	might_sleep_if(pri & __GFP_WAIT);
@@ -729,7 +729,7 @@ struct sk_buff *  skb_unshare_debug(struct sk_buff *skb, int pri,
 }
 
 struct sk_buff * skb_copy_expand_debug(const struct sk_buff *skb, int newheadroom, 
-		      int newtailroom, int gfp_mask, 
+		      int newtailroom, gfp_t gfp_mask, 
 		      const char *func, int line)
 {
 	return track_skb(
