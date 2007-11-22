@@ -135,7 +135,8 @@ if_printf(struct net_device *dev, const char *fmt, ...)
  */
 struct sk_buff *
 #ifdef IEEE80211_DEBUG_REFCNT
-ieee80211_getmgtframe_debug(u_int8_t **frm, u_int pktlen, const char* func, int line)
+ieee80211_getmgtframe_debug(u_int8_t **frm, u_int pktlen, 
+		const char* func, int line)
 #else
 ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 #endif

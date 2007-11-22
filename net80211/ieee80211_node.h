@@ -248,7 +248,8 @@ struct ieee80211_node_table {
 	struct timer_list nt_wds_aging_timer;	/* timer to age out wds entries */
 };
 
-/* Allocates a new ieee80211_node* that has a reference count of one, and adds it to the node table. */
+/* Allocates a new ieee80211_node* that has a reference count of one, and 
+ * adds it to the node table. */
 #ifdef IEEE80211_DEBUG_REFCNT
 #define ieee80211_alloc_node_table(_vap, _mac) \
 	ieee80211_alloc_node_table_debug(_vap, _mac, __func__, __LINE__)

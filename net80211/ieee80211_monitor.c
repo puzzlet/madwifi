@@ -506,7 +506,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				th->wr_chan_freq = cpu_to_le16(ic->ic_curchan->ic_freq);
 
 				/* Define the channel flags for radiotap */
-				switch(sc->sc_curmode) {
+				switch (sc->sc_curmode) {
 					case IEEE80211_MODE_11A:
 						th->wr_chan_flags =
 							cpu_to_le16(IEEE80211_CHAN_A);

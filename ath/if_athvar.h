@@ -641,7 +641,7 @@ struct ath_softc {
 	u_int8_t sc_txrate;			/* current tx rate for LED */
 	u_int16_t sc_ledoff;			/* off time for current blink */
 	struct timer_list sc_ledtimer;		/* led off timer */
-	struct timer_list sc_dfswaittimer;	/* dfs wait timer */
+	struct timer_list sc_dfswaittimer;	/* DFS wait timer */
 
 	struct ATH_TQ_STRUCT sc_fataltq;	/* fatal error intr tasklet */
 

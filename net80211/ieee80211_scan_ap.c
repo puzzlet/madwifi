@@ -386,7 +386,7 @@ ap_start(struct ieee80211_scan_state *ss, struct ieee80211vap *vap)
 		/* If we are in "AUTO" mode, upgrade the mode to auto. 
 		 * This lets add_channels upgrade an 11b channel to 
 		 * 11g if available. */
-		if(!as->as_vap_desired_mode && mode == IEEE80211_MODE_11B)
+		if (!as->as_vap_desired_mode && mode == IEEE80211_MODE_11B)
 			mode = IEEE80211_MODE_AUTO;
 		/* Add the list of the channels; any that are not
 		 * in the master channel list will be discarded. */

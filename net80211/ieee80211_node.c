@@ -56,29 +56,35 @@
 /*
  * Association IDs are managed with a bit vector.
  */
-#define	IEEE80211_AID_SET(_vap, _b) \
-	((_vap)->iv_aid_bitmap[IEEE80211_AID(_b) / 32] |= \
+#define	IEEE80211_AID_SET(_vap, _b)				\
+	((_vap)->iv_aid_bitmap[IEEE80211_AID(_b) / 32] |=	\
 		(1 << (IEEE80211_AID(_b) % 32)))
-#define	IEEE80211_AID_CLR(_vap, _b) \
-	((_vap)->iv_aid_bitmap[IEEE80211_AID(_b) / 32] &= \
+#define	IEEE80211_AID_CLR(_vap, _b)				\
+	((_vap)->iv_aid_bitmap[IEEE80211_AID(_b) / 32] &= 	\
 		~(1 << (IEEE80211_AID(_b) % 32)))
-#define	IEEE80211_AID_ISSET(_vap, _b) \
-	((_vap)->iv_aid_bitmap[IEEE80211_AID(_b) / 32] & (1 << (IEEE80211_AID(_b) % 32)))
+#define	IEEE80211_AID_ISSET(_vap, _b)				\
+	((_vap)->iv_aid_bitmap[IEEE80211_AID(_b) / 32] & 	\
+	 (1 << (IEEE80211_AID(_b) % 32)))
 
 #ifdef IEEE80211_DEBUG_REFCNT
 #define ieee80211_alloc_node(_vap, _mac) \
 	ieee80211_alloc_node_debug(_vap, _mac, __func__, __LINE__)
-static struct ieee80211_node *ieee80211_alloc_node_debug(struct ieee80211vap *, const u_int8_t *, const char* func, int line);
+static struct ieee80211_node *ieee80211_alloc_node_debug(struct ieee80211vap *, 
+		const u_int8_t *, const char* func, int line);
 #else
-static struct ieee80211_node *ieee80211_alloc_node(struct ieee80211vap *, const u_int8_t *);
+static struct ieee80211_node *ieee80211_alloc_node(struct ieee80211vap *, 
+		const u_int8_t *);
 #endif
 
 static int ieee80211_sta_join1(struct ieee80211_node *);
 
 #ifdef IEEE80211_DEBUG_REFCNT
-static struct ieee80211_node *node_alloc_debug(struct ieee80211vap *, const char* func, int line);
-static void node_cleanup_debug(struct ieee80211_node *, const char* func, int line);
-static void node_free_debug(struct ieee80211_node *, const char* func, int line);
+static struct ieee80211_node *node_alloc_debug(struct ieee80211vap *, 
+		const char* func, int line);
+static void node_cleanup_debug(struct ieee80211_node *, const char* func, 
+		int line);
+static void node_free_debug(struct ieee80211_node *, const char* func, 
+		int line);
 #else /* #ifdef IEEE80211_DEBUG_REFCNT */
 static struct ieee80211_node *node_alloc(struct ieee80211vap *);
 static void node_cleanup(struct ieee80211_node *);
@@ -91,17 +97,21 @@ static u_int8_t node_getrssi(const struct ieee80211_node *);
 #ifdef IEEE80211_DEBUG_REFCNT
 #define node_table_leave_locked(_table, _node) \
 	node_table_leave_locked_debug(_table, _node, __func__, __LINE__)
-static void node_table_leave_locked_debug(struct ieee80211_node_table *, struct ieee80211_node *, const char* func, int line);
+static void node_table_leave_locked_debug(struct ieee80211_node_table *, 
+		struct ieee80211_node *, const char* func, int line);
 #else
-static void node_table_leave_locked(struct ieee80211_node_table *, struct ieee80211_node *);
+static void node_table_leave_locked(struct ieee80211_node_table *, 
+		struct ieee80211_node *);
 #endif
 
 #ifdef IEEE80211_DEBUG_REFCNT
 #define node_table_join_locked(_table, _node) \
 	node_table_join_locked_debug(_table, _node, __func__, __LINE__)
-static void node_table_join_locked_debug(struct ieee80211_node_table *, struct ieee80211_node *, const char* func, int line);
+static void node_table_join_locked_debug(struct ieee80211_node_table *, 
+		struct ieee80211_node *, const char* func, int line);
 #else
-static void node_table_join_locked(struct ieee80211_node_table *, struct ieee80211_node *);
+static void node_table_join_locked(struct ieee80211_node_table *, 
+		struct ieee80211_node *);
 #endif
 
 static void ieee80211_node_timeout(unsigned long);
@@ -737,8 +747,8 @@ ieee80211_sta_leave(struct ieee80211_node *ni)
  */
 
 static void
-ieee80211_node_table_init(struct ieee80211com *ic, struct ieee80211_node_table *nt,
-		const char *name, int inact)
+ieee80211_node_table_init(struct ieee80211com *ic, 
+		struct ieee80211_node_table *nt, const char *name, int inact)
 {
 	nt->nt_ic = ic;
 	IEEE80211_NODE_TABLE_LOCK_INIT(nt, ic->ic_dev->name);
@@ -756,9 +766,11 @@ ieee80211_node_table_init(struct ieee80211com *ic, struct ieee80211_node_table *
 static __inline 
 void 
 #ifdef IEEE80211_DEBUG_REFCNT
-node_table_join_locked_debug(struct ieee80211_node_table *nt, struct ieee80211_node *ni, const char* func, int line) 
+node_table_join_locked_debug(struct ieee80211_node_table *nt, 
+		struct ieee80211_node *ni, const char* func, int line) 
 #else
-node_table_join_locked(struct ieee80211_node_table *nt, struct ieee80211_node *ni) 
+node_table_join_locked(struct ieee80211_node_table *nt, 
+		struct ieee80211_node *ni) 
 #endif
 {
 	struct ieee80211_node *tni = NULL;
@@ -773,22 +785,26 @@ node_table_join_locked(struct ieee80211_node_table *nt, struct ieee80211_node *n
 	TAILQ_INSERT_TAIL(&nt->nt_node, tni, ni_list);
 	tni = NULL;
 	
-	LIST_INSERT_HEAD(&nt->nt_hash[IEEE80211_NODE_HASH(ni->ni_macaddr)], ni, ni_hash);
+	LIST_INSERT_HEAD(&nt->nt_hash[IEEE80211_NODE_HASH(ni->ni_macaddr)], 
+			ni, ni_hash);
 }
 
 static __inline 
 void 
 #ifdef IEEE80211_DEBUG_REFCNT
-node_table_leave_locked_debug(struct ieee80211_node_table *nt, struct ieee80211_node *ni, const char* func, int line) 
+node_table_leave_locked_debug(struct ieee80211_node_table *nt, 
+		struct ieee80211_node *ni, const char* func, int line) 
 #else
-node_table_leave_locked(struct ieee80211_node_table *nt, struct ieee80211_node *ni) 
+node_table_leave_locked(struct ieee80211_node_table *nt, 
+		struct ieee80211_node *ni) 
 #endif
 {
 	struct ieee80211_node *hni;
 	IEEE80211_NODE_TABLE_LOCK_ASSERT(nt);
 
 	TAILQ_REMOVE(&nt->nt_node, ni, ni_list);
-	LIST_FOREACH(hni, &nt->nt_hash[IEEE80211_NODE_HASH(ni->ni_macaddr)], ni_hash) {
+	LIST_FOREACH(hni, &nt->nt_hash[IEEE80211_NODE_HASH(ni->ni_macaddr)], 
+			ni_hash) {
 		LIST_REMOVE(ni, ni_hash);
 	}
 	ni->ni_table = NULL;
@@ -983,7 +999,8 @@ node_getrssi(const struct ieee80211_node *ni)
  * used by the routines below to create entries with a
  * specific purpose.
  * Dont assume a BSS?
- * MT: Allocates a new ieee80211_node* that has a reference count of one, and adds it to the node table.
+ * Allocates a new ieee80211_node* that has a reference 
+ * count of one, and adds it to the node table.
  */
 struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -1215,9 +1232,8 @@ ieee80211_node_wds_ageout(unsigned long data)
 }
 
 
-/*
- * Add the specified station to the station table.
- * MT: Allocates a new ieee80211_node* that has a reference count of one
+/* Add the specified station to the station table.
+ * Allocates a new ieee80211_node* that has a reference count of one
  * If tmp is 0, it is added to the node table and the reference is used.
  * If tmp is 1, then the caller gets to use the reference. */
 struct ieee80211_node *
@@ -2337,7 +2353,7 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 			   __func__, __LINE__, 
 			   "unref" /* message */);
 
-	if(atomic_dec_and_test(&ni->ni_refcnt)) {
+	if (atomic_dec_and_test(&ni->ni_refcnt)) {
 #ifdef IEEE80211_DEBUG_REFCNT
 		ieee80211_free_node_debug(ni, func, line);
 #else /* #ifdef IEEE80211_DEBUG_REFCNT */

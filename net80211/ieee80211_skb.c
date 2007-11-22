@@ -405,7 +405,7 @@ unref_skb(struct sk_buff *skb, int type,
 		dump_stack();
 	}
 
-	switch(type) {
+	switch (type) {
 	case UNREF_USE_DEV_KFREE_SKB_ANY:
 		dev_kfree_skb_any(skb);
 		break;

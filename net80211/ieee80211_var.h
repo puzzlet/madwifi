@@ -395,9 +395,12 @@ struct ieee80211com {
 	/* Node state management */
 	int32_t (*ic_node_count)(struct ieee80211com *);
 #ifdef IEEE80211_DEBUG_REFCNT
-	struct ieee80211_node *(*ic_node_alloc_debug)(struct ieee80211vap *, const char* func, int line);
-	void (*ic_node_cleanup_debug)(struct ieee80211_node *, const char* func, int line);
-	void (*ic_node_free_debug)(struct ieee80211_node *, const char* func, int line);
+	struct ieee80211_node *(*ic_node_alloc_debug)(struct ieee80211vap *, 
+			const char* func, int line);
+	void (*ic_node_cleanup_debug)(struct ieee80211_node *, 
+			const char* func, int line);
+	void (*ic_node_free_debug)(struct ieee80211_node *, 
+			const char* func, int line);
 #else
 	struct ieee80211_node *(*ic_node_alloc)(struct ieee80211vap *);
 	void (*ic_node_cleanup)(struct ieee80211_node *);

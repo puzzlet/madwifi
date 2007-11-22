@@ -142,7 +142,7 @@ ieee80211_classify(struct ieee80211_node *ni, struct sk_buff *skb)
 		 *
 		 * XXX: fill out these mappings???
 		 */
-		switch(ip->tos) {
+		switch (ip->tos) {
 		case 0x08:				/* Background */
 		case 0x20:
 			d_wme_ac = WME_AC_BK;
@@ -206,7 +206,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ieee80211_node *ni = NULL;
 	struct ether_header *eh;
 
-	/* MT: reset the skb of new frames reaching this layer BEFORE
+	/* reset the skb of new frames reaching this layer BEFORE
 	 * we invoke ieee80211_skb_track. */
 	memset(SKB_CB(skb), 0, sizeof(struct ieee80211_cb));
 
