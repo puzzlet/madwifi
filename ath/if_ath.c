@@ -10448,10 +10448,11 @@ txcont_queue_packet(struct ieee80211com *ic, struct ath_txq* txq)
 	{
 		bf  = ath_take_txbuf_locked(sc);
 		skb = alloc_skb(datasz + sizeof(struct ieee80211_frame) + IEEE80211_CRC_LEN, GFP_ATOMIC);
-		wh  = (struct ieee80211_frame*)skb_put(skb, sizeof(struct ieee80211_frame));
 		if (NULL == skb) {
+			printk(KERN_ERR "%s: %s: alloc_skb returned null!\n", DEV_NAME(dev), __func__); 
 			BUG();
 		}
+		wh  = (struct ieee80211_frame*)skb_put(skb, sizeof(struct ieee80211_frame));
 		if (NULL == bf) {
 			printk(KERN_ERR "%s: %s: STAILQ_FIRST(&sc->sc_txbuf) returned null!\n", DEV_NAME(dev), __func__);
 			BUG();
