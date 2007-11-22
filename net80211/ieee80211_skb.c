@@ -131,14 +131,7 @@ static void skb_print_message(
 #else
 	printk("%s: %s%s:%d %s\n",
 #endif
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20))
-		(skb->input_dev != NULL ? 
-			DEV_NAME(skb->input_dev) : 
-			DEV_NAME(skb->dev)),
-#else
 		DEV_NAME(skb->dev),
-#endif
-
 		skb_count, 
 #ifdef IEEE80211_DEBUG_REFCNT
 		func1, line1,
