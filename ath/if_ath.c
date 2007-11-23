@@ -1102,8 +1102,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 				DEV_NAME(dev));
 	}
 
-	sc->sc_last_tsf      = 0;
-
 	return 0;
 bad3:
 	ieee80211_ifdetach(ic);
@@ -1972,14 +1970,6 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 					"%s: bf_tsf=%10llx hw_tsf=%10llx\n",
 					DEV_NAME(sc->sc_dev),
 					bf->bf_tsf, hw_tsf);
-
-				if (bf->bf_tsf < sc->sc_last_tsf) {
-					printk("TSF error: bf_tsf=%10llx "
-							"sc_last_tsf=%10llx\n",
-					       bf->bf_tsf,
-					       sc->sc_last_tsf);
-				}
-				sc->sc_last_tsf = bf->bf_tsf;
 			}
 		}
 	}
@@ -5038,9 +5028,6 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 				~(HAL_BEACON_RESET_TSF | HAL_BEACON_ENA));
 #endif
 		ath_hal_beaconinit(ah, nexttbtt, intval);
-		if (intval & HAL_BEACON_RESET_TSF) {
-			sc->sc_last_tsf = 0;
-		}
 		sc->sc_bmisscount = 0;
 		ath_hal_intrset(ah, sc->sc_imask);
 		/*
