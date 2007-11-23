@@ -157,6 +157,28 @@ extern u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
 #endif				/* AH_BYTE_ORDER */
 
 /*
+ * Some big-endian architectures don't set CONFIG_GENERIC_IOMAP, but fail to
+ * implement iowrite32be and ioread32be.  Provide compatibility macros when
+ * it's needed.
+ *
+ * As of Linux 2.6.24, only MIPS, PARISC and PowerPC implement iowrite32be and
+ * ioread32be as functions.
+ *
+ * The downside or the replacement macros it that we may be byte-swapping data
+ * for the second time, so the native implementations should be preferred.
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)) && \
+	!defined(CONFIG_GENERIC_IOMAP) && (AH_BYTE_ORDER == AH_BIG_ENDIAN) && \
+	!defined(__mips__) && !defined(__hppa__) && !defined(__powerpc__)
+# ifndef iowrite32be
+#  define iowrite32be(_val, _addr) iowrite32(swab32((_val)), (_addr))
+# endif
+# ifndef ioread32be
+#  define ioread32be(_addr) swab32(ioread32((_addr)))
+# endif
+#endif
+
+/*
  * The register accesses are done using target-specific functions when
  * debugging is enabled (AH_DEBUG) or it's explicitly requested for the target.
  *
