@@ -83,8 +83,6 @@
 #define	__packed	__attribute__((__packed__))
 #endif
 
-#define	__printflike(_a,_b) \
-	__attribute__ ((__format__ (__printf__, _a, _b)))
 #define	__offsetof(t,m)	offsetof(t,m)
 
 #ifndef ALIGNED_POINTER
