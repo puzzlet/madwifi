@@ -1519,15 +1519,15 @@ ieee80211_find_rxnode(struct ieee80211com *ic,
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
 	if (IS_CTL(wh) && !IS_PSPOLL(wh) /*&& !IS_RTS(ah)*/)
 #ifdef IEEE80211_DEBUG_REFCNT
-		ni = ieee80211_find_node_debug(nt, wh->i_addr1, func, line);
+		ni = ieee80211_find_node_locked_debug(nt, wh->i_addr1, func, line);
 #else
-		ni = ieee80211_find_node(nt, wh->i_addr1);
+		ni = ieee80211_find_node_locked(nt, wh->i_addr1);
 #endif
 	else
 #ifdef IEEE80211_DEBUG_REFCNT
-		ni = ieee80211_find_node_debug(nt, wh->i_addr2, func, line);
+		ni = ieee80211_find_node_locked_debug(nt, wh->i_addr2, func, line);
 #else
-		ni = ieee80211_find_node(nt, wh->i_addr2);
+		ni = ieee80211_find_node_locked(nt, wh->i_addr2);
 #endif
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 
