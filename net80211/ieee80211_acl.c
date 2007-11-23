@@ -180,7 +180,7 @@ acl_add(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_LEN])
 	hash = ACL_HASH(mac);
 	LIST_FOREACH(acl, &as->as_hash[hash], acl_hash) {
 		if (IEEE80211_ADDR_EQ(acl->acl_macaddr, mac)) {
-			ACL_UNLOCK(as);
+			ACL_UNLOCK_EARLY(as);
 			FREE(new, M_80211_ACL);
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_ACL,
 				"ACL: add %s failed, already present\n",

@@ -2834,6 +2834,7 @@ internal_take_txbuf_locked(struct ath_softc *sc, int for_management)
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
 	struct ath_buf* bf = NULL;
+	ATH_TXBUF_LOCK_ASSERT(sc);
 	/* Reserve at least ATH_TXBUF_MGT_RESERVED buffers for management frames */
 	if (ath_get_buffers_available() <= ATH_TXBUF_MGT_RESERVED) {
 		/* Stop the queue, we are full */
@@ -11654,6 +11655,7 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **buf)
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
 	void *bufaddr;
+	ATH_TXBUF_LOCK_ASSERT(sc);
 
 	if ((buf == NULL) || ((*buf) == NULL)) 
 		return;
@@ -11740,6 +11742,7 @@ ath_return_txbuf_list_locked_debug(struct ath_softc *sc, ath_bufhead *bfhead, co
 ath_return_txbuf_list_locked(struct ath_softc *sc, ath_bufhead *bfhead)
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
+	ATH_TXBUF_LOCK_ASSERT(sc);
 	if (!bfhead)
 		return;
 	

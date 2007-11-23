@@ -365,15 +365,30 @@ struct ath_node {
 #define	ATH_NODE(_n)			((struct ath_node *)(_n))
 #define	ATH_NODE_CONST(ni)		((const struct ath_node *)(ni))
 #define ATH_NODE_UAPSD_LOCK_INIT(_an)	spin_lock_init(&(_an)->an_uapsd_lock)
-#define ATH_NODE_UAPSD_LOCK_IRQ(_an)	do {	\
-	unsigned long __an_uapsd_lockflags;	\
+#define ATH_NODE_UAPSD_LOCK_IRQ(_an)	do {				     \
+	unsigned long __an_uapsd_lockflags;				     \
+	ATH_NODE_UAPSD_UNLOCK_ASSERT(_an);				     \
 	spin_lock_irqsave(&(_an)->an_uapsd_lock, __an_uapsd_lockflags);
-#define ATH_NODE_UAPSD_UNLOCK_IRQ(_an)		\
+
+#define ATH_NODE_UAPSD_UNLOCK_IRQ(_an)					     \
+	ATH_NODE_UAPSD_LOCK_ASSERT(_an);				     \
 	spin_unlock_irqrestore(&(_an)->an_uapsd_lock, __an_uapsd_lockflags); \
 } while (0)
-#define ATH_NODE_UAPSD_UNLOCK_IRQ_EARLY(_an)		\
+
+#define ATH_NODE_UAPSD_UNLOCK_IRQ_EARLY(_an) 		     \
+	ATH_NODE_UAPSD_LOCK_ASSERT(_an);				     \
 	spin_unlock_irqrestore(&(_an)->an_uapsd_lock, __an_uapsd_lockflags);
 
+#if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
+#define	ATH_NODE_UAPSD_LOCK_ASSERT(_an) \
+	KASSERT(spin_is_locked(&(_an)->an_uapsd_lock), ("uapsd not locked!"))
+
+#define	ATH_NODE_UAPSD_UNLOCK_ASSERT(_an) \
+	KASSERT(!spin_is_locked(&(_an)->an_uapsd_lock), ("uapsd locked!"))
+#else
+#define	ATH_NODE_UAPSD_LOCK_ASSERT(_an)
+#define	ATH_NODE_UAPSD_UNLOCK_ASSERT(_an)
+#endif 
 
 #define ATH_RSSI_LPF_LEN	10
 #define ATH_RSSI_DUMMY_MARKER	0x127
@@ -465,7 +480,7 @@ struct ath_txq {
 	spinlock_t axq_lock;		/* lock on q and link */
 	int axq_depth;			/* queue depth */
 	u_int32_t axq_totalqueued;	/* total ever queued */
-	u_int axq_intrcnt;		/* count to determine if descriptor
+	u_int axq_intrcnt;	        /* count to determine if descriptor
 					 * should generate int on this txq.
 					 */
 	/*
@@ -501,17 +516,33 @@ struct ath_vap {
 #define	ATH_TXQ_LOCK_DESTROY(_tq)
 #define ATH_TXQ_LOCK_IRQ(_tq)		do {				\
 	unsigned long __axq_lockflags;					\
+	ATH_TXQ_UNLOCK_ASSERT(_tq); 					\
 	spin_lock_irqsave(&(_tq)->axq_lock, __axq_lockflags);
 #define ATH_TXQ_UNLOCK_IRQ(_tq)						\
+	ATH_TXQ_LOCK_ASSERT(_tq); 					\
 	spin_unlock_irqrestore(&(_tq)->axq_lock, __axq_lockflags);	\
 } while (0)
 #define ATH_TXQ_UNLOCK_IRQ_EARLY(_tq)					\
+	ATH_TXQ_LOCK_ASSERT(_tq); 					\
 	spin_unlock_irqrestore(&(_tq)->axq_lock, __axq_lockflags);
-#define ATH_TXQ_LOCK_IRQ_INSIDE(_tq) spin_lock(&(_tq)->axq_lock);
-#define ATH_TXQ_UNLOCK_IRQ_INSIDE(_tq) spin_unlock(&(_tq)->axq_lock);
+#define ATH_TXQ_LOCK_IRQ_INSIDE(_tq)   do { 				\
+	ATH_TXQ_UNLOCK_ASSERT(_tq); 					\
+	spin_lock(&(_tq)->axq_lock); 					\
+} while(0)
+#define ATH_TXQ_UNLOCK_IRQ_INSIDE(_tq) do { 				\
+	ATH_TXQ_LOCK_ASSERT(_tq);  					\
+	spin_unlock(&(_tq)->axq_lock);					\
+} while(0)
 
+#if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ATH_TXQ_LOCK_ASSERT(_tq) \
 	KASSERT(spin_is_locked(&(_tq)->axq_lock), ("txq not locked!"))
+#define	ATH_TXQ_UNLOCK_ASSERT(_tq) \
+	KASSERT(!spin_is_locked(&(_tq)->axq_lock), ("txq locked!"))
+#else
+#define	ATH_TXQ_LOCK_ASSERT(_tq)
+#define	ATH_TXQ_UNLOCK_ASSERT(_tq)
+#endif
 
 #define ATH_TXQ_INSERT_TAIL(_tq, _elm, _field) do { \
 	STAILQ_INSERT_TAIL( &(_tq)->axq_q, (_elm), _field); \
@@ -726,27 +757,50 @@ typedef void (*ath_callback) (struct ath_softc *);
 #define	ATH_TXBUF_LOCK_DESTROY(_sc)
 #define	ATH_TXBUF_LOCK_IRQ(_sc)		do {	\
 	unsigned long __txbuflockflags;		\
+	ATH_TXBUF_UNLOCK_ASSERT(_sc);		\
 	spin_lock_irqsave(&(_sc)->sc_txbuflock, __txbuflockflags);
 #define	ATH_TXBUF_UNLOCK_IRQ(_sc)		\
+	ATH_TXBUF_LOCK_ASSERT(_sc);		\
 	spin_unlock_irqrestore(&(_sc)->sc_txbuflock, __txbuflockflags); \
 } while (0)
 #define	ATH_TXBUF_UNLOCK_IRQ_EARLY(_sc)		\
+	ATH_TXBUF_LOCK_ASSERT(_sc);		\
 	spin_unlock_irqrestore(&(_sc)->sc_txbuflock, __txbuflockflags);
 
+#if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ATH_TXBUF_LOCK_ASSERT(_sc) \
 	KASSERT(spin_is_locked(&(_sc)->sc_txbuflock), ("txbuf not locked!"))
+#define	ATH_TXBUF_UNLOCK_ASSERT(_sc) \
+	KASSERT(!spin_is_locked(&(_sc)->sc_txbuflock), ("txbuf locked!"))
+#else
+#define	ATH_TXBUF_LOCK_ASSERT(_sc)
+#define	ATH_TXBUF_UNLOCK_ASSERT(_sc)
+#endif
 
 
 #define	ATH_RXBUF_LOCK_INIT(_sc)	spin_lock_init(&(_sc)->sc_rxbuflock)
 #define	ATH_RXBUF_LOCK_DESTROY(_sc)
 #define	ATH_RXBUF_LOCK_IRQ(_sc)		do {	\
 	unsigned long __rxbuflockflags;		\
+	ATH_RXBUF_UNLOCK_ASSERT(_sc); 		\
 	spin_lock_irqsave(&(_sc)->sc_rxbuflock, __rxbuflockflags);
 #define	ATH_RXBUF_UNLOCK_IRQ(_sc)		\
+	ATH_RXBUF_LOCK_ASSERT(_sc); 		\
 	spin_unlock_irqrestore(&(_sc)->sc_rxbuflock, __rxbuflockflags); \
 } while (0)
 #define	ATH_RXBUF_UNLOCK_IRQ_EARLY(_sc)		\
+	ATH_RXBUF_LOCK_ASSERT(_sc); 		\
 	spin_unlock_irqrestore(&(_sc)->sc_rxbuflock, __rxbuflockflags);
+
+#if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
+#define	ATH_RXBUF_LOCK_ASSERT(_sc) \
+	KASSERT(spin_is_locked(&(_sc)->sc_rxbuflock), ("rxbuf not locked!"))
+#define	ATH_RXBUF_UNLOCK_ASSERT(_sc) \
+	KASSERT(!spin_is_locked(&(_sc)->sc_rxbuflock), ("rxbuf locked!"))
+#else
+#define	ATH_RXBUF_LOCK_ASSERT(_sc)
+#define	ATH_RXBUF_UNLOCK_ASSERT(_sc)
+#endif
 
 /* Protects the device from concurrent accesses */
 #define	ATH_LOCK_INIT(_sc)		init_MUTEX(&(_sc)->sc_lock)

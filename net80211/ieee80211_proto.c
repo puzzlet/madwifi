@@ -816,6 +816,8 @@ ieee80211_wme_updateparams_locked(struct ieee80211vap *vap)
 	enum ieee80211_phymode mode;
 	int i;
 
+	IEEE80211_LOCK_ASSERT(vap->iv_ic);
+
 	/* set up the channel access parameters for the physical device */
 
 	for (i = 0; i < WME_NUM_AC; i++) {

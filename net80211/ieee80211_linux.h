@@ -126,38 +126,53 @@ typedef void *IEEE80211_TQUEUE_ARG;
  * UAPSD locking 
  */
 typedef spinlock_t ieee80211com_lock_t;
-#define	IEEE80211_LOCK_INIT(_ic, _name)				\
+#define	IEEE80211_LOCK_INIT(_ic, _name)					\
 	spin_lock_init(&(_ic)->ic_comlock)
 #define	IEEE80211_LOCK_DESTROY(_ic)
-#define	IEEE80211_LOCK_IRQ(_ic) do {				\
-	unsigned long __ilockflags;				\
+#define	IEEE80211_LOCK_IRQ(_ic) do {					\
+	unsigned long __ilockflags;					\
+	IEEE80211_UNLOCK_ASSERT(_ic);					\
 	spin_lock_irqsave(&(_ic)->ic_comlock, __ilockflags);
 #define	IEEE80211_UNLOCK_IRQ(_ic)					\
+	IEEE80211_LOCK_ASSERT(_ic);					\
 	spin_unlock_irqrestore(&(_ic)->ic_comlock, __ilockflags);	\
 } while (0)
 #define	IEEE80211_UNLOCK_IRQ_EARLY(_ic)					\
+	IEEE80211_LOCK_ASSERT(_ic);					\
 	spin_unlock_irqrestore(&(_ic)->ic_comlock, __ilockflags);
 
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	IEEE80211_LOCK_ASSERT(_ic) \
 	KASSERT(spin_is_locked(&(_ic)->ic_comlock), ("ieee80211com not locked!"))
+#define	IEEE80211_UNLOCK_ASSERT(_ic) \
+	KASSERT(!spin_is_locked(&(_ic)->ic_comlock), ("ieee80211com locked!"))
 #else
 #define	IEEE80211_LOCK_ASSERT(_ic)
+#define	IEEE80211_UNLOCK_ASSERT(_ic)
 #endif
 
 
 #define IEEE80211_VAPS_LOCK_INIT(_ic, _name)		\
 	spin_lock_init(&(_ic)->ic_vapslock)
 #define IEEE80211_VAPS_LOCK_DESTROY(_ic)
-#define IEEE80211_VAPS_LOCK_BH(_ic)	spin_lock_bh(&(_ic)->ic_vapslock);
-#define IEEE80211_VAPS_UNLOCK_BH(_ic)	spin_unlock_bh(&(_ic)->ic_vapslock);
+#define IEEE80211_VAPS_LOCK_BH(_ic)	do { 		\
+	IEEE80211_VAPS_UNLOCK_ASSERT(_ic);		\
+	spin_lock_bh(&(_ic)->ic_vapslock);
+#define IEEE80211_VAPS_UNLOCK_BH(_ic)			\
+	IEEE80211_VAPS_LOCK_ASSERT(_ic);		\
+	spin_unlock_bh(&(_ic)->ic_vapslock);		\
+} while (0)
 
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define IEEE80211_VAPS_LOCK_ASSERT(_ic) \
 	KASSERT(spin_is_locked(&(_ic)->ic_vapslock), \
 		("ieee80211com_vaps not locked!"))
+#define IEEE80211_VAPS_UNLOCK_ASSERT(_ic) \
+	KASSERT(!spin_is_locked(&(_ic)->ic_vapslock), \
+		("ieee80211com_vaps locked!"))
 #else
 #define IEEE80211_VAPS_LOCK_ASSERT(_ic)
+#define IEEE80211_VAPS_UNLOCK_ASSERT(_ic)
 #endif
 
 
@@ -171,19 +186,26 @@ typedef spinlock_t ieee80211_node_lock_t;
 #define	IEEE80211_NODE_LOCK_DESTROY(_ni)
 #define	IEEE80211_NODE_LOCK_IRQ(_ni)	do {	\
 	unsigned long __node_lockflags;		\
+	IEEE80211_NODE_UNLOCK_ASSERT(_ni); 	\
 	spin_lock_irqsave(&(_ni)->ni_nodelock, __node_lockflags);
-#define	IEEE80211_NODE_UNLOCK_IRQ(_ni)		\
+#define	IEEE80211_NODE_UNLOCK_IRQ(_ni) \
+	IEEE80211_NODE_LOCK_ASSERT(_ni); \
 	spin_unlock_irqrestore(&(_ni)->ni_nodelock, __node_lockflags); \
 } while (0)
 #define	IEEE80211_NODE_UNLOCK_IRQ_EARLY(_ni)		\
+	IEEE80211_NODE_LOCK_ASSERT(_ni); \
 	spin_unlock_irqrestore(&(_ni)->ni_nodelock, __node_lockflags);
 
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
-#define	IEEE80211_NODE_LOCK_ASSERT(_nt) \
+#define	IEEE80211_NODE_LOCK_ASSERT(_ni) \
 	KASSERT(spin_is_locked(&(_ni)->ni_nodelock), \
 		("802.11 node not locked!"))
+#define	IEEE80211_NODE_UNLOCK_ASSERT(_ni) \
+	KASSERT(!spin_is_locked(&(_ni)->ni_nodelock), \
+		("802.11 node locked!"))
 #else
 #define	IEEE80211_NODE_LOCK_ASSERT(_ni)
+#define	IEEE80211_NODE_UNLOCK_ASSERT(_ni)
 #endif
 
 #endif /* node lock */
@@ -245,14 +267,25 @@ typedef spinlock_t ieee80211_scan_lock_t;
 typedef spinlock_t acl_lock_t;
 #define	ACL_LOCK_INIT(_as, _name)	spin_lock_init(&(_as)->as_lock)
 #define	ACL_LOCK_DESTROY(_as)
-#define	ACL_LOCK(_as)			spin_lock(&(_as)->as_lock)
-#define	ACL_UNLOCK(_as)			spin_unlock(&(_as)->as_lock)
+#define	ACL_LOCK(_as)			do { 	\
+	ACL_UNLOCK_ASSERT(_as); 		\
+	spin_lock(&(_as)->as_lock);
+#define	ACL_UNLOCK(_as)				\
+	ACL_LOCK_ASSERT(_as); 			\
+	spin_unlock(&(_as)->as_lock); 		\
+} while(0)
+#define ACL_UNLOCK_EARLY(_as)			\
+	ACL_LOCK_ASSERT(_as); 			\
+	spin_unlock(&(_as)->as_lock);
 
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ACL_LOCK_ASSERT(_as) \
 	KASSERT(spin_is_locked(&(_as)->as_lock), ("ACL not locked!"))
+#define	ACL_UNLOCK_ASSERT(_as) \
+	KASSERT(!spin_is_locked(&(_as)->as_lock), ("ACL locked!"))
 #else
 #define	ACL_LOCK_ASSERT(_as)
+#define	ACL_UNLOCK_ASSERT(_as)
 #endif
 
 /* __skb_append got a third parameter in 2.6.14 */
@@ -271,12 +304,27 @@ typedef spinlock_t acl_lock_t;
 #define	IEEE80211_NODE_SAVEQ_QLEN(_ni)		skb_queue_len(&(_ni)->ni_savedq)
 #define	IEEE80211_NODE_SAVEQ_LOCK_IRQ(_ni) do {			\
 	unsigned long __qlockflags;				\
+	IEEE80211_NODE_SAVEQ_UNLOCK_ASSERT(_ni);		\
 	spin_lock_irqsave(&(_ni)->ni_savedq.lock, __qlockflags);
-#define	IEEE80211_NODE_SAVEQ_UNLOCK_IRQ(_ni)    \
+#define	IEEE80211_NODE_SAVEQ_UNLOCK_IRQ(_ni)    		\
+	IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ni);			\
 	spin_unlock_irqrestore(&(_ni)->ni_savedq.lock, __qlockflags); \
 } while (0)
 #define	IEEE80211_NODE_SAVEQ_UNLOCK_IRQ_EARLY(_ni)		\
+	IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ni);			\
 	spin_unlock_irqrestore(&(_ni)->ni_savedq.lock, __qlockflags);
+
+#if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
+#define IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ni) \
+	KASSERT(spin_is_locked(&(_ni)->ni_savedq.lock), \
+		("node saveq not locked!"))
+#define IEEE80211_NODE_SAVEQ_UNLOCK_ASSERT(_ni) \
+	KASSERT(!spin_is_locked(&(_ni)->ni_savedq.lock), \
+		("node saveq locked!"))
+#else
+#define IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ic)
+#define IEEE80211_NODE_SAVEQ_UNLOCK_ASSERT(_ic)
+#endif
 
 /* caller MUST lock IEEE80211_NODE_SAVEQ */
 #define	IEEE80211_NODE_SAVEQ_DEQUEUE(_ni, _skb, _qlen) do {	\

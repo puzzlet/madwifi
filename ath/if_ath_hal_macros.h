@@ -53,12 +53,26 @@
 #define ATH_HAL_LOCK_INIT(_sc) 	spin_lock_init(&(_sc)->sc_hal_lock)
 #define ATH_HAL_LOCK_DESTROY(_sc)
 #define ATH_HAL_LOCK_IRQ(_sc) 	do { \
-   unsigned long __sc_halLockflags; \
+   unsigned long __sc_halLockflags; 				   \
+   ATH_HAL_UNLOCK_ASSERT(_sc); 					   \
    spin_lock_irqsave(&(_sc)->sc_hal_lock, __sc_halLockflags);
 #define ATH_HAL_UNLOCK_IRQ(_sc) \
+   ATH_HAL_LOCK_ASSERT(_sc); 					   \
    spin_unlock_irqrestore(&(_sc)->sc_hal_lock, __sc_halLockflags); \
    } while(0)
 #define ATH_HAL_UNLOCK_IRQ_EARLY(_sc) \
+   ATH_HAL_LOCK_ASSERT(_sc); 					   \
    spin_unlock_irqrestore(&(_sc)->sc_hal_lock, __sc_halLockflags);
+
+#if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
+#define	ATH_HAL_LOCK_ASSERT(_sc) \
+	KASSERT(spin_is_locked(&(_sc)->sc_hal_lock), ("hal not locked!"))
+#define	ATH_HAL_UNLOCK_ASSERT(_sc) \
+	KASSERT(!spin_is_locked(&(_sc)->sc_hal_lock), ("hal locked!"))
+#else
+#define	ATH_HAL_LOCK_ASSERT(_sc)
+#define	ATH_HAL_UNLOCK_ASSERT(_sc)
+#endif
+
 
 #endif /* #ifndef _IF_ATH_HAL_MACROS_H_ */
