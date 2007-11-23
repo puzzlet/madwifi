@@ -42,16 +42,16 @@
  * Atheros Hardware Access Layer (HAL) OS Dependent Definitions.
  */
 
-/* 
-MadWifi safe register operations:
+/*
+   MadWifi safe register operations:
 
-	When hacking on registers directly we need to use the macros
-	below, to avoid concurrent PCI access and abort mode errors.
+	When hacking on registers directly, we need to use the macros below to
+	avoid concurrent PCI access and abort mode errors.
 
 	* ath_reg_read
 	* ATH_REG_WRITE
 
-HAL-ONLY register operations: 
+   HAL-ONLY register operations:
 
 	* _OS_REG_READ
 	* _OS_REG_WRITE
@@ -60,26 +60,27 @@ HAL-ONLY register operations:
 	* ath_hal_reg_read.
 	* ath_hal_reg_write
 
-	When compiled in HAL:
-		* We do not require locking overhead and function call unless user is debugging.
-		* All HAL operations are executed in the context of a MadWifi wrapper call which holds 
-		  the HAL lock.
-		* Normally HAL is build with the non-modified version of this file so it doesnt have our 
-		  funny macros anyway.
+    When compiled in HAL:
+	* We don't require locking overhead and function call except for
+	  debugging.
+	* All HAL operations are executed in the context of a MadWifi wrapper
+	  call that holds the HAL lock.
+	* Normally HAL is built with the non-modified version of this file, so
+	  it doesn't have our funny macros anyway.
 
-	When compiled in MadWifi:
-		* The HAL wrapper API takes the HAL lock before invoking the HAL.
-		* HAL access is already protected, and MadWifi must NOT access the functions listed above.
-
+    When compiled in MadWifi:
+	* The HAL wrapper API takes the HAL lock before invoking the HAL.
+	* HAL access is already protected, and MadWifi must NOT access the
+	  functions listed above.
 */
 
 /*
- * When building the HAL proper we use no GPL-contaminated include
- * files and must define these types ourself.  Beware of these being
- * mismatched against the contents of <linux/types.h>
+ * When building the HAL proper, we use no GPL-licensed include files and must
+ * define Linux types ourselves.  Please note that the definitions below don't
+ * exactly match those in <linux/types.h>
  */
 #ifndef _LINUX_TYPES_H
-/* NB: arm defaults to unsigned so be explicit */
+/* NB: ARM defaults to unsigned, so be explicit */
 typedef signed char		int8_t;
 typedef short			int16_t;
 typedef int			int32_t;
@@ -93,36 +94,35 @@ typedef unsigned long long	u_int64_t;
 typedef unsigned int		size_t;
 typedef unsigned int		u_int;
 typedef	void*			va_list;
-#endif
+#endif				/* !_LINUX_TYPES_H */
 
 /*
  * Linux/BSD gcc compatibility shims.
  */
 #define	__printflike(_a,_b) \
-	__attribute__ ((__format__ (__printf__, _a, _b)))
-#define	__va_list	va_list 
+	__attribute__((__format__ (__printf__, _a, _b)))
+#define	__va_list	va_list
 #define	OS_INLINE	__inline
 
 extern int ath_hal_dma_beacon_response_time;
 extern int ath_hal_sw_beacon_response_time;
 extern int ath_hal_additional_swba_backoff;
 
-void __ahdecl ath_hal_vprintf(struct ath_hal *ah, const char* fmt,
-			      va_list ap);
-void __ahdecl ath_hal_printf(struct ath_hal *ah, const char* fmt, ...);
-const char* __ahdecl ath_hal_ether_sprintf(const u_int8_t *mac);
+void __ahdecl ath_hal_vprintf(struct ath_hal *ah, const char *fmt, va_list ap);
+void __ahdecl ath_hal_printf(struct ath_hal *ah, const char *fmt, ...);
+const char *__ahdecl ath_hal_ether_sprintf(const u_int8_t *mac);
 int __ahdecl ath_hal_memcmp(const void *a, const void *b, size_t n);
-void * __ahdecl ath_hal_malloc(size_t size);
-void __ahdecl ath_hal_free(void* p);
+void *__ahdecl ath_hal_malloc(size_t size);
+void __ahdecl ath_hal_free(void *p);
 
 /* Delay n microseconds. */
-extern	void __ahdecl ath_hal_delay(int);
+extern void __ahdecl ath_hal_delay(int);
 #define	OS_DELAY(_n)		ath_hal_delay(_n)
 
 #define	OS_MEMZERO(_a, _n)	ath_hal_memzero((_a), (_n))
 extern void __ahdecl ath_hal_memzero(void *, size_t);
 #define	OS_MEMCPY(_d, _s, _n)	ath_hal_memcpy(_d,_s,_n)
-extern void * __ahdecl ath_hal_memcpy(void *, const void *, size_t);
+extern void *__ahdecl ath_hal_memcpy(void *, const void *, size_t);
 
 #ifndef abs
 #define	abs(_a)			__builtin_abs(_a)
@@ -133,7 +133,7 @@ extern void * __ahdecl ath_hal_memcpy(void *, const void *, size_t);
 #endif
 
 struct ath_hal;
-extern	u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
+extern u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
 #define	OS_GETUPTIME(_ah)	ath_hal_getuptime(_ah)
 
 /* Byte order/swapping support. */
@@ -142,9 +142,8 @@ extern	u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
 
 #ifndef AH_BYTE_ORDER
 /*
- * When the .inc file is not available (e.g. when building
- * in a kernel source tree); look for some other way to
- * setup the host byte order.
+ * When the .inc file is not available (e.g. when building in the kernel source
+ * tree), look for some other way to determine the host byte order.
  */
 #ifdef __LITTLE_ENDIAN
 #define	AH_BYTE_ORDER	AH_LITTLE_ENDIAN
@@ -155,26 +154,21 @@ extern	u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
 #ifndef AH_BYTE_ORDER
 #error "Do not know host byte order"
 #endif
-#endif /* AH_BYTE_ORDER */
+#endif				/* AH_BYTE_ORDER */
 
 /*
- * Note that register accesses are done using target-specific 
- * functions when debugging is enabled (AH_DEBUG) or we are 
- * explicitly configured this way.
+ * The register accesses are done using target-specific functions when
+ * debugging is enabled (AH_DEBUG) or it's explicitly requested for the target.
  *
- * The hardware registers are native little-endian byte order.
- * Big-endian hosts are handled by enabling hardware byte-swap
- * of register reads and writes at reset.  But the PCI clock
- * domain registers are not byte swapped!  Thus, on big-endian
- * platforms we have to byte-swap thoese registers specifically.
- * Most of this code is collapsed at compile time because the
- * register values are constants.
+ * The hardware registers use little-endian byte order natively.  Big-endian
+ * systems are configured by HAL to enable hardware byte-swap of register reads
+ * and writes at reset.  This avoid the need to byte-swap the data in software.
+ * However, the registers in a certain area from 0x4000 to 0x4fff (PCI clock
+ * domain registers) are not byte swapped!
  *
- * Presumably when talking about hardware byte-swapping, the above
- * text is referring to the Atheros chipset, as the registers 
- * referred to are in the PCI memory address space, and these are
- * never byte-swapped by PCI chipsets or bridges, but always 
- * written directly (i.e. the format defined by the manufacturer).
+ * Since Linux I/O primitives default to little-endian operations, we only
+ * need to suppress byte-swapping on big-endian systems outside the area used
+ * by the PCI clock domain registers.
  */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
 # if (AH_BYTE_ORDER == AH_BIG_ENDIAN)
@@ -187,14 +181,14 @@ extern	u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
 	((0x4000 <= (_reg) && (_reg) < 0x5000) ?		\
 	 ioread32((_ah)->ah_sh + (_reg)) :			\
 	 ioread32be((_ah)->ah_sh + (_reg)));
-# else /* AH_LITTLE_ENDIAN */
+# else				/* AH_LITTLE_ENDIAN */
 #define _OS_REG_WRITE(_ah, _reg, _val) do {			\
 	iowrite32(_val, (_ah)->ah_sh + (_reg));			\
 	} while (0)
 #define _OS_REG_READ(_ah, _reg)					\
 	ioread32((_ah)->ah_sh + (_reg))
-	
-# endif /* AH_BYTE_ORDER */
+
+# endif				/* AH_BYTE_ORDER */
 #else
 # if (AH_BYTE_ORDER == AH_BIG_ENDIAN)
 #define _OS_REG_WRITE(_ah, _reg, _val) do {			\
@@ -206,42 +200,41 @@ extern	u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
 	((0x4000 <= (_reg) && (_reg) < 0x5000) ?		\
 	 readl((_ah)->ah_sh + (_reg)) :				\
 	 cpu_to_le32(readl((_ah)->ah_sh + (_reg))))
-# else /* AH_LITTLE_ENDIAN */
+# else				/* AH_LITTLE_ENDIAN */
 #define _OS_REG_WRITE(_ah, _reg, _val) do {			\
 	writel(_val, (_ah)->ah_sh + (_reg));			\
 	} while (0)
 #define _OS_REG_READ(_ah, _reg)					\
 	readl((_ah)->ah_sh + (_reg))
-# endif /* AH_BYTE_ORDER */
-#endif /* KERNEL_VERSON(2,6,12) */
+# endif				/* AH_BYTE_ORDER */
+#endif				/* KERNEL_VERSION(2,6,12) */
 
-/* 
-The functions in this section are not intended to be invoked by MadWifi driver
-code, but by the HAL.  They are NOT safe for direct invocation when the 
-sc->sc_hal_lock is not held.  Use ath_reg_read and ATH_REG_WRITE instead!
+/*
+ * The functions in this section are not intended to be invoked by MadWifi
+ * driver code, but by the HAL.  They are NOT safe to call directly when the
+ * sc->sc_hal_lock is not held.  Use ath_reg_read and ATH_REG_WRITE instead!
 */
 #if defined(AH_DEBUG) || defined(AH_REGOPS_FUNC) || defined(AH_DEBUG_ALQ)
 #define	OS_REG_WRITE(_ah, _reg, _val)	ath_hal_reg_write(_ah, _reg, _val)
 #define	OS_REG_READ(_ah, _reg)		ath_hal_reg_read(_ah, _reg)
-extern	void __ahdecl ath_hal_reg_write(struct ath_hal *ah, u_int reg, u_int32_t val);
-extern	u_int32_t __ahdecl ath_hal_reg_read(struct ath_hal *ah, u_int reg);
+extern void __ahdecl ath_hal_reg_write(struct ath_hal *ah, u_int reg,
+				       u_int32_t val);
+extern u_int32_t __ahdecl ath_hal_reg_read(struct ath_hal *ah, u_int reg);
 #else
 #define OS_REG_WRITE(_ah, _reg, _val)	_OS_REG_WRITE(_ah, _reg, _val)
 #define OS_REG_READ(_ah, _reg)		_OS_REG_READ(_ah, _reg)
-#endif /* AH_DEBUG || AH_REGFUNC || AH_DEBUG_ALQ */
+#endif				/* AH_DEBUG || AH_REGFUNC || AH_DEBUG_ALQ */
 
 extern char *ath_hal_func;
 static inline void ath_hal_set_function(const char *name)
-#if defined(AH_DEBUG)
 {
+#ifdef AH_DEBUG
 	ath_hal_func = (char *)name;
-}
-#else
-{ }
 #endif
+}
 
 #ifdef AH_DEBUG_ALQ
-extern	void __ahdecl OS_MARK(struct ath_hal *, u_int id, u_int32_t value);
+extern void __ahdecl OS_MARK(struct ath_hal *, u_int id, u_int32_t value);
 #else
 #define	OS_MARK(_ah, _id, _v)
 #endif
@@ -253,8 +246,9 @@ extern	void __ahdecl OS_MARK(struct ath_hal *, u_int id, u_int32_t value);
  *     compiled with the default calling convention and are not called
  *     from within the HAL.
  */
-extern	struct ath_hal *_ath_hal_attach(u_int16_t devid, HAL_SOFTC,
-		HAL_BUS_TAG, HAL_BUS_HANDLE, HAL_STATUS*);
-extern	void _ath_hal_detach(struct ath_hal *);
+extern struct ath_hal *_ath_hal_attach(u_int16_t devid, HAL_SOFTC,
+				       HAL_BUS_TAG, HAL_BUS_HANDLE,
+				       HAL_STATUS *);
+extern void _ath_hal_detach(struct ath_hal *);
 
-#endif /* _ATH_AH_OSDEP_H_ */
+#endif				/* _ATH_AH_OSDEP_H_ */
