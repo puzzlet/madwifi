@@ -193,7 +193,7 @@ LDFLAGS += $(LDOPTS)
 # Filter out compiler options that are not supported by all compilers
 # and that are not needed to ensure compatible architecture and calling
 # conventions.
-COPTS := $(filter-out -mshort-load-bytes,$(COPTS))
+COPTS := $(filter-out -mshort-load-bytes -mapcs-32,$(COPTS))
 
 
 # The following variables will affect developers only, and are used in the
