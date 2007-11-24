@@ -54,7 +54,7 @@
 #define ATH_HAL_LOCK_DESTROY(_sc)
 #define ATH_HAL_LOCK_IRQ(_sc) 	do { \
    unsigned long __sc_halLockflags; 				   \
-   ATH_HAL_UNLOCK_ASSERT(_sc); 					   \
+   ATH_HAL_LOCK_CHECK(_sc); 					   \
    spin_lock_irqsave(&(_sc)->sc_hal_lock, __sc_halLockflags);
 #define ATH_HAL_UNLOCK_IRQ(_sc) \
    ATH_HAL_LOCK_ASSERT(_sc); 					   \
@@ -67,11 +67,18 @@
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ATH_HAL_LOCK_ASSERT(_sc) \
 	KASSERT(spin_is_locked(&(_sc)->sc_hal_lock), ("hal not locked!"))
-#define	ATH_HAL_UNLOCK_ASSERT(_sc) \
-	KASSERT(!spin_is_locked(&(_sc)->sc_hal_lock), ("hal locked!"))
+#if (defined(ATH_DEBUG_SPINLOCKS))
+#define	ATH_HAL_LOCK_CHECK(_sc) do { \
+	if (spin_is_locked(&(_sc)->sc_hal_lock)) \
+		printk("%s:%d - about to block on hal lock!", __func__, __LINE__); \
+} while(0)
+#else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#define	ATH_HAL_LOCK_CHECK(_sc)
+#endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+
 #else
 #define	ATH_HAL_LOCK_ASSERT(_sc)
-#define	ATH_HAL_UNLOCK_ASSERT(_sc)
+#define	ATH_HAL_LOCK_CHECK(_sc)
 #endif
 
 

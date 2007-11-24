@@ -367,7 +367,7 @@ struct ath_node {
 #define ATH_NODE_UAPSD_LOCK_INIT(_an)	spin_lock_init(&(_an)->an_uapsd_lock)
 #define ATH_NODE_UAPSD_LOCK_IRQ(_an)	do {				     \
 	unsigned long __an_uapsd_lockflags;				     \
-	ATH_NODE_UAPSD_UNLOCK_ASSERT(_an);				     \
+	ATH_NODE_UAPSD_LOCK_CHECK(_an);				     	     \
 	spin_lock_irqsave(&(_an)->an_uapsd_lock, __an_uapsd_lockflags);
 
 #define ATH_NODE_UAPSD_UNLOCK_IRQ(_an)					     \
@@ -382,12 +382,17 @@ struct ath_node {
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ATH_NODE_UAPSD_LOCK_ASSERT(_an) \
 	KASSERT(spin_is_locked(&(_an)->an_uapsd_lock), ("uapsd not locked!"))
-
-#define	ATH_NODE_UAPSD_UNLOCK_ASSERT(_an) \
-	KASSERT(!spin_is_locked(&(_an)->an_uapsd_lock), ("uapsd locked!"))
+#if (defined(ATH_DEBUG_SPINLOCKS))
+#define	ATH_NODE_UAPSD_LOCK_CHECK(_an) do { \
+	if (spin_is_locked(&(_an)->an_uapsd_lock)) \
+		printk("%s:%d - about to block on uapsd lock!", __func__, __LINE__); \
+} while(0)
+#else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#define	ATH_NODE_UAPSD_LOCK_CHECK(_an)
+#endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #else
 #define	ATH_NODE_UAPSD_LOCK_ASSERT(_an)
-#define	ATH_NODE_UAPSD_UNLOCK_ASSERT(_an)
+#define	ATH_NODE_UAPSD_LOCK_CHECK(_an)
 #endif 
 
 #define ATH_RSSI_LPF_LEN	10
@@ -516,7 +521,7 @@ struct ath_vap {
 #define	ATH_TXQ_LOCK_DESTROY(_tq)
 #define ATH_TXQ_LOCK_IRQ(_tq)		do {				\
 	unsigned long __axq_lockflags;					\
-	ATH_TXQ_UNLOCK_ASSERT(_tq); 					\
+	ATH_TXQ_LOCK_CHECK(_tq); 					\
 	spin_lock_irqsave(&(_tq)->axq_lock, __axq_lockflags);
 #define ATH_TXQ_UNLOCK_IRQ(_tq)						\
 	ATH_TXQ_LOCK_ASSERT(_tq); 					\
@@ -526,7 +531,7 @@ struct ath_vap {
 	ATH_TXQ_LOCK_ASSERT(_tq); 					\
 	spin_unlock_irqrestore(&(_tq)->axq_lock, __axq_lockflags);
 #define ATH_TXQ_LOCK_IRQ_INSIDE(_tq)   do { 				\
-	ATH_TXQ_UNLOCK_ASSERT(_tq); 					\
+	ATH_TXQ_LOCK_CHECK(_tq); 					\
 	spin_lock(&(_tq)->axq_lock); 					\
 } while(0)
 #define ATH_TXQ_UNLOCK_IRQ_INSIDE(_tq) do { 				\
@@ -537,11 +542,17 @@ struct ath_vap {
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ATH_TXQ_LOCK_ASSERT(_tq) \
 	KASSERT(spin_is_locked(&(_tq)->axq_lock), ("txq not locked!"))
-#define	ATH_TXQ_UNLOCK_ASSERT(_tq) \
-	KASSERT(!spin_is_locked(&(_tq)->axq_lock), ("txq locked!"))
+#if (defined(ATH_DEBUG_SPINLOCKS))
+#define	ATH_TXQ_LOCK_CHECK(_tq) do { \
+	if (spin_is_locked(&(_tq)->axq_lock)) \
+		printk("%s:%d - about to block on txq lock!", __func__, __LINE__); \
+} while(0)
+#else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#define	ATH_TXQ_LOCK_CHECK(_tq)
+#endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #else
 #define	ATH_TXQ_LOCK_ASSERT(_tq)
-#define	ATH_TXQ_UNLOCK_ASSERT(_tq)
+#define	ATH_TXQ_LOCK_CHECK(_tq)
 #endif
 
 #define ATH_TXQ_INSERT_TAIL(_tq, _elm, _field) do { \
@@ -757,7 +768,7 @@ typedef void (*ath_callback) (struct ath_softc *);
 #define	ATH_TXBUF_LOCK_DESTROY(_sc)
 #define	ATH_TXBUF_LOCK_IRQ(_sc)		do {	\
 	unsigned long __txbuflockflags;		\
-	ATH_TXBUF_UNLOCK_ASSERT(_sc);		\
+	ATH_TXBUF_LOCK_CHECK(_sc);		\
 	spin_lock_irqsave(&(_sc)->sc_txbuflock, __txbuflockflags);
 #define	ATH_TXBUF_UNLOCK_IRQ(_sc)		\
 	ATH_TXBUF_LOCK_ASSERT(_sc);		\
@@ -770,11 +781,17 @@ typedef void (*ath_callback) (struct ath_softc *);
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ATH_TXBUF_LOCK_ASSERT(_sc) \
 	KASSERT(spin_is_locked(&(_sc)->sc_txbuflock), ("txbuf not locked!"))
-#define	ATH_TXBUF_UNLOCK_ASSERT(_sc) \
-	KASSERT(!spin_is_locked(&(_sc)->sc_txbuflock), ("txbuf locked!"))
+#if (defined(ATH_DEBUG_SPINLOCKS))
+#define	ATH_TXBUF_LOCK_CHECK(_sc) do { \
+	if (spin_is_locked(&(_sc)->sc_txbuflock)) \
+		printk("%s:%d - about to block on txbuf lock!", __func__, __LINE__); \
+} while(0)
+#else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#define	ATH_TXBUF_LOCK_CHECK(_sc)
+#endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #else
 #define	ATH_TXBUF_LOCK_ASSERT(_sc)
-#define	ATH_TXBUF_UNLOCK_ASSERT(_sc)
+#define	ATH_TXBUF_LOCK_CHECK(_sc)
 #endif
 
 
@@ -782,7 +799,7 @@ typedef void (*ath_callback) (struct ath_softc *);
 #define	ATH_RXBUF_LOCK_DESTROY(_sc)
 #define	ATH_RXBUF_LOCK_IRQ(_sc)		do {	\
 	unsigned long __rxbuflockflags;		\
-	ATH_RXBUF_UNLOCK_ASSERT(_sc); 		\
+	ATH_RXBUF_LOCK_CHECK(_sc); 		\
 	spin_lock_irqsave(&(_sc)->sc_rxbuflock, __rxbuflockflags);
 #define	ATH_RXBUF_UNLOCK_IRQ(_sc)		\
 	ATH_RXBUF_LOCK_ASSERT(_sc); 		\
@@ -795,11 +812,17 @@ typedef void (*ath_callback) (struct ath_softc *);
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ATH_RXBUF_LOCK_ASSERT(_sc) \
 	KASSERT(spin_is_locked(&(_sc)->sc_rxbuflock), ("rxbuf not locked!"))
-#define	ATH_RXBUF_UNLOCK_ASSERT(_sc) \
-	KASSERT(!spin_is_locked(&(_sc)->sc_rxbuflock), ("rxbuf locked!"))
+#if (defined(ATH_DEBUG_SPINLOCKS))
+#define	ATH_RXBUF_LOCK_CHECK(_sc) do { \
+	if (spin_is_locked(&(_sc)->sc_rxbuflock)) \
+		printk("%s:%d - about to block on rxbuf lock!", __func__, __LINE__); \
+} while(0)
+#else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#define	ATH_RXBUF_LOCK_CHECK(_sc)
+#endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #else
 #define	ATH_RXBUF_LOCK_ASSERT(_sc)
-#define	ATH_RXBUF_UNLOCK_ASSERT(_sc)
+#define	ATH_RXBUF_LOCK_CHECK(_sc)
 #endif
 
 /* Protects the device from concurrent accesses */
