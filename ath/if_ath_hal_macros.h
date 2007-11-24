@@ -70,7 +70,7 @@
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_HAL_LOCK_CHECK(_sc) do { \
 	if (spin_is_locked(&(_sc)->sc_hal_lock)) \
-		printk("%s:%d - about to block on hal lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on hal lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_HAL_LOCK_CHECK(_sc)

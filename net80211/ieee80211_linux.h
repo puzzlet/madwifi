@@ -148,7 +148,7 @@ typedef spinlock_t ieee80211com_lock_t;
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	IEEE80211_LOCK_CHECK(_ic) do { \
 	if (spin_is_locked(&(_ic)->ic_comlock)) \
-		printk("%s:%d - about to block on ieee80211com lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on ieee80211com lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	IEEE80211_LOCK_CHECK(_ic)
@@ -177,7 +177,7 @@ typedef spinlock_t ieee80211com_lock_t;
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	IEEE80211_VAPS_LOCK_CHECK(_ic) do { \
 	if (spin_is_locked(&(_ic)->ic_vapslock)) \
-		printk("%s:%d - about to block on ieee80211com_vaps lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on ieee80211com_vaps lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define IEEE80211_VAPS_LOCK_CHECK(_ic)
@@ -215,7 +215,7 @@ typedef spinlock_t ieee80211_node_lock_t;
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	IEEE80211_NODE_LOCK_CHECK(_ni) do { \
 	if (spin_is_locked(&(_ni)->ni_nodelock)) \
-		printk("%s:%d - about to block on node lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on node lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	IEEE80211_NODE_LOCK_CHECK(_ni)
@@ -301,7 +301,7 @@ typedef spinlock_t acl_lock_t;
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ACL_LOCK_CHECK(_as) do { \
 	if (spin_is_locked(&(_as)->as_lock)) \
-		printk("%s:%d - about to block on ACL lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on ACL lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ACL_LOCK_CHECK(_as)
@@ -344,7 +344,7 @@ typedef spinlock_t acl_lock_t;
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define IEEE80211_NODE_SAVEQ_LOCK_CHECK(_ni) do { \
 	if (spin_is_locked(&(_ni)->ni_savedq.lock)) \
-		printk("%s:%d - about to block on node saveq lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on node saveq lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define IEEE80211_NODE_SAVEQ_LOCK_CHECK(_ni)

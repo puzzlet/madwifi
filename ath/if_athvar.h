@@ -385,7 +385,7 @@ struct ath_node {
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_NODE_UAPSD_LOCK_CHECK(_an) do { \
 	if (spin_is_locked(&(_an)->an_uapsd_lock)) \
-		printk("%s:%d - about to block on uapsd lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on uapsd lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_NODE_UAPSD_LOCK_CHECK(_an)
@@ -545,7 +545,7 @@ struct ath_vap {
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_TXQ_LOCK_CHECK(_tq) do { \
 	if (spin_is_locked(&(_tq)->axq_lock)) \
-		printk("%s:%d - about to block on txq lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on txq lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_TXQ_LOCK_CHECK(_tq)
@@ -784,7 +784,7 @@ typedef void (*ath_callback) (struct ath_softc *);
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_TXBUF_LOCK_CHECK(_sc) do { \
 	if (spin_is_locked(&(_sc)->sc_txbuflock)) \
-		printk("%s:%d - about to block on txbuf lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on txbuf lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_TXBUF_LOCK_CHECK(_sc)
@@ -815,7 +815,7 @@ typedef void (*ath_callback) (struct ath_softc *);
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_RXBUF_LOCK_CHECK(_sc) do { \
 	if (spin_is_locked(&(_sc)->sc_rxbuflock)) \
-		printk("%s:%d - about to block on rxbuf lock!", __func__, __LINE__); \
+		printk("%s:%d - about to block on rxbuf lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_RXBUF_LOCK_CHECK(_sc)
