@@ -3113,11 +3113,9 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			}
 			bf = ath_take_txbuf(sc);
 			if (!bf) {
-				ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
 				goto hardstart_fail;
 			}
 
-			ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
 			goto ff_flush_done;
 		}
 		/* XXX: out-of-order condition only occurs for AP mode and 
