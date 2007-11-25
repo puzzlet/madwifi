@@ -2827,10 +2827,10 @@ ath_get_buffer_count(void)
 static 
 struct ath_buf*
 #ifdef IEEE80211_DEBUG_REFCNT
-internal_take_txbuf_locked_debug(struct ath_softc *sc, int for_management, 
+_take_txbuf_locked_debug(struct ath_softc *sc, int for_management, 
 			const char *func, int line)
 #else
-internal_take_txbuf_locked(struct ath_softc *sc, int for_management)
+_take_txbuf_locked(struct ath_softc *sc, int for_management)
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
 	struct ath_buf* bf = NULL;
@@ -2883,17 +2883,17 @@ internal_take_txbuf_locked(struct ath_softc *sc, int for_management)
 static
 struct ath_buf*
 #ifdef IEEE80211_DEBUG_REFCNT
-internal_take_txbuf_debug(struct ath_softc *sc, int for_management,
+_take_txbuf_debug(struct ath_softc *sc, int for_management,
 			  const char *func, int line) {
 #else
-internal_take_txbuf(struct ath_softc *sc, int for_management) {
+_take_txbuf(struct ath_softc *sc, int for_management) {
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	struct ath_buf* bf = NULL;
 	ATH_TXBUF_LOCK_IRQ(sc);
 #ifdef IEEE80211_DEBUG_REFCNT
-	bf = internal_take_txbuf_locked_debug(sc, for_management, func, line);
+	bf = _take_txbuf_locked_debug(sc, for_management, func, line);
 #else
-	bf = internal_take_txbuf_locked(sc, for_management);
+	bf = _take_txbuf_locked(sc, for_management);
 #endif
 	ATH_TXBUF_UNLOCK_IRQ(sc);
 	return bf;
@@ -2902,46 +2902,46 @@ internal_take_txbuf(struct ath_softc *sc, int for_management) {
 #ifdef IEEE80211_DEBUG_REFCNT
 
 #define ath_take_txbuf_locked(_sc) \
-	internal_take_txbuf_locked_debug(_sc, 0, __func__, __LINE__)
+	_take_txbuf_locked_debug(_sc, 0, __func__, __LINE__)
 #define ath_take_txbuf_locked_debug(_sc, _func, _line) \
-	internal_take_txbuf_locked_debug(_sc, 0, _func, _line)
+	_take_txbuf_locked_debug(_sc, 0, _func, _line)
 
-#define ath_take_txbuf_for_management_locked(_sc) \
-	internal_take_txbuf_locked_debug(_sc, 1, __func__, __LINE__)
-#define ath_take_txbuf_for_management_locked_debug(_sc, _func, _line) \
-	internal_take_txbuf_locked_debug(_sc, 1, _func, _line)
+#define ath_take_txbuf_mgmt_locked(_sc) \
+	_take_txbuf_locked_debug(_sc, 1, __func__, __LINE__)
+#define ath_take_txbuf_mgmt_locked_debug(_sc, _func, _line) \
+	_take_txbuf_locked_debug(_sc, 1, _func, _line)
 
 #define ath_take_txbuf(_sc) \
-	internal_take_txbuf_debug(_sc, 0, __func__, __LINE__)
+	_take_txbuf_debug(_sc, 0, __func__, __LINE__)
 #define ath_take_txbuf_debug(_sc, _func, _line) \
-	internal_take_txbuf_debug(_sc, 0, _func, _line)
+	_take_txbuf_debug(_sc, 0, _func, _line)
 
-#define ath_take_txbuf_for_management(_sc) \
-	internal_take_txbuf_debug(_sc, 1, __func__, __LINE__)
-#define ath_take_txbuf_for_management_debug(_sc, _func, _line) \
-	internal_take_txbuf_debug(_sc, 1, _func, _line)
+#define ath_take_txbuf_mgmt(_sc) \
+	_take_txbuf_debug(_sc, 1, __func__, __LINE__)
+#define ath_take_txbuf_mgmt_debug(_sc, _func, _line) \
+	_take_txbuf_debug(_sc, 1, _func, _line)
 
 #else /* #ifdef IEEE80211_DEBUG_REFCNT */
 
 #define ath_take_txbuf_locked(_sc) \
-	internal_take_txbuf_locked(_sc, 0)
+	_take_txbuf_locked(_sc, 0)
 #define ath_take_txbuf_locked_debug(_sc, _func, _line) \
-	internal_take_txbuf_locked(_sc, 0)
+	_take_txbuf_locked(_sc, 0)
 
-#define ath_take_txbuf_for_management_locked(_sc) \
-	internal_take_txbuf_locked(_sc, 1)
-#define ath_take_txbuf_for_management_locked_debug(_sc, _func, _line) \
-	internal_take_txbuf_locked(_sc, 1)
+#define ath_take_txbuf_mgmt_locked(_sc) \
+	_take_txbuf_locked(_sc, 1)
+#define ath_take_txbuf_mgmt_locked_debug(_sc, _func, _line) \
+	_take_txbuf_locked(_sc, 1)
 
 #define ath_take_txbuf(_sc) \
-	internal_take_txbuf(_sc, 0)
+	_take_txbuf(_sc, 0)
 #define ath_take_txbuf_debug(_sc, _func, _line) \
-	internal_take_txbuf(_sc, 0)
+	_take_txbuf(_sc, 0)
 
-#define ath_take_txbuf_for_management(_sc) \
-	internal_take_txbuf(_sc, 1)
-#define ath_take_txbuf_for_management_debug(_sc, _func, _line) \
-	internal_take_txbuf(_sc, 1)
+#define ath_take_txbuf_mgmt(_sc) \
+	_take_txbuf(_sc, 1)
+#define ath_take_txbuf_mgmt_debug(_sc, _func, _line) \
+	_take_txbuf(_sc, 1)
 
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 
@@ -3264,7 +3264,7 @@ ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 	/*
 	 * Grab a TX buffer and associated resources.
 	 */
-	bf = ath_take_txbuf_for_management(sc);
+	bf = ath_take_txbuf_mgmt(sc);
 	if (!bf) {
 		printk("ath_mgtstart: discard, no xmit buf\n");
 		sc->sc_stats.ast_tx_nobufmgt++;
