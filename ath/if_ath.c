@@ -2815,7 +2815,7 @@ ath_get_buffers_available(void)
 }
 
 #ifdef IEEE80211_DEBUG_REFCNT
-/* NOTE: This function is valid in noo-debug configurations, just not used. */
+/* NOTE: This function is valid in non-debug configurations, just not used. */
 static inline
 u_int32_t
 ath_get_buffer_count(void)
