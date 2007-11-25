@@ -195,7 +195,7 @@ ref_skb(struct sk_buff *skb,
 static void skb_destructor(struct sk_buff* skb) {
 	/* Report any node reference leaks - caused by kernel net device queue 
 	 * dropping buffer, rather than passing it to the driver. */
-	if ( (ath_debug_global & GLOBAL_DEBUG_SKB) && SKB_CB(skb)->ni != NULL ) {
+	if ((ath_debug_global & GLOBAL_DEBUG_SKB) && SKB_CB(skb)->ni != NULL) {
 		printk(KERN_ERR "%s:%d - ERROR: non-NULL node pointer in %p, %p<%s>!  "
 				"Leak Detected!\n", 
 		       __func__, __LINE__, 
@@ -232,9 +232,9 @@ static void print_skb_refchange_message(
 		const char* func2, int line2)
 {
 	char skb_desc[128] = { '\0' };
-	if ( 0 == (ath_debug_global & GLOBAL_DEBUG_SKB))
+	if (0 == (ath_debug_global & GLOBAL_DEBUG_SKB))
 		return;
-	get_skb_description( skb_desc, sizeof( skb_desc),  
+	get_skb_description(skb_desc, sizeof(skb_desc),  
 			     "skb",  skb,  users_adjustment);
 	skb_print_message(0 /* no global count */, skb, 
 			  func1, line1, func2, line2,
@@ -248,9 +248,9 @@ static void print_skb_trackchange_message(
 		char* message)
 {
 	char skb_desc[128] = { '\0' };
-	if ( 0 == (ath_debug_global & GLOBAL_DEBUG_SKB))
+	if (0 == (ath_debug_global & GLOBAL_DEBUG_SKB))
 		return;
-	get_skb_description( skb_desc, sizeof( skb_desc),  
+	get_skb_description(skb_desc, sizeof(skb_desc),  
 			     "skb",  skb,  users_adjustment);
 	skb_print_message(1 /* show global count */, skb, 
 			  func1, line1, func2, line2,
@@ -281,7 +281,7 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 		dump_stack();
 		return skb;
 	}
-	if ( skb_shared(skb) ) {
+	if (skb_shared(skb)) {
 		skb_print_message(0 /* show_counter */, 
 			skb, func1, line1, func2, line2,
 			"ERROR: Shared skb received.  References leaked??");
@@ -316,7 +316,7 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
 		dump_stack();
 		return skb;
 	}
-	if ( skb_shared(skb) ) {
+	if (skb_shared(skb)) {
 		skb_print_message(0 /* show_counter */, 
 			skb, func1, line1, func2, line2,
 			"ERROR: Shared skb received.  References leaked??");
@@ -388,7 +388,7 @@ unref_skb(struct sk_buff *skb, int type,
 	}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
-	if ( (in_irq() || irqs_disabled()) 
+	if ((in_irq() || irqs_disabled()) 
 	     && (type == UNREF_USE_KFREE_SKB || type == UNREF_USE_DEV_KFREE_SKB)) 
 	{
 		skb_print_message(0 /* show_counter */, 
@@ -466,19 +466,17 @@ void ieee80211_dev_kfree_skb(struct sk_buff** pskb)
 	if (!pskb || !(skb = *pskb))
 		return;
 
-	if ( !skb_shared(skb) ) {
+	if (!skb_shared(skb)) {
 		/* Release the SKB references, for fragments of chain that are
-		 * unshared... starting at skb passed in.
-		 */
+		 * unshared... starting at skb passed in. */
 		if (skb->prev == NULL) {
 			if (skb->next != NULL) {
 				skb->next->prev = NULL;
 			}
 			skb->next = NULL;
-			skb->prev = NULL;
 		}
 		/* Release node reference, if any */
-		if ( SKB_CB(skb)->ni != NULL ) {
+		if (SKB_CB(skb)->ni != NULL) {
 #ifdef IEEE80211_DEBUG_REFCNT
 			ieee80211_unref_node_debug(&SKB_CB(skb)->ni, func, line);
 #else

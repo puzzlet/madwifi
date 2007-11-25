@@ -556,7 +556,7 @@ struct ath_vap {
 #endif
 
 #define ATH_TXQ_INSERT_TAIL(_tq, _elm, _field) do { \
-	STAILQ_INSERT_TAIL( &(_tq)->axq_q, (_elm), _field); \
+	STAILQ_INSERT_TAIL(&(_tq)->axq_q, (_elm), _field); \
 	(_tq)->axq_depth++; \
 	(_tq)->axq_totalqueued++; \
 } while (0)

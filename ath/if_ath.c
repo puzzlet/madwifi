@@ -2754,7 +2754,7 @@ ath_ff_neverflushtestdone(struct ath_txq *txq, struct ath_buf *bf)
 static int
 ath_ff_ageflushtestdone(struct ath_txq *txq, struct ath_buf *bf)
 {
-	if ( (txq->axq_totalqueued - bf->bf_queueage) < ATH_FF_STAGEQAGEMAX )
+	if ((txq->axq_totalqueued - bf->bf_queueage) < ATH_FF_STAGEQAGEMAX)
 		return 1;
 
 	return 0;
