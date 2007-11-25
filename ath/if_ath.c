@@ -3112,7 +3112,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 				ath_return_txbuf(sc, &bf_ff);
 			}
 			bf = ath_take_txbuf(sc);
-			if (!bf) {
+			if (bf == NULL) {
 				goto hardstart_fail;
 			}
 
@@ -3265,7 +3265,7 @@ ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 	 * Grab a TX buffer and associated resources.
 	 */
 	bf = ath_take_txbuf_mgmt(sc);
-	if (!bf) {
+	if (bf == NULL) {
 		printk("ath_mgtstart: discard, no xmit buf\n");
 		sc->sc_stats.ast_tx_nobufmgt++;
 		error = -ENOBUFS;
@@ -5812,7 +5812,7 @@ ath_rx_capture(struct net_device *dev, const struct ath_buf *bf,
 	if (padbytes > 0) {
 		/* Remove hw pad bytes */
 		struct sk_buff *skb1 = skb_copy(skb, GFP_ATOMIC);
-		if (skb == NULL)
+		if (skb1 == NULL)
 			return;
 		memmove(skb1->data + padbytes, skb1->data, headersize);
 		skb_pull(skb1, padbytes);
