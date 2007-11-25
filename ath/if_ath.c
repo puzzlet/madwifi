@@ -11822,7 +11822,6 @@ cleanup_ath_buf(struct ath_softc *sc, struct ath_buf *buf, int direction)
 }
 #endif /* ATH_SUPERG_FF */
 	buf->bf_node = NULL;
-	buf->bf_skb = NULL;
 	buf->bf_flags = 0;
 
 	if (buf->bf_desc) {
