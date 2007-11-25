@@ -6149,7 +6149,6 @@ rx_accept:
 			if (sc->sc_ic.ic_opmode == IEEE80211_M_MONITOR) {
 				/* no other VAPs need the packet */
 				ieee80211_dev_kfree_skb(&skb);
-				skb = NULL;
 				goto rx_next;
 			}
 		}
@@ -10606,7 +10605,7 @@ txcont_queue_packet(struct ieee80211com *ic, struct ath_txq* txq)
 
 	ath_hal_intrset(ah, 0);
 	{
-		bf  = ath_take_txbuf_locked(sc);
+		bf  = ath_take_txbuf(sc);
 		skb = alloc_skb(datasz + sizeof(struct ieee80211_frame) + 
 				IEEE80211_CRC_LEN, GFP_ATOMIC);
 		if (NULL == skb) {
