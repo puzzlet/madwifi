@@ -89,7 +89,6 @@ static struct {
 	u_int		bit;
 	const char *desc;
 } flags[] = {
-	{ "node_ref",   IEEE80211_MSG_NODE_REF, "node ref counting (affects all devs)" },
 	{ "debug",	IEEE80211_MSG_DEBUG, "IFF_DEBUG equivalent" },
 	{ "dumppkts",	IEEE80211_MSG_DUMPPKTS,  "dump packets" },
 	{ "crypto",	IEEE80211_MSG_CRYPTO, "crypto modules" },
@@ -97,6 +96,7 @@ static struct {
 	{ "xrate",	IEEE80211_MSG_XRATE, "rate set handling" },
 	{ "elemid",	IEEE80211_MSG_ELEMID, "element id parsing"},
 	{ "node",	IEEE80211_MSG_NODE, "node management" },
+	{ "node_ref",   IEEE80211_MSG_NODE_REF, "node ref counting (affects all devs)" },
 	{ "assoc",	IEEE80211_MSG_ASSOC, "association handling" },
 	{ "auth",	IEEE80211_MSG_AUTH, "authentication handling" },
 	{ "scan",	IEEE80211_MSG_SCAN, "scanning" },

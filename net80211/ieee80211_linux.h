@@ -381,7 +381,7 @@ typedef spinlock_t acl_lock_t;
  * NB: sizeof(cb) == 48 and the vlan code grabs the first
  *     8 bytes so we reserve/avoid it.
  */
-struct ieee80211_cb {
+	struct ieee80211_cb {
 	u_int8_t vlan[8];			/* reserve for vlan tag info */
 	struct ieee80211_node *ni;
 	u_int32_t flags;
@@ -392,6 +392,7 @@ struct ieee80211_cb {
 #define M_RAW           0x10
 #ifdef IEEE80211_DEBUG_REFCNT
 	int tracked;
+	void		(*next_destructor)(struct sk_buff *skb);
 #endif
 	struct sk_buff *next;			/* fast frame sk_buf chain */
 };

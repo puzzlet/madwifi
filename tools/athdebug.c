@@ -63,7 +63,7 @@ enum {
 	ATH_DEBUG_RECV_DESC	= 0x00000008,	/* recv descriptors */
 	ATH_DEBUG_RATE		= 0x00000010,	/* rate control */
 	ATH_DEBUG_RESET		= 0x00000020,	/* reset processing */
-	ATH_DEBUG_MODE		= 0x00000040,	/* mode init/setup */
+	ATH_DEBUG_SKB_REF	= 0x00000040,   /* skb ref counting */
 	ATH_DEBUG_BEACON	= 0x00000080,	/* beacon handling */
 	ATH_DEBUG_WATCHDOG	= 0x00000100,	/* watchdog timeout */
 	ATH_DEBUG_INTR		= 0x00001000,	/* ISR */
@@ -73,7 +73,6 @@ enum {
 	ATH_DEBUG_CALIBRATE	= 0x00010000,	/* periodic calibration */
 	ATH_DEBUG_KEYCACHE	= 0x00020000,	/* key cache management */
 	ATH_DEBUG_STATE		= 0x00040000,	/* 802.11 state transitions */
-	ATH_DEBUG_NODE		= 0x00080000,	/* node management */
 	ATH_DEBUG_LED		= 0x00100000,	/* led management */
 	ATH_DEBUG_FF		= 0x00200000,	/* fast frames */
 	ATH_DEBUG_TURBO		= 0x00400000,	/* turbo/dynamic turbo */
@@ -100,7 +99,6 @@ static struct {
 	{ "recv_desc",	 ATH_DEBUG_RECV_DESC, 	"recv descriptors" },
 	{ "rate",	 ATH_DEBUG_RATE, 	"rate control modules" },
 	{ "reset",	 ATH_DEBUG_RESET, 	"reset processing and initialization" },
-	{ "mode",	 ATH_DEBUG_MODE, 	"mode initialization and changes" },
 	{ "beacon",	 ATH_DEBUG_BEACON, 	"beacon handling" },
 	{ "watchdog",	 ATH_DEBUG_WATCHDOG, 	"watchdog timer" },
 	{ "intr",	 ATH_DEBUG_INTR, 	"interrupt processing" },
@@ -110,9 +108,9 @@ static struct {
 	{ "calibrate",	 ATH_DEBUG_CALIBRATE, 	"periodic re-calibration" },
 	{ "keycache",	 ATH_DEBUG_KEYCACHE, 	"key cache management" },
 	{ "state",	 ATH_DEBUG_STATE, 	"802.11 state transitions" },
-	{ "node",	 ATH_DEBUG_NODE, 	"node management" },
 	{ "txbuf", 	 ATH_DEBUG_TXBUF,   	"ath_buf management" },
 	{ "skb",         ATH_DEBUG_SKB,         "skb management (affects all devs)" },
+	{ "skb_ref",     ATH_DEBUG_SKB_REF,     "skb ref counting (affects all devs)" },
 	{ "led",         ATH_DEBUG_LED, 	"led management" },
 	{ "ff",		 ATH_DEBUG_FF, 		"fast frame handling" },
 	{ "turbo",	 ATH_DEBUG_TURBO, 	"dynamic turbo handling" },

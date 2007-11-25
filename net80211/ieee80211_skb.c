@@ -195,11 +195,15 @@ ref_skb(struct sk_buff *skb,
 static void skb_destructor(struct sk_buff* skb) {
 	/* Report any node reference leaks - caused by kernel net device queue 
 	 * dropping buffer, rather than passing it to the driver. */
-	if ((ath_debug_global & GLOBAL_DEBUG_SKB) && SKB_CB(skb)->ni != NULL) {
+	if (SKB_CB(skb)->ni != NULL) {
 		printk(KERN_ERR "%s:%d - ERROR: non-NULL node pointer in %p, %p<%s>!  "
 				"Leak Detected!\n", 
 		       __func__, __LINE__, 
 		       skb, SKB_CB(skb)->ni, ether_sprintf(SKB_CB(skb)->ni->ni_macaddr));
+		dump_stack();
+	}
+	if (SKB_CB(skb)->next_destructor != NULL) {
+		SKB_CB(skb)->next_destructor(skb);
 	}
 }
 EXPORT_SYMBOL(skb_destructor);
@@ -232,7 +236,7 @@ static void print_skb_refchange_message(
 		const char* func2, int line2)
 {
 	char skb_desc[128] = { '\0' };
-	if (0 == (ath_debug_global & GLOBAL_DEBUG_SKB))
+	if (0 == (ath_debug_global & GLOBAL_DEBUG_SKB_REF))
 		return;
 	get_skb_description(skb_desc, sizeof(skb_desc),  
 			     "skb",  skb,  users_adjustment);
@@ -293,8 +297,9 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 	print_skb_trackchange_message(skb, users_adjustment,
 				      func1, line1, func2, line2, 
 				      " is now ** TRACKED **");
-	/* Always use our debug destructor, when we can... */
-	if (NULL == skb->destructor) {
+	/* Install our debug destructor, chaining to the original... */
+	if (skb->destructor != skb_destructor) {
+		SKB_CB(skb)->next_destructor = skb->destructor;
 		skb->destructor = skb_destructor;
 	}
 	return skb;
@@ -327,6 +332,11 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
 	atomic_dec(&skb_total_counter);
 	atomic_dec(&skb_refs_counter);
 	SKB_CB(skb)->tracked = 0;
+	/* Install our debug destructor, chaining to the original... */
+	if (skb->destructor != skb_destructor) {
+		SKB_CB(skb)->next_destructor = skb->destructor;
+		skb->destructor = skb_destructor;
+	}
 	print_skb_trackchange_message(skb, users_adjustment,
 				      func1, line1, func2, line2, 
 				      " is now ** UNTRACKED **");

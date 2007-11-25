@@ -446,7 +446,7 @@ enum {
 	ATH_DEBUG_RECV_DESC	= 0x00000008,	/* recv descriptors */
 	ATH_DEBUG_RATE		= 0x00000010,	/* rate control */
 	ATH_DEBUG_RESET		= 0x00000020,	/* reset processing */
-	/* 0x00000040 was ATH_DEBUG_MODE */
+	ATH_DEBUG_SKB_REF	= 0x00000040,	/* sbk references */
 	ATH_DEBUG_BEACON 	= 0x00000080,	/* beacon handling */
 	ATH_DEBUG_WATCHDOG 	= 0x00000100,	/* watchdog timeout */
 	ATH_DEBUG_INTR		= 0x00001000,	/* ISR */
@@ -456,7 +456,6 @@ enum {
 	ATH_DEBUG_CALIBRATE	= 0x00010000,	/* periodic calibration */
 	ATH_DEBUG_KEYCACHE	= 0x00020000,	/* key cache management */
 	ATH_DEBUG_STATE		= 0x00040000,	/* 802.11 state transitions */
-	ATH_DEBUG_NODE		= 0x00080000,	/* node management */
 	ATH_DEBUG_LED		= 0x00100000,	/* led management */
 	ATH_DEBUG_FF		= 0x00200000,	/* fast frames */
 	ATH_DEBUG_TURBO		= 0x00400000,	/* turbo/dynamic turbo */
@@ -474,7 +473,7 @@ enum {
 						 * to all vaps] */
 	ATH_DEBUG_FATAL		= 0x80000000,	/* fatal errors */
 	ATH_DEBUG_ANY		= 0xffffffff,
-	ATH_DEBUG_GLOBAL	= (ATH_DEBUG_SKB)
+	ATH_DEBUG_GLOBAL	= (ATH_DEBUG_SKB|ATH_DEBUG_SKB_REF)
 };
 #define	DPRINTF(sc, _m, _fmt, ...) do {					\
 	if (DFLAG_ISSET(sc, (_m))) {					\
@@ -5859,6 +5858,8 @@ ath_tx_capture(struct net_device *dev, const struct ath_buf *bf,  struct sk_buff
 		SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(skb_orig)->ni);
 		ieee80211_dev_kfree_skb(&skb_orig);
 	} else {
+		if (SKB_CB(skb)->ni != NULL) 
+			ieee80211_unref_node(&SKB_CB(skb)->ni);
 		skb_orphan(skb);
 	}
 

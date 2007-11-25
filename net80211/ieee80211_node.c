@@ -903,6 +903,7 @@ node_cleanup(struct ieee80211_node *ni)
 }
 
 static void node_print_message(
+		u_int32_t flags,
 		int show_counter, 
 		int refcnt_adjust,
 		const struct ieee80211_node *ni, 
@@ -918,7 +919,7 @@ static void node_print_message(
 	char node_count[32] = { '\0' };
 	char expanded_message[1024] = { '\0' };
 
-	if (0 == (ni->ni_ic->ic_debug & IEEE80211_MSG_NODE_REF))
+	if (0 == (ni->ni_ic->ic_debug & flags) && (flags != IEEE80211_MSG_ANY))
 		return;
 
 	if (adjusted_refcount == 0)
@@ -1080,7 +1081,8 @@ ieee80211_alloc_node(struct ieee80211vap *vap, const u_int8_t *macaddr)
 		ni->ni_vap = vap;
 		ni->ni_ic = ic;
 		atomic_inc(&ni->ni_ic->ic_node_counter);
-		node_print_message(1 /* show counter */, 
+		node_print_message(IEEE80211_MSG_NODE|IEEE80211_MSG_NODE_REF,
+				   1 /* show counter */, 
 				   0 /* adjust refcount */, 
 				   ni, 
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -1629,7 +1631,8 @@ ieee80211_free_node(struct ieee80211_node *ni)
 	struct ieee80211vap *vap = ni->ni_vap;
 
 	atomic_dec(&ni->ni_ic->ic_node_counter);
-	node_print_message(1 /* show counter */, 
+	node_print_message(IEEE80211_MSG_NODE|IEEE80211_MSG_NODE_REF,
+			   1 /* show counter */, 
 			   0 /* adjust refcount */, 
 			   ni, 
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -2280,7 +2283,8 @@ ieee80211_ref_node(struct ieee80211_node *ni)
 		return ni;
 	}
 	if (atomic_read(&ni->ni_refcnt) < 1) {
-		node_print_message(0 /* show counter */, 
+		node_print_message(IEEE80211_MSG_ANY,
+				   0 /* show counter */, 
 				   0 /* adjust refcount */, 
 				   ni, 
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -2294,7 +2298,8 @@ ieee80211_ref_node(struct ieee80211_node *ni)
 		return ni;
 	}
 	atomic_inc(&ni->ni_refcnt);
-	node_print_message(0 /* show counter */, 
+	node_print_message(IEEE80211_MSG_NODE_REF,
+			   0 /* show counter */, 
 			   0 /* adjust refcount */, 
 			   ni, 
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -2330,7 +2335,8 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 		return;
 	}
 	if (atomic_read(&ni->ni_refcnt) < 1) {
-		node_print_message(0 /* show counter */, 
+		node_print_message(IEEE80211_MSG_ANY,
+				   0 /* show counter */, 
 				   0 /* adjust refcount */, 
 				   ni, 
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -2344,7 +2350,8 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 		return;
 	}
 
-	node_print_message(0 /* show counter */, 
+	node_print_message(IEEE80211_MSG_NODE_REF, 
+			   0 /* show counter */, 
 			   -1 /* adjust refcount */, 
 			   ni, 
 #ifdef IEEE80211_DEBUG_REFCNT
