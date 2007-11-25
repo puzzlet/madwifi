@@ -85,7 +85,8 @@ enum {
 	ATH_DEBUG_TXBUF         = 0x20000000,   /* TX buffer usage/leak debugging */
 	ATH_DEBUG_SKB           = 0x40000000,   /* SKB usage/leak debugging [applies to all vaps] */
 	ATH_DEBUG_FATAL		= 0x80000000,	/* fatal errors */
-	ATH_DEBUG_ANY		= 0xffffffff
+	ATH_DEBUG_ANY		= 0xffffffff,
+	ATH_DEBUG_GLOBAL	= (ATH_DEBUG_SKB|ATH_DEBUG_SKB_REF)
 };
 
 static struct {
