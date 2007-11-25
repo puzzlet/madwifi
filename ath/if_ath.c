@@ -3607,16 +3607,22 @@ ath_key_alloc(struct ieee80211vap *vap, const struct ieee80211_key *k)
 	 * multi-station operation.
 	 */
 	if ((k->wk_flags & IEEE80211_KEY_GROUP) && !sc->sc_mcastkey) {
-		ieee80211_keyix_t keyix;
+		int i;
+		ieee80211_keyix_t keyix = IEEE80211_KEYIX_NONE;
 
-		if (!(&vap->iv_nw_keys[0] <= k &&
-		    k < &vap->iv_nw_keys[IEEE80211_WEP_NKID])) {
+		for (i = 0; i < IEEE80211_WEP_NKID; i++) {
+			if (k == &vap->iv_nw_keys[i]) {
+				keyix = i;
+				break;
+			}
+		}
+		if (keyix == IEEE80211_KEYIX_NONE) {
 			/* should not happen */
 			DPRINTF(sc, ATH_DEBUG_KEYCACHE,
 				"%s: bogus group key\n", __func__);
 			return IEEE80211_KEYIX_NONE;
 		}
-		keyix = k - vap->iv_nw_keys;
+
 		/* XXX: We pre-allocate the global keys so have no way 
 		 * to check if they've already been allocated. */
 		return keyix;
