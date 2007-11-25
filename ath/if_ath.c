@@ -5462,7 +5462,6 @@ ath_node_move_data(const struct ieee80211_node *ni)
 		while (bf) {
 			skb = bf->bf_skb;
 			bf->bf_skb = NULL;
-			bf->bf_node = NULL;
 			ath_return_txbuf(sc, &bf);
 			/* Untrack because ath_hardstart will restart tracking */
 			ieee80211_skb_untrack(skb);
