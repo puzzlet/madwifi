@@ -293,8 +293,10 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 	print_skb_trackchange_message(skb, users_adjustment,
 				      func1, line1, func2, line2, 
 				      " is now ** TRACKED **");
-	/* Always use our debug destructor */
-	skb->destructor = skb_destructor;
+	/* Always use our debug destructor, when we can... */
+	if (NULL == skb->destructor) {
+		skb->destructor = skb_destructor;
+	}
 	return skb;
 }
 
@@ -328,7 +330,6 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
 	print_skb_trackchange_message(skb, users_adjustment,
 				      func1, line1, func2, line2, 
 				      " is now ** UNTRACKED **");
-	skb->destructor = skb_destructor;
 	return skb;
 }
 
@@ -484,6 +485,7 @@ void ieee80211_dev_kfree_skb(struct sk_buff** pskb)
 #endif
 		}
 	}
+
 	/* Decrement the ref count for the skb, possibly freeing the memory */
 #ifdef IEEE80211_DEBUG_REFCNT
 	unref_skb(skb, UNREF_USE_DEV_KFREE_SKB_ANY, 
