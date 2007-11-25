@@ -5858,12 +5858,8 @@ ath_tx_capture(struct net_device *dev, const struct ath_buf *bf,  struct sk_buff
 		/* If the clone works, bump the reference count for our copy. */
 		SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(skb_orig)->ni);
 		ieee80211_dev_kfree_skb(&skb_orig);
-		/* Clear the parent pointer instead of calling skb_orphan. 
-		 * NOTE: We don't want  o invoke skb_orphan here because it will
-		 * invoke the destructor on the skb and release/reset the node
-		 * reference before we are ready for that.  This is handled at
-		 * the bottom of this function. */
-		skb->sk = NULL;
+	} else {
+		skb_orphan(skb);
 	}
 
 	wh = (struct ieee80211_frame *) skb->data;
