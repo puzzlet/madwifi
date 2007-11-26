@@ -283,7 +283,7 @@ static inline HAL_BOOL ath_hal_getintmit(struct ath_hal *ah, u_int32_t *dst)
 
 static inline HAL_BOOL ath_hal_setintmit(struct ath_hal *ah, u_int32_t v)
 {
-	return (ath_hal_setcapability(ah, HAL_CAP_INTMIT, 1, v, NULL) == HAL_OK);
+	return (ath_hal_setcapability(ah, HAL_CAP_INTMIT, 1, v, NULL));
 }
 
 #endif				/* #ifndef _IF_ATH_HAL_WRAPPERS_H_ */
