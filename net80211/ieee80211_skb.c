@@ -332,10 +332,10 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
 	atomic_dec(&skb_total_counter);
 	atomic_dec(&skb_refs_counter);
 	SKB_CB(skb)->tracked = 0;
-	/* Install our debug destructor, chaining to the original... */
-	if (skb->destructor != skb_destructor) {
-		SKB_CB(skb)->next_destructor = skb->destructor;
-		skb->destructor = skb_destructor;
+	/* Uninstall our debug destructor, restoring any original... */
+	if (skb->destructor == skb_destructor) {
+		skb->destructor = SKB_CB(skb)->next_destructor;
+		SKB_CB(skb)->next_destructor = NULL;
 	}
 	print_skb_trackchange_message(skb, users_adjustment,
 				      func1, line1, func2, line2, 
