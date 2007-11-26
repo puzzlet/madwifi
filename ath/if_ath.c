@@ -1536,8 +1536,7 @@ ath_resume(struct net_device *dev)
 
 /* Extend 15-bit timestamp from RX descriptor to a full 64-bit TSF using the
  * provided hardware TSF. The result is the closest value relative to hardware
- * TSF.
- */
+ * TSF. */
 
 /* NB: Not all chipsets return the same precision rstamp */
 static __inline u_int64_t
@@ -1549,13 +1548,11 @@ ath_extend_tsf(u_int64_t tsf, u_int32_t rstamp)
 
 	result = (tsf & ~TSTAMP_MASK) | rstamp;
 	if (result > tsf) {
-		if (result - tsf > (TSTAMP_MASK/2)) {
-			result -= (TSTAMP_MASK+1);
-		}
+		if ((result - tsf) > (TSTAMP_MASK / 2))
+			result -= (TSTAMP_MASK + 1);
 	} else {
-		if (tsf - result > (TSTAMP_MASK/2)) {
-			result += (TSTAMP_MASK+1);
-		}
+		if ((tsf - result) > (TSTAMP_MASK / 2))
+			result += (TSTAMP_MASK + 1);
 	}
 
 	return result;
@@ -1660,7 +1657,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 		/* update the per packet TSF with rs_tstamp */
 		bf->bf_tsf     = rs->rs_tstamp;
 		bf->bf_status |= ATH_BUFSTATUS_RXTSTAMP;
-		count ++;
+		count++;
 
 		DPRINTF(sc, ATH_DEBUG_BEACON,
 			"%s: rs_tstamp=%10llx count=%d\n",
@@ -1669,7 +1666,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 
 		/* compute rollover */
 		if (last_rs_tstamp > rs->rs_tstamp) {
-			rollover ++;
+			rollover++;
 			DPRINTF(sc, ATH_DEBUG_BEACON,
 				"%s: %d rollover detected\n",
 				DEV_NAME(sc->sc_dev),
@@ -1681,6 +1678,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 		/* XXX: We do not support frames spanning multiple
 		 *      descriptors */
 		bf->bf_status |= ATH_BUFSTATUS_DONE;
+
 		/* Capture noise per-interrupt, since it may change
 		 * by the time the receive queue gets around to
 		 * processing these buffers, and multiple interrupts
@@ -1933,15 +1931,15 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 	if (count > 0) {
 		hw_tsf = ath_hal_gettsf64(ah);
 		if (last_rs_tstamp > (hw_tsf & TSTAMP_MASK)) {
-			rollover ++;
+			rollover++;
 			DPRINTF(sc, ATH_DEBUG_BEACON,
-			  "%s: %d rollover detected for hw_tsf=%10llx\n",
+				"%s: %d rollover detected for hw_tsf=%10llx\n",
 				DEV_NAME(sc->sc_dev),
 				rollover, hw_tsf);
 		}
 
 		last_rs_tstamp = 0;
-		for (bf=prev_rxbufcur; bf; bf = STAILQ_NEXT(bf, bf_list)) {
+		for (bf = prev_rxbufcur; bf; bf = STAILQ_NEXT(bf, bf_list)) {
 			ds = bf->bf_desc;
 			if (ds->ds_link == bf->bf_daddr) {
 				/* NB: never process the self-linked entry at
@@ -1951,20 +1949,19 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 
 			/* we only process buffers who needs RX timestamps
 			 * adjustements */
-
 			if  (bf->bf_status & ATH_BUFSTATUS_RXTSTAMP) {
 				bf->bf_status &= ~ATH_BUFSTATUS_RXTSTAMP;
 
-
 				/* update rollover */
-				if (last_rs_tstamp > bf->bf_tsf) {
-					rollover --;
-				}
+				if (last_rs_tstamp > bf->bf_tsf)
+					rollover--;
 
 				/* update last_rs_tstamp */
 				last_rs_tstamp = bf->bf_tsf;
-				bf->bf_tsf =(hw_tsf & ~TSTAMP_MASK)|bf->bf_tsf;
-				bf->bf_tsf -= rollover * (TSTAMP_MASK+1);
+				bf->bf_tsf = 
+					(hw_tsf & ~TSTAMP_MASK) | bf->bf_tsf;
+				bf->bf_tsf -= rollover * (TSTAMP_MASK + 1);
+
 				DPRINTF(sc, ATH_DEBUG_BEACON,
 					"%s: bf_tsf=%10llx hw_tsf=%10llx\n",
 					DEV_NAME(sc->sc_dev),
@@ -6126,7 +6123,6 @@ rx_accept:
 		skb_put(skb, len);
 		skb->protocol = __constant_htons(ETH_P_CONTROL);
 
-		/* Pass up TSF clock in MAC time */
 		if (sc->sc_nmonvaps > 0) {
 			/*
 			 * Some vap is in monitor mode, so send to
