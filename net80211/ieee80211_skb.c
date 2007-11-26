@@ -157,7 +157,9 @@ print_skb_trackchange_message(
 
 /* Called automatically when an SKB reaches zero users, 
  * reporting any leaked node references. */
+#ifdef IEEE80211_DEBUG_REFCNT_SKBDEST
 static void skb_destructor(struct sk_buff* skb);
+#endif
 static void get_skb_description(char *dst, int dst_size, const char* label, const struct sk_buff *skb, int users_adjustment);
 
 static struct sk_buff *
@@ -191,6 +193,8 @@ ref_skb(struct sk_buff *skb,
 	const char* func1, int line1, 
 	const char* func2, int line2);
 
+
+#ifdef IEEE80211_DEBUG_REFCNT_SKBDEST
 /* Destructor for reporting node reference leaks */
 static void skb_destructor(struct sk_buff* skb) {
 	/* Report any node reference leaks - caused by kernel net device queue 
@@ -207,6 +211,7 @@ static void skb_destructor(struct sk_buff* skb) {
 	}
 }
 EXPORT_SYMBOL(skb_destructor);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT_SKBDEST */
 
 static void get_skb_description(char *dst, int dst_size, const char* label, const struct sk_buff *skb, int users_adjustment) { 
 	dst[0] = '\0';
@@ -297,11 +302,13 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 	print_skb_trackchange_message(skb, users_adjustment,
 				      func1, line1, func2, line2, 
 				      " is now ** TRACKED **");
+#ifdef IEEE80211_DEBUG_REFCNT_SKBDEST
 	/* Install our debug destructor, chaining to the original... */
 	if (skb->destructor != skb_destructor) {
 		SKB_CB(skb)->next_destructor = skb->destructor;
 		skb->destructor = skb_destructor;
 	}
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT_SKBDEST */
 	return skb;
 }
 
@@ -332,11 +339,13 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
 	atomic_dec(&skb_total_counter);
 	atomic_dec(&skb_refs_counter);
 	SKB_CB(skb)->tracked = 0;
+#ifdef IEEE80211_DEBUG_REFCNT_SKBDEST
 	/* Uninstall our debug destructor, restoring any original... */
 	if (skb->destructor == skb_destructor) {
 		skb->destructor = SKB_CB(skb)->next_destructor;
 		SKB_CB(skb)->next_destructor = NULL;
 	}
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT_SKBDEST */
 	print_skb_trackchange_message(skb, users_adjustment,
 				      func1, line1, func2, line2, 
 				      " is now ** UNTRACKED **");
