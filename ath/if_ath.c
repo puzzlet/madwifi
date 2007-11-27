@@ -11665,12 +11665,12 @@ ath_return_txbuf_locked_debug(struct ath_softc *sc, struct ath_buf **buf, const 
 ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **buf) 
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
-	void *bufaddr;
+	struct ath_buf *bufaddr;
 	ATH_TXBUF_LOCK_ASSERT(sc);
 
 	if ((buf == NULL) || ((*buf) == NULL)) 
 		return;
-	bufaddr = (void *)*buf;
+	bufaddr = *buf;
 #ifdef IEEE80211_DEBUG_REFCNT
 	cleanup_ath_buf_debug(sc, (*buf), BUS_DMA_TODEVICE, func, line);
 #else
