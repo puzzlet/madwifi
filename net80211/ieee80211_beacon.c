@@ -422,7 +422,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 				timoff = 128;		/* impossibly large */
 				for (i = 0; i < vap->iv_tim_len; i++)
 					if (vap->iv_tim_bitmap[i]) {
-						timoff = i &~ 1;
+						timoff = i & BITCTL_BUFD_UCAST_AID_MASK;
 						break;
 					}
 				KASSERT(timoff != 128, ("tim bitmap empty!"));
@@ -473,9 +473,9 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 			tie->tim_count--;
 		/* update state for buffered multicast frames on DTIM */
 		if (mcast && (tie->tim_count == 0))
-			tie->tim_bitctl |= 1;
+			tie->tim_bitctl |= BITCTL_BUFD_MCAST;
 		else
-			tie->tim_bitctl &= ~1;
+			tie->tim_bitctl &= BITCTL_BUFD_UCAST_AID_MASK;
 
 		if ((ic->ic_flags & IEEE80211_F_DOTH) &&
 		    (ic->ic_flags & IEEE80211_F_CHANSWITCH)) {

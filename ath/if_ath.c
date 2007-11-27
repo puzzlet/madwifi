@@ -4246,6 +4246,14 @@ ath_beaconq_config(struct ath_softc *sc)
 	}
 #undef ATH_EXPONENT_TO_VALUE
 }
+/* Return 1 if beacon was already allocated, 0 otherwise. */
+static int
+ath_beacon_allocated(struct ath_softc *sc, struct ieee80211_node *ni) {
+	return ni != NULL && 
+		ni->ni_vap != NULL && 
+		ATH_VAP(ni->ni_vap)->av_bcbuf != NULL &&
+		ATH_VAP(ni->ni_vap)->av_bcbuf->bf_skb != NULL;
+}
 
 /*
  * Allocate and setup an initial beacon frame.
@@ -4259,6 +4267,8 @@ ath_beacon_alloc(struct ath_softc *sc, struct ieee80211_node *ni)
 	struct ieee80211_frame *wh;
 	struct ath_buf *bf;
 	struct sk_buff *skb;
+
+	KASSERT(!ath_beacon_allocated(sc, ni), ("beacon alloc called twice!"));
 
 	/*
 	 * release the previous beacon's skb if it already exists.
@@ -4448,6 +4458,7 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	struct ath_vap *avp;
 	struct sk_buff *skb;
 	unsigned int curlen, ncabq;
+	u_int8_t tim_bitctl;
 
 	if (vap->iv_state != IEEE80211_S_RUN) {
 		DPRINTF(sc, ATH_DEBUG_BEACON_PROC, "%s: skip VAP in %s state\n",
@@ -4511,7 +4522,8 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	 *     the cabq so that the current VAPs CAB traffic can be scheduled.
 	 * XXX: Need to handle the last MORE_DATA bit here.
 	 */
-	if (ncabq && (avp->av_boff.bo_tim[4] & 1) && sc->sc_cabq->axq_depth) {
+	tim_bitctl = ((struct ieee80211_tim_ie *)avp->av_boff.bo_tim)->tim_bitctl;
+	if (ncabq && (tim_bitctl & BITCTL_BUFD_MCAST) && sc->sc_cabq->axq_depth) {
 		if (sc->sc_nvaps > 1 && sc->sc_stagbeacons) {
 			ath_tx_draintxq(sc, sc->sc_cabq);
 			DPRINTF(sc, ATH_DEBUG_BEACON,
@@ -4530,8 +4542,8 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	/*
 	 * Enable the CAB queue before the beacon queue to
 	 * ensure cab frames are triggered by this beacon.
-	 */
-	if (avp->av_boff.bo_tim[4] & 1)	{	/* NB: only at DTIM */
+	 * We only set BITCTL_BUFD_MCAST bit when its DTIM */
+	if (tim_bitctl & BITCTL_BUFD_MCAST) {
 		struct ath_txq *cabq = sc->sc_cabq;
 		struct ath_buf *bfmcast;
 		/*
@@ -8568,9 +8580,11 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 				ni->ni_ath_defkeyindex = vap->iv_def_txkey;
 			}
 
-			error = ath_beacon_alloc(sc, ni);
-			if (error < 0)
-				goto bad;
+			if (!ath_beacon_allocated(sc,ni)) {
+				error = ath_beacon_alloc(sc, ni);
+				if (error < 0)
+					goto bad;
+			}
 			/*
 			 * if the turbo flags have changed, then beacon and turbo
 			 * need to be reconfigured.
