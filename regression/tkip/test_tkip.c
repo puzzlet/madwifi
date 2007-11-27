@@ -109,7 +109,8 @@ static const u_int8_t ref_encrypted[] = {
 };
 
 struct tkip_ctx {
-	struct ieee80211com *tc_ic;	/* for diagnostics */
+	struct ieee80211vap *tc_vap;	/* for diagnostics + statistics */
+	struct ieee80211com *tc_ic;
 
 	u16	tx_ttak[5];
 	int	tx_phase1_done;
@@ -126,7 +127,7 @@ dumpdata(const char *tag, const void *p, size_t len)
 {
 	int i;
 
-	printk("%s: 0x%p len %u", tag, p, len);
+	printk("%s: 0x%p len %zu", tag, p, len);
 	for (i = 0; i < len; i++) {
 		if ((i % 16) == 0)
 			printk("\n%03d:", i);
@@ -149,31 +150,34 @@ cmpfail(const void *gen, size_t genlen, const void *ref, size_t reflen)
 	dumpdata("Reference", ref, reflen);
 }
 
-void
-tkip_test(struct ieee80211com *ic)
+static int
+tkip_test(struct ieee80211vap *vap)
 {
 	struct tkip_ctx *ctx;
-	struct ieee80211_key key;
+	struct ieee80211_key *key;
 	struct sk_buff *skb = NULL;
 	const struct ieee80211_cipher *cip;
 	u_int8_t mac[IEEE80211_ADDR_LEN];
+	int hdrlen;
+	const int keyix = 0;
 
 	/*
 	 * Setup key.
 	 */
-	memset(&key, 0, sizeof(key));
-	key.wk_flags = IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV;
-	key.wk_cipher = &ieee80211_cipher_none;
-	if (!ieee80211_crypto_newkey(ic, IEEE80211_CIPHER_TKIP, &key)) {
+	key = &vap->iv_nw_keys[keyix];
+	key->wk_keyix = keyix;
+	if (!ieee80211_crypto_newkey(vap, IEEE80211_CIPHER_TKIP,
+				     IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV,
+				     key)) {
 		printk("ieee80211_crypto_newkey failed\n");
 		goto bad;
 	}
 
-	memcpy(key.wk_key, ref_key, sizeof(ref_key));
-	key.wk_keylen = 128 / NBBY;
-	key.wk_keyrsc = 0;
-	key.wk_keytsc = 0;
-	if (!ieee80211_crypto_setkey(ic, &key, mac)) {
+	memcpy(key->wk_key, ref_key, sizeof(ref_key));
+	key->wk_keylen = 128 / NBBY;
+	memset(key->wk_keyrsc, 0, sizeof(key->wk_keyrsc));
+	key->wk_keytsc = 0;
+	if (!ieee80211_crypto_setkey(vap, key, mac, NULL)) {
 		printk("ieee80211_crypto_setkey failed\n");
 		goto bad;
 	}
@@ -183,7 +187,7 @@ tkip_test(struct ieee80211com *ic)
 	 * we leave the MIC off as we'll add it ourself
 	 * and then check it against the reference data.
 	 */
-	cip = key.wk_cipher;
+	cip = key->wk_cipher;
 	skb = ieee80211_dev_alloc_skb(sizeof(ref_plaintext) +
 		cip->ic_miclen + cip->ic_header + cip->ic_trailer);
 	if (skb == NULL) {
@@ -197,7 +201,7 @@ tkip_test(struct ieee80211com *ic)
 	/*
 	 * Add MIC.
 	 */
-	if (!ieee80211_crypto_enmic(ic, &key, skb)) {
+	if (!ieee80211_crypto_enmic(vap, key, skb, 0)) {
 		printk("tkip enmic failed\n");
 		goto bad;
 	}
@@ -219,14 +223,14 @@ tkip_test(struct ieee80211com *ic)
 	/*
 	 * Encrypt frame w/ MIC.
 	 */
-	if (!(*cip->ic_encap)(&key, skb, 0 << 6)) {
+	if (!(*cip->ic_encap)(key, skb, 0 << 6)) {
 		printk("tkip encap failed\n");
 		goto bad;
 	}
 	/*
 	 * Verify: phase1, phase2, frame length, frame contents.
 	 */
-	ctx = key.wk_private;
+	ctx = key->wk_private;
 	if (memcmp(ctx->tx_ttak, ref_phase1, sizeof(ref_phase1))) {
 		printk("encrypt phase1 botch\n");
 		cmpfail(ctx->tx_ttak, sizeof(ctx->tx_ttak),
@@ -253,7 +257,8 @@ tkip_test(struct ieee80211com *ic)
 	/*
 	 * Decrypt frame.
 	 */
-	if (!(*cip->ic_decap)(&key, skb)) {
+	hdrlen = ieee80211_hdrspace(vap->iv_ic, skb->data);
+	if (!(*cip->ic_decap)(key, skb, hdrlen)) {
 		printk("tkip decap failed\n");
 		/*
 		 * Check reason for failure: phase1, phase2, frame data (ICV).
@@ -291,16 +296,20 @@ tkip_test(struct ieee80211com *ic)
 	/*
 	 * De-MIC decrypted frame.
 	 */
-	if (!ieee80211_crypto_demic(ic, &key, skb)) {
+	if (!ieee80211_crypto_demic(vap, key, skb, hdrlen)) {
 		printk("tkip demic failed\n");
 		goto bad;
 	}
 	/* XXX check frame length and contents... */
+	ieee80211_dev_kfree_skb(&skb);
+	ieee80211_crypto_delkey(vap, key, NULL);
 	printk("802.11i TKIP test vectors passed\n");
+	return 1;
 bad:
 	if (skb != NULL)
 		ieee80211_dev_kfree_skb(&skb);
-	ieee80211_crypto_delkey(ic, &key);
+	ieee80211_crypto_delkey(vap, key, NULL);
+	return 0;
 }
 
 /*
@@ -313,23 +322,37 @@ MODULE_LICENSE("Dual BSD/GPL");
 #endif
 
 static int debug = 0;
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,52))
 MODULE_PARM(debug, "i");
+#else
+#include <linux/moduleparam.h>
+module_param(debug, int, 0600);
+#endif
+
 MODULE_PARM_DESC(debug, "Enable IEEE80211_MSG_CRYPTO");
 
 static int __init
 init_crypto_tkip_test(void)
 {
 	struct ieee80211com ic;
+	struct ieee80211vap vap;
+	int pass = 0;
+	const int total = 1;
 
 	memset(&ic, 0, sizeof(ic));
+	memset(&vap, 0, sizeof(vap));
+	vap.iv_ic = &ic;
 	if (debug)
-		ic.msg_enable = IEEE80211_MSG_CRYPTO;
+		vap.iv_debug = IEEE80211_MSG_CRYPTO;
 	ieee80211_crypto_attach(&ic);
+	ieee80211_crypto_vattach(&vap);
 
-	tkip_test(&ic);
+	pass += tkip_test(&vap);
 
+	ieee80211_crypto_vdetach(&vap);
 	ieee80211_crypto_detach(&ic);
-	return 0;
+	return (pass == total ? 0 : -ENXIO);
 }
 module_init(init_crypto_tkip_test);
 

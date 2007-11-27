@@ -133,7 +133,7 @@ static const u_int8_t test1_encrypted[] = {	/* Encrypted MPDU */
 	test##n##_encrypted, sizeof(test##n##_encrypted) \
 }
 
-struct ciphertest {
+static struct ciphertest {
 	const char	*name;
 	int		cipher;
 	int		keyix;
@@ -153,7 +153,7 @@ dumpdata(const char *tag, const void *p, size_t len)
 {
 	int i;
 
-	printk("%s: 0x%p len %u", tag, p, len);
+	printk("%s: 0x%p len %zu", tag, p, len);
 	for (i = 0; i < len; i++) {
 		if ((i % 16) == 0)
 			printk("\n%03d:", i);
@@ -177,39 +177,42 @@ cmpfail(const void *gen, size_t genlen, const void *ref, size_t reflen)
 }
 
 struct wep_ctx_hw {			/* for use with h/w support */
+	struct ieee80211vap *wc_vap;	/* for diagnostics + statistics */
 	struct ieee80211com *wc_ic;	/* for diagnostics */
 	u_int32_t	wc_iv;		/* initial vector for crypto */
 };
 
-int
-runtest(struct ieee80211com *ic, struct ciphertest *t)
+static int
+runtest(struct ieee80211vap *vap, struct ciphertest *t)
 {
-	struct ieee80211_key key;
+	struct ieee80211_key *key;
 	struct sk_buff *skb = NULL;
 	const struct ieee80211_cipher *cip;
 	u_int8_t mac[IEEE80211_ADDR_LEN];
 	struct wep_ctx_hw *ctx;
+	int hdrlen;
 
 	printk("%s: ", t->name);
 
 	/*
 	 * Setup key.
 	 */
-	memset(&key, 0, sizeof(key));
-	key.wk_flags = IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV;
-	key.wk_cipher = &ieee80211_cipher_none;
-	if (!ieee80211_crypto_newkey(ic, t->cipher, &key)) {
+	key = &vap->iv_nw_keys[t->keyix];
+	key->wk_keyix = t->keyix;
+	if (!ieee80211_crypto_newkey(vap, t->cipher,
+				     IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV,
+				     key)) {
 		printk("FAIL: ieee80211_crypto_newkey failed\n");
 		goto bad;
 	}
 
-	memcpy(key.wk_key, t->key, t->key_len);
-	key.wk_keylen = t->key_len;
-	if (!ieee80211_crypto_setkey(ic, &key, mac)) {
+	memcpy(key->wk_key, t->key, t->key_len);
+	key->wk_keylen = t->key_len;
+	if (!ieee80211_crypto_setkey(vap, key, mac, NULL)) {
 		printk("FAIL: ieee80211_crypto_setkey failed\n");
 		goto bad;
 	}
-	cip = key.wk_cipher;
+	cip = key->wk_cipher;
 
 	/*
 	 * Craft encrypted frame from known data.
@@ -224,7 +227,8 @@ runtest(struct ieee80211com *ic, struct ciphertest *t)
 	/*
 	 * Decrypt frame.
 	 */
-	if (!(*cip->ic_decap)(&key, skb)) {
+	hdrlen = ieee80211_hdrspace(vap->iv_ic, skb->data);
+	if (!(*cip->ic_decap)(key, skb, hdrlen)) {
 		printk("FAIL: wep decap failed\n");
 		cmpfail(skb->data, skb->len,
 			t->plaintext, t->plaintext_len);
@@ -248,9 +252,9 @@ runtest(struct ieee80211com *ic, struct ciphertest *t)
 	/*
 	 * Encrypt frame.
 	 */
-	ctx = (struct wep_ctx_hw *) key.wk_private;
+	ctx = (struct wep_ctx_hw *) key->wk_private;
 	memcpy(&ctx->wc_iv, t->iv, sizeof(t->iv));	/* for encap/encrypt */
-	if (!(*cip->ic_encap)(&key, skb, t->keyix << 6)) {
+	if (!(*cip->ic_encap)(key, skb, t->keyix << 6)) {
 		printk("FAIL: wep encap failed\n");
 		goto bad;
 	}
@@ -271,13 +275,13 @@ runtest(struct ieee80211com *ic, struct ciphertest *t)
 	}
 	if (skb != NULL)
 		ieee80211_dev_kfree_skb(&skb);
-	ieee80211_crypto_delkey(ic, &key);
+	ieee80211_crypto_delkey(vap, key, NULL);
 	printk("PASS\n");
 	return 1;
 bad:
 	if (skb != NULL)
 		ieee80211_dev_kfree_skb(&skb);
-	ieee80211_crypto_delkey(ic, &key);
+	ieee80211_crypto_delkey(vap, key, NULL);
 	return 0;
 }
 
@@ -291,11 +295,18 @@ MODULE_LICENSE("Dual BSD/GPL");
 #endif
 
 static int tests = -1;
-MODULE_PARM(tests, "i");
-MODULE_PARM_DESC(tests, "Specify which tests to run");
-
 static int debug = 0;
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,52))
+MODULE_PARM(tests, "i");
 MODULE_PARM(debug, "i");
+#else
+#include <linux/moduleparam.h>
+module_param(tests, int, 0600);
+module_param(debug, int, 0600);
+#endif
+
+MODULE_PARM_DESC(tests, "Specify which tests to run");
 MODULE_PARM_DESC(debug, "Enable IEEE80211_MSG_CRYPTO");
 
 static int __init
@@ -303,22 +314,27 @@ init_crypto_wep_test(void)
 {
 #define	N(a)	(sizeof(a)/sizeof(a[0]))
 	struct ieee80211com ic;
+	struct ieee80211vap vap;
 	int i, pass, total;
 
 	memset(&ic, 0, sizeof(ic));
+	memset(&vap, 0, sizeof(vap));
+	vap.iv_ic = &ic;
 	if (debug)
-		ic.msg_enable = IEEE80211_MSG_CRYPTO;
+		vap.iv_debug = IEEE80211_MSG_CRYPTO;
 	ieee80211_crypto_attach(&ic);
+	ieee80211_crypto_vattach(&vap);
 	pass = 0;
 	total = 0;
 	for (i = 0; i < N(weptests); i++)
 		if (tests & (1 << i)) {
 			total++;
-			pass += runtest(&ic, &weptests[i]);
+			pass += runtest(&vap, &weptests[i]);
 		}
 	printk("%u of %u 802.11i WEP test vectors passed\n", pass, total);
+	ieee80211_crypto_vdetach(&vap);
 	ieee80211_crypto_detach(&ic);
-	return (pass == total ? 0 : -1);
+	return (pass == total ? 0 : -ENXIO);
 #undef N
 }
 module_init(init_crypto_wep_test);
