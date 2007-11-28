@@ -119,13 +119,16 @@ ieee80211_anyhdrsize(const void *data)
 {
 	const struct ieee80211_frame *wh = data;
 
-	if ((wh->i_fc[0]&IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_CTL) {
+	if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_CTL) {
 		switch (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK) {
 		case IEEE80211_FC0_SUBTYPE_CTS:
 		case IEEE80211_FC0_SUBTYPE_ACK:
 			return sizeof(struct ieee80211_frame_ack);
+			break;
+		default:
+			return sizeof(struct ieee80211_frame_min);
+			break;
 		}
-		return sizeof(struct ieee80211_frame_min);
 	} else
 		return ieee80211_hdrsize(data);
 }

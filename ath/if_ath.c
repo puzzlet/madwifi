@@ -5802,29 +5802,35 @@ ath_rx_capture(struct net_device *dev, const struct ath_buf *bf,
 {
 	struct ath_softc *sc = dev->priv;
 	struct ieee80211com *ic = &sc->sc_ic;
-	struct ieee80211_frame *wh = (struct ieee80211_frame *) skb->data;
-	unsigned int headersize = ieee80211_anyhdrsize(wh);
-	int padbytes = roundup(headersize, 4) - headersize;
-
-	KASSERT(ic->ic_flags & IEEE80211_F_DATAPAD,
-		("data padding not enabled?"));
-
-	if (padbytes > 0) {
-		/* Remove hw pad bytes */
-		struct sk_buff *skb1 = skb_copy(skb, GFP_ATOMIC);
-		if (skb1 == NULL)
-			return;
-		memmove(skb1->data + padbytes, skb1->data, headersize);
-		skb_pull(skb1, padbytes);
-		/* We must duplicate the reference after an skb_copy! */
-		if (SKB_CB(skb)->ni != NULL) {
-			SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+	struct ieee80211_frame *wh = (struct ieee80211_frame *)skb->data;
+	struct sk_buff *tskb = skb;
+	unsigned int headersize;
+	int padbytes;
+  
+  	KASSERT(ic->ic_flags & IEEE80211_F_DATAPAD,
+  		("data padding not enabled?"));
+  
+	/* Only non-control frames have bodies, and hence padding. */
+	if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=  
+			IEEE80211_FC0_TYPE_CTL) {
+		headersize = ieee80211_anyhdrsize(wh);
+		padbytes = roundup(headersize, 4) - headersize;
+		if (padbytes > 0) {
+			/* Copy skb and remove HW pad bytes */
+			tskb = skb_copy(skb, GFP_ATOMIC);
+			if (tskb == NULL)
+				return;
+			/* Reference any node from the source skb. */
+			if (SKB_CB(skb)->ni != NULL)
+				SKB_CB(tskb)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+			memmove(tskb->data + padbytes, tskb->data, headersize);
+			skb_pull(tskb, padbytes);
 		}
-		ieee80211_input_monitor(ic, skb1, bf, 0, rtsf, sc);
-		ieee80211_dev_kfree_skb(&skb1);
-	} else {
-		ieee80211_input_monitor(ic, skb, bf, 0, rtsf, sc);
-	}
+  	}
+	
+	ieee80211_input_monitor(ic, tskb, bf, 0, rtsf, sc);
+	if (tskb != skb)
+		ieee80211_dev_kfree_skb(&tskb);
 }
 
 
@@ -5864,17 +5870,22 @@ ath_tx_capture(struct net_device *dev, const struct ath_buf *bf,  struct sk_buff
 		skb_orphan(skb);
 	}
 
-	wh = (struct ieee80211_frame *) skb->data;
-	headersize = ieee80211_anyhdrsize(wh);
-	padbytes = roundup(headersize, 4) - headersize;
-	if (padbytes > 0) {
-		/* Unlike in rx_capture, we're freeing the skb at the end
-		 * anyway, so we don't need to worry about using a copy */
-		memmove(skb->data + padbytes, skb->data, headersize);
-		skb_pull(skb, padbytes);
+	/* Only non-control frames have bodies, and hence padding. */
+	wh = (struct ieee80211_frame *)skb->data;
+	if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=  
+			IEEE80211_FC0_TYPE_CTL) {
+		headersize = ieee80211_anyhdrsize(wh);
+		padbytes = roundup(headersize, 4) - headersize;
+		if (padbytes > 0) {
+			/* Unlike in rx_capture, we're freeing the skb at the 
+			 * end anyway, so we don't need to worry about using a 
+			 * copy. */
+			memmove(skb->data + padbytes, skb->data, headersize);
+			skb_pull(skb, padbytes);
+		}
 	}
 
-	if (skb_headroom(skb) < extra &&
+	if ((skb_headroom(skb) < extra) &&
 	    pskb_expand_head(skb, extra, 0, GFP_ATOMIC)) {
 		printk("%s:%d %s\n", __FILE__, __LINE__, __func__);
 		goto done;
@@ -5883,8 +5894,7 @@ ath_tx_capture(struct net_device *dev, const struct ath_buf *bf,  struct sk_buff
 	if (sc->sc_nmonvaps > 0) {
 		/* Pass up tsf clock in mactime
 		 * TX descriptor contains the transmit time in TUs,
-		 * (bits 25-10 of the TSF).
-		 */
+		 * (bits 25-10 of the TSF). */
 		tstamp = ts->ts_tstamp << 10;
 
 		if ((tsf & 0x3ffffff) < tstamp)
