@@ -317,7 +317,6 @@ MODULE_PARM_DESC(debug, "Enable IEEE80211_MSG_CRYPTO");
 static int __init
 init_crypto_wep_test(void)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	struct ieee80211com ic;
 	struct ieee80211vap vap;
 	int i, pass, total;
@@ -331,7 +330,7 @@ init_crypto_wep_test(void)
 	ieee80211_crypto_vattach(&vap);
 	pass = 0;
 	total = 0;
-	for (i = 0; i < N(weptests); i++)
+	for (i = 0; i < ARRAY_SIZE(weptests); i++)
 		if (tests & (1 << i)) {
 			total++;
 			pass += runtest(&vap, &weptests[i]);
@@ -340,7 +339,6 @@ init_crypto_wep_test(void)
 	ieee80211_crypto_vdetach(&vap);
 	ieee80211_crypto_detach(&ic);
 	return (pass == total ? 0 : -ENXIO);
-#undef N
 }
 module_init(init_crypto_wep_test);
 

@@ -1276,7 +1276,6 @@ EXPORT_SYMBOL(ieee80211_chan2mode);
 int
 ieee80211_rate2media(struct ieee80211com *ic, int rate, enum ieee80211_phymode mode)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	static const struct {
 		u_int	m;	/* rate & mode */
 		u_int	r;	/* if_media rate */
@@ -1343,18 +1342,16 @@ ieee80211_rate2media(struct ieee80211com *ic, int rate, enum ieee80211_phymode m
 		mask |= IFM_IEEE80211_11G;
 		break;
 	}
-	for (i = 0; i < N(rates); i++)
+	for (i = 0; i < ARRAY_SIZE(rates); i++)
 		if (rates[i].m == mask)
 			return rates[i].r;
 	return IFM_AUTO;
-#undef N
 }
 EXPORT_SYMBOL(ieee80211_rate2media);
 
 int
 ieee80211_media2rate(int mword)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	static const int ieeerates[] = {
 		-1,		/* IFM_AUTO */
 		0,		/* IFM_MANUAL */
@@ -1382,9 +1379,8 @@ ieee80211_media2rate(int mword)
 		108,		/* IFM_IEEE80211_OFDM54 */
 		144,		/* IFM_IEEE80211_OFDM72 */
 	};
-	return IFM_SUBTYPE(mword) < N(ieeerates) ?
+	return IFM_SUBTYPE(mword) < ARRAY_SIZE(ieeerates) ?
 		ieeerates[IFM_SUBTYPE(mword)] : 0;
-#undef N
 }
 EXPORT_SYMBOL(ieee80211_media2rate);
 
@@ -1473,7 +1469,6 @@ ieee80211_set_multicast_list(struct net_device *dev)
 void
 ieee80211_build_countryie(struct ieee80211com *ic)
 {
-#define	N(a)	(sizeof (a) / sizeof (a[0]))
 	int i, j, chanflags, found;
 	struct net_device *dev = ic->ic_dev;
 	struct ieee80211_channel *c;
@@ -1488,7 +1483,7 @@ ieee80211_build_countryie(struct ieee80211com *ic)
 
 	/* Initialize country IE */
 	found = 0;
-	for (i = 0; i < N(country_strings); i++) {
+	for (i = 0; i < ARRAY_SIZE(country_strings); i++) {
 		if (country_strings[i].iso_code == ic->ic_country_code) {
 			ic->ic_country_ie.country_str[0] = country_strings[i].iso_name[0];
 			ic->ic_country_ie.country_str[1] = country_strings[i].iso_name[1];
@@ -1608,7 +1603,6 @@ ieee80211_build_countryie(struct ieee80211com *ic)
 	ic->ic_country_ie.country_triplet[1] = 11;
 	ic->ic_country_ie.country_triplet[2] = 12;
 #endif
-#undef N
 }
 
 int ath_debug_global = 0;

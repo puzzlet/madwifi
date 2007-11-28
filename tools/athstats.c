@@ -63,6 +63,9 @@
 #include "wireless_copy.h"
 #include "if_athioctl.h"
 
+#undef ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 static const struct {
 	u_int		phyerr;
 	const char*	desc;
@@ -91,7 +94,6 @@ static const struct {
 static void
 printstats(FILE *fd, const struct ath_stats *stats)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 #define	STAT(x,fmt) \
 	if (stats->ast_##x) fprintf(fd, "%u " fmt "\n", stats->ast_##x)
 #define	STATI(x,fmt) \
@@ -138,10 +140,10 @@ printstats(FILE *fd, const struct ath_stats *stats)
 		for (i = 0; i < 32; i++) {
 			if (stats->ast_rx_phy[i] == 0)
 				continue;
-			for (j = 0; j < N(phyerrdescriptions); j++)
+			for (j = 0; j < ARRAY_SIZE(phyerrdescriptions); j++)
 				if (phyerrdescriptions[j].phyerr == i)
 					break;
-			if (j == N(phyerrdescriptions))
+			if (j == ARRAY_SIZE(phyerrdescriptions))
 				fprintf(fd,
 					"    %u (unknown phy error code %u)\n",
 					stats->ast_rx_phy[i], i);
@@ -172,7 +174,6 @@ printstats(FILE *fd, const struct ath_stats *stats)
 				stats->ast_ant_tx[i], stats->ast_ant_rx[i]);
 #undef STAT
 #undef STATI
-#undef N
 }
 
 static u_int

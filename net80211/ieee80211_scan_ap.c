@@ -201,12 +201,11 @@ add_channels(struct ieee80211com *ic,
 	struct ieee80211_scan_state *ss,
 	enum ieee80211_phymode mode, const u_int16_t freq[], int nfreq)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	struct ieee80211_channel *c, *cg;
 	u_int modeflags;
 	int i;
 
-	KASSERT(mode < N(chanflags), ("Unexpected mode %u", mode));
+	KASSERT(mode < ARRAY_SIZE(chanflags), ("Unexpected mode %u", mode));
 	modeflags = chanflags[mode];
 	for (i = 0; i < nfreq; i++) {
 		c = ieee80211_find_channel(ic, freq[i], modeflags);
@@ -225,7 +224,6 @@ add_channels(struct ieee80211com *ic,
 			break;
 		ss->ss_chans[ss->ss_last++] = c;
 	}
-#undef N
 }
 
 /* This function must be invoked with locks acquired */

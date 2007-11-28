@@ -74,6 +74,9 @@
 
 #define	streq(a,b)	(strncasecmp(a, b, sizeof(b) - 1) == 0)
 
+#undef ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 static int if_split_name(const char *, char **, unsigned int *);
 static void vap_create(struct ifreq *);
 static void vap_destroy(const char *);
@@ -925,8 +928,6 @@ get80211param(const char *ifname, int param, void *data, size_t len)
 static int
 do80211priv(struct iwreq *iwr, const char *ifname, int op, void *data, size_t len)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
-
 	memset(iwr, 0, sizeof(struct iwreq));
 	strncpy(iwr->ifr_name, ifname, IFNAMSIZ);
 	if (len < IFNAMSIZ) {
@@ -970,14 +971,13 @@ do80211priv(struct iwreq *iwr, const char *ifname, int op, void *data, size_t le
 			IOCTL_ERR(IEEE80211_IOCTL_WRITEREG),
 		};
 		op -= SIOCIWFIRSTPRIV;
-		if (0 <= op && op < N(opnames))
+		if (0 <= op && op < ARRAY_SIZE(opnames))
 			perror(opnames[op]);
 		else
 			perror("ioctl[unknown???]");
 		return -1;
 	}
 	return 0;
-#undef N
 }
 
 static int

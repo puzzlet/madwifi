@@ -74,7 +74,6 @@
 static void
 printstats(FILE *fd, const struct ieee80211_stats *stats)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 #define	STAT(x,fmt) \
 	if (stats->is_##x) fprintf(fd, "%u " fmt "\n", stats->is_##x)
 	STAT(rx_badversion,	"rx frame with bad version");
@@ -158,7 +157,6 @@ printstats(FILE *fd, const struct ieee80211_stats *stats)
 	STAT(crypto_swfallback,	"crypto fell back to s/w implementation");
 	STAT(crypto_keyfail,	"setkey failed due to driver key alloc failed");
 #undef STAT
-#undef N
 }
 
 static struct ifreq ifr;

@@ -252,7 +252,6 @@ static const char *cipher_modnames[] = {
 int
 ieee80211_crypto_available(struct ieee80211vap *vap, u_int cipher)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	unsigned int status = 0;
 
 	if (cipher < IEEE80211_CIPHER_MAX) {
@@ -263,7 +262,7 @@ ieee80211_crypto_available(struct ieee80211vap *vap, u_int cipher)
 			 * than numbers and craft a module name based on the cipher
 			 * name; e.g. wlan_cipher_<cipher-name>.
 			 */
-			if (cipher < N(cipher_modnames)) {
+			if (cipher < ARRAY_SIZE(cipher_modnames)) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
 						"%s: unregistered cipher %u, load module %s\n",
 						__func__, cipher, cipher_modnames[cipher]);
@@ -278,7 +277,7 @@ ieee80211_crypto_available(struct ieee80211vap *vap, u_int cipher)
 					IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
 							"%s: unable to load cipher %u, module %s\n",
 							__func__, cipher,
-							cipher < N(cipher_modnames) ?
+							cipher < ARRAY_SIZE(cipher_modnames) ?
 							cipher_modnames[cipher] : "<unknown>");
 					vap->iv_stats.is_crypto_nocipher++;
 				} else
@@ -288,7 +287,6 @@ ieee80211_crypto_available(struct ieee80211vap *vap, u_int cipher)
 			status = 1;
 	}
 	return status;
-#undef N
 }
 EXPORT_SYMBOL(ieee80211_crypto_available);
 

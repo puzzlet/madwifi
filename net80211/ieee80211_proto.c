@@ -554,13 +554,12 @@ ieee80211_set_shortslottime(struct ieee80211com *ic, int onoff)
 int
 ieee80211_iserp_rateset(struct ieee80211com *ic, struct ieee80211_rateset *rs)
 {
-#define N(a)	(sizeof(a) / sizeof(a[0]))
 	static const int rates[] = { 2, 4, 11, 22, 12, 24, 48 };
 	int i, j;
 
-	if (rs->rs_nrates < N(rates))
+	if (rs->rs_nrates < ARRAY_SIZE(rates))
 		return 0;
-	for (i = 0; i < N(rates); i++) {
+	for (i = 0; i < ARRAY_SIZE(rates); i++) {
 		for (j = 0; j < rs->rs_nrates; j++) {
 			int r = rs->rs_rates[j] & IEEE80211_RATE_VAL;
 			if (rates[i] == r)
@@ -573,7 +572,6 @@ ieee80211_iserp_rateset(struct ieee80211com *ic, struct ieee80211_rateset *rs)
 		;
 	}
 	return 1;
-#undef N
 }
 
 static const struct ieee80211_rateset basic11g[IEEE80211_MODE_MAX] = {

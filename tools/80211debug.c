@@ -49,7 +49,8 @@
 #include <getopt.h>
 #include <err.h>
 
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
+#undef ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 static const char *progname;
 
@@ -122,7 +123,7 @@ getflag(const char *name, int len)
 {
 	int i;
 
-	for (i = 0; i < N(flags); i++)
+	for (i = 0; i < ARRAY_SIZE(flags); i++)
 		if (strncasecmp(flags[i].name, name, len) == 0)
 			return flags[i].bit;
 	return 0;
@@ -135,7 +136,7 @@ usage(void)
 
 	fprintf(stderr, "usage: %s [-i interface] [(+/-) flags]\n", progname);
 	fprintf(stderr, "\twhere flags are:\n\n");
-	for (i = 0; i < N(flags); i++)
+	for (i = 0; i < ARRAY_SIZE(flags); i++)
 		printf("\t%12s\t0x%08x\t%s\n", flags[i].name, flags[i].bit, flags[i].desc);
 	exit(-1);
 }
@@ -259,14 +260,14 @@ main(int argc, char *argv[])
 	} else
 		printf("%s: 0x%08x", oid, debug);
 	sep = "<";
-	for (i = 0; i < N(flags); i++)
+	for (i = 0; i < ARRAY_SIZE(flags); i++)
 		if (debug & flags[i].bit) {
 			printf("%s%s", sep, flags[i].name);
 			sep = ",";
 		}
 	printf("%s\n", *sep != '<' ? ">" : "");
 	printf("Details:\n");
-	for (i = 0; i < N(flags); i++)
+	for (i = 0; i < ARRAY_SIZE(flags); i++)
 		printf("%12s %s 0x%08x - %s\n", flags[i].name, debug & flags[i].bit ? "+" : " ", flags[i].bit, flags[i].desc);
 	return 0;
 }

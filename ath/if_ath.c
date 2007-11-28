@@ -3392,7 +3392,6 @@ ath_keyset(struct ath_softc *sc, const struct ieee80211_key *k,
 	const u_int8_t mac0[IEEE80211_ADDR_LEN],
 	struct ieee80211_node *bss)
 {
-#define	N(a)	((int)(sizeof(a)/sizeof(a[0])))
 	static const u_int8_t ciphermap[] = {
 		HAL_CIPHER_WEP,		/* IEEE80211_CIPHER_WEP */
 		HAL_CIPHER_TKIP,	/* IEEE80211_CIPHER_TKIP */
@@ -3415,7 +3414,7 @@ ath_keyset(struct ath_softc *sc, const struct ieee80211_key *k,
 	 * so that rx frames have an entry to match.
 	 */
 	if ((k->wk_flags & IEEE80211_KEY_SWCRYPT) == 0) {
-		KASSERT(cip->ic_cipher < N(ciphermap),
+		KASSERT(cip->ic_cipher < ARRAY_SIZE(ciphermap),
 			("invalid cipher type %u", cip->ic_cipher));
 		hk.kv_type = ciphermap[cip->ic_cipher];
 		hk.kv_len = k->wk_keylen;
@@ -3443,7 +3442,6 @@ ath_keyset(struct ath_softc *sc, const struct ieee80211_key *k,
 		return ath_hal_keyset(ah, ATH_KEY(k->wk_keyix), &hk, mac, 
 				AH_FALSE);
 	}
-#undef N
 }
 
 /*
@@ -3453,13 +3451,12 @@ ath_keyset(struct ath_softc *sc, const struct ieee80211_key *k,
 static ieee80211_keyix_t
 key_alloc_2pair(struct ath_softc *sc)
 {
-#define	N(a)	((int)(sizeof(a)/sizeof(a[0])))
 	u_int i;
 	ieee80211_keyix_t keyix;
 
 	KASSERT(sc->sc_splitmic, ("key cache !split"));
 	/* XXX could optimize */
-	for (i = 0; i < N(sc->sc_keymap) / 4; i++) {
+	for (i = 0; i < ARRAY_SIZE(sc->sc_keymap) / 4; i++) {
 		u_int8_t b = sc->sc_keymap[i];
 		if (b != 0xff) {
 			/*
@@ -3496,7 +3493,6 @@ key_alloc_2pair(struct ath_softc *sc)
 	}
 	DPRINTF(sc, ATH_DEBUG_KEYCACHE, "%s: out of pair space\n", __func__);
 	return IEEE80211_KEYIX_NONE;
-#undef N
 }
 
 /*
@@ -3506,13 +3502,12 @@ key_alloc_2pair(struct ath_softc *sc)
 static ieee80211_keyix_t
 key_alloc_pair(struct ath_softc *sc)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	u_int i;
 	ieee80211_keyix_t keyix;
 
 	KASSERT(!sc->sc_splitmic, ("key cache split"));
 	/* XXX could optimize */
-	for (i = 0; i < N(sc->sc_keymap)/4; i++) {
+	for (i = 0; i < ARRAY_SIZE(sc->sc_keymap)/4; i++) {
 		u_int8_t b = sc->sc_keymap[i];
 		if (b != 0xff) {
 			/*
@@ -3543,7 +3538,6 @@ key_alloc_pair(struct ath_softc *sc)
 	}
 	DPRINTF(sc, ATH_DEBUG_KEYCACHE, "%s: out of pair space\n", __func__);
 	return IEEE80211_KEYIX_NONE;
-#undef N
 }
 
 /*
@@ -3552,12 +3546,11 @@ key_alloc_pair(struct ath_softc *sc)
 static ieee80211_keyix_t
 key_alloc_single(struct ath_softc *sc)
 {
-#define	N(a)	((int)(sizeof(a)/sizeof(a[0])))
 	u_int i;
 	ieee80211_keyix_t keyix;
 
 	/* XXX: try i, i + 32, i + 64, i + 32 + 64 to minimize key pair conflicts */
-	for (i = 0; i < N(sc->sc_keymap); i++) {
+	for (i = 0; i < ARRAY_SIZE(sc->sc_keymap); i++) {
 		u_int8_t b = sc->sc_keymap[i];
 		if (b != 0xff) {
 			/*
@@ -3574,7 +3567,6 @@ key_alloc_single(struct ath_softc *sc)
 	}
 	DPRINTF(sc, ATH_DEBUG_KEYCACHE, "%s: out of space\n", __func__);
 	return IEEE80211_KEYIX_NONE;
-#undef N
 }
 
 /*
@@ -6361,7 +6353,6 @@ ath_grppoll_txq_update(struct ath_softc *sc, int period)
 static void
 ath_grppoll_txq_setup(struct ath_softc *sc, int qtype, int period)
 {
-#define	N(a)	((int)(sizeof(a)/sizeof(a[0])))
 	struct ath_hal *ah = sc->sc_ah;
 	HAL_TXQ_INFO qi;
 	int qnum;
@@ -6383,9 +6374,10 @@ ath_grppoll_txq_setup(struct ath_softc *sc, int qtype, int period)
 		qnum = ath_hal_setuptxqueue(ah, qtype, &qi);
 		if (qnum == -1)
 			return ;
-		if (qnum >= N(sc->sc_txq)) {
+		if (qnum >= ARRAY_SIZE(sc->sc_txq)) {
 			printk("%s: HAL qnum %u out of range, max %u!\n",
-				   DEV_NAME(sc->sc_dev), qnum, N(sc->sc_txq));
+				   DEV_NAME(sc->sc_dev), qnum,
+				   (unsigned)ARRAY_SIZE(sc->sc_txq));
 			ath_hal_releasetxqueue(ah, qnum);
 			return;
 		}
@@ -6403,8 +6395,6 @@ ath_grppoll_txq_setup(struct ath_softc *sc, int qtype, int period)
 	txq->axq_compbufsz = compbufsz;
 	txq->axq_compbufp = compbufp;
 	ath_hal_resettxqueue(ah, txq->axq_qnum); /* push to h/w */
-#undef N
-
 }
 
 /*
@@ -6680,7 +6670,6 @@ bf_fail:
 static struct ath_txq *
 ath_txq_setup(struct ath_softc *sc, int qtype, int subtype)
 {
-#define	N(a)	((int)(sizeof(a)/sizeof(a[0])))
 	struct ath_hal *ah = sc->sc_ah;
 	HAL_TXQ_INFO qi;
 	int qnum;
@@ -6750,9 +6739,10 @@ ath_txq_setup(struct ath_softc *sc, int qtype, int subtype)
 #endif
 		return NULL;
 	}
-	if (qnum >= N(sc->sc_txq)) {
+	if (qnum >= ARRAY_SIZE(sc->sc_txq)) {
 		printk("%s: HAL qnum %u out of range, max %u!\n",
-			DEV_NAME(sc->sc_dev), qnum, N(sc->sc_txq));
+			DEV_NAME(sc->sc_dev), qnum,
+			(unsigned)ARRAY_SIZE(sc->sc_txq));
 #ifdef ATH_SUPERG_COMP
 		if (compbuf) {
 			bus_free_consistent(sc->sc_bdev, compbufsz,
@@ -6779,7 +6769,6 @@ ath_txq_setup(struct ath_softc *sc, int qtype, int subtype)
 		sc->sc_txqsetup |= 1 << qnum;
 	}
 	return &sc->sc_txq[qnum];
-#undef N
 }
 
 /*
@@ -6794,12 +6783,12 @@ ath_txq_setup(struct ath_softc *sc, int qtype, int subtype)
 static int
 ath_tx_setup(struct ath_softc *sc, int ac, int haltype)
 {
-#define	N(a)	((int)(sizeof(a)/sizeof(a[0])))
 	struct ath_txq *txq;
 
-	if (ac >= N(sc->sc_ac2q)) {
+	if (ac >= ARRAY_SIZE(sc->sc_ac2q)) {
 		printk("%s: AC %u out of range, max %u!\n",
-		       DEV_NAME(sc->sc_dev), ac, (unsigned)N(sc->sc_ac2q));
+		       DEV_NAME(sc->sc_dev), ac,
+		       (unsigned)ARRAY_SIZE(sc->sc_ac2q));
 		return 0;
 	}
 	txq = ath_txq_setup(sc, HAL_TX_QUEUE_DATA, haltype);
@@ -6808,7 +6797,6 @@ ath_tx_setup(struct ath_softc *sc, int ac, int haltype)
 		return 1;
 	} else
 		return 0;
-#undef N
 }
 
 /*
@@ -9320,7 +9308,6 @@ ath_rate_setup(struct net_device *dev, u_int mode)
 static void
 ath_setcurmode(struct ath_softc *sc, enum ieee80211_phymode mode)
 {
-#define	N(a)	((int)(sizeof(a)/sizeof(a[0])))
 	/* NB: on/off times from the Atheros NDIS driver, w/ permission */
 	static const struct {
 		u_int		rate;		/* tx/rx 802.11 rate */
@@ -9364,7 +9351,7 @@ ath_setcurmode(struct ath_softc *sc, enum ieee80211_phymode mode)
 		    rt->info[ix].phy == IEEE80211_T_OFDM)
 			sc->sc_hwmap[i].flags |= IEEE80211_RADIOTAP_F_SHORTPRE;
 		/* setup blink rate table to avoid per-packet lookup */
-		for (j = 0; j < N(blinkrates) - 1; j++)
+		for (j = 0; j < ARRAY_SIZE(blinkrates) - 1; j++)
 			if (blinkrates[j].rate == sc->sc_hwmap[i].ieeerate)
 				break;
 		/* NB: this uses the last entry if the rate isn't found */
@@ -9382,7 +9369,6 @@ ath_setcurmode(struct ath_softc *sc, enum ieee80211_phymode mode)
 	sc->sc_protrix = (mode == IEEE80211_MODE_11G ? 1 : 0);
 	/* rate index used to send mgt frames */
 	sc->sc_minrateix = 0;
-#undef N
 }
 
 #ifdef ATH_SUPERG_FF

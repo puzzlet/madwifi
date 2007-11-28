@@ -217,7 +217,7 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	/* looking for device type from broken device id */
 	vdevice = id->device;
-	for (i = 0; i < (sizeof(ath_devidmap) / sizeof(ath_devidmap[0])); i++) {
+	for (i = 0; i < ARRAY_SIZE(ath_devidmap); i++) {
 		if (id->device == ath_devidmap[i][0]) {
 			vdevice = ath_devidmap[i][1];
 			break;
