@@ -161,6 +161,11 @@ tkip_test(struct ieee80211vap *vap)
 	int hdrlen;
 	const int keyix = 0;
 
+	if (!ieee80211_crypto_available(vap, IEEE80211_CIPHER_TKIP)) {
+		printk("FAIL: ieee80211_crypto_available failed\n");
+		return 0;
+	}
+
 	/*
 	 * Setup key.
 	 */

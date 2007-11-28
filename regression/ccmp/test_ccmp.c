@@ -589,6 +589,11 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 
 	printk("%s: ", t->name);
 
+	if (!ieee80211_crypto_available(vap, t->cipher)) {
+		printk("FAIL: ieee80211_crypto_available failed\n");
+		return 0;
+	}
+
 	/*
 	 * Setup key.
 	 */
