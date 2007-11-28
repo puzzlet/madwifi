@@ -55,7 +55,7 @@ Phase1	bb 58 07 1f 9e 93 b4 38 25 4b
 Phase2	00 20 01 4c fe 67 be d2 7c 86 7b 1b f8 02 8b 1c 
 */
 
-static const u_int8_t ref_key[] = {
+static const u_int8_t test1_key[] = {
 	0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12,
 	0x34, 0x56, 0x78, 0x90, 0x12,
 
@@ -74,16 +74,16 @@ static const u_int8_t ref_key[] = {
 	0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78,		/* TX copy */
 #endif
 };
-static const u_int8_t ref_phase1[] = {
+static const u_int8_t test1_phase1[] = {
 	0xbb, 0x58, 0x07, 0x1f, 0x9e, 0x93, 0xb4, 0x38, 0x25, 0x4b
 };
-static const u_int8_t ref_phase2[] = {
+static const u_int8_t test1_phase2[] = {
 	0x00, 0x20, 0x01, 0x4c, 0xfe, 0x67, 0xbe, 0xd2, 0x7c, 0x86,
 	0x7b, 0x1b, 0xf8, 0x02, 0x8b, 0x1c,
 };
 
 /* Plaintext MPDU with MIC */
-static const u_int8_t ref_plaintext[] = {
+static const u_int8_t test1_plaintext[] = {
 0x08,0x42,0x2c,0x00,0x02,0x03,0x04,0x05,0x06,0x08,0x02,0x03,0x04,0x05,0x06,0x07,
 0x02,0x03,0x04,0x05,0x06,0x07,0xd0,0x02,
 0xaa,0xaa,0x03,0x00,0x00,0x00,0x08,0x00,0x45,0x00,0x00,0x54,0x00,0x00,0x40,0x00,
@@ -96,7 +96,7 @@ static const u_int8_t ref_plaintext[] = {
 };
 
 /* Encrypted MPDU with MIC and ICV */
-static const u_int8_t ref_encrypted[] = {
+static const u_int8_t test1_encrypted[] = {
 0x08,0x42,0x2c,0x00,0x02,0x03,0x04,0x05,0x06,0x08,0x02,0x03,0x04,0x05,0x06,0x07,
 0x02,0x03,0x04,0x05,0x06,0x07,0xd0,0x02,0x00,0x20,0x01,0x20,0x00,0x00,0x00,0x00,
 0xc0,0x0e,0x14,0xfc,0xe7,0xcf,0xab,0xc7,0x75,0x47,0xe6,0x66,0xe5,0x7c,0x0d,0xac,
@@ -106,6 +106,33 @@ static const u_int8_t ref_encrypted[] = {
 0x54,0x1e,0x82,0x38,0x73,0x55,0x8a,0xdb,0xa0,0x79,0x06,0x8a,0xbd,0x7f,0x7f,0x50,
 0x95,0x96,0x75,0xac,0xc4,0xb4,0xde,0x9a,0xa9,0x9c,0x05,0xf2,0x89,0xa7,0xc5,0x2f,
 0xee,0x5b,0xfc,0x14,0xf6,0xf8,0xe5,0xf8
+};
+
+#define	TEST(n,name,cipher,keyix) { \
+	name, IEEE80211_CIPHER_##cipher, keyix, \
+	test##n##_key,   sizeof(test##n##_key), \
+	test##n##_plaintext, sizeof(test##n##_plaintext), \
+	test##n##_encrypted, sizeof(test##n##_encrypted), \
+	test##n##_phase1, sizeof(test##n##_phase1), \
+	test##n##_phase2, sizeof(test##n##_phase2) \
+}
+
+static struct ciphertest {
+	const char	*name;
+	int		cipher;
+	int		keyix;
+	const u_int8_t	*key;
+	size_t		key_len;
+	const u_int8_t	*plaintext;
+	size_t		plaintext_len;
+	const u_int8_t	*encrypted;
+	size_t		encrypted_len;
+	const u_int8_t	*phase1;
+	size_t		phase1_len;
+	const u_int8_t	*phase2;
+	size_t		phase2_len;
+} tkiptests[] = {
+	TEST(1, "TKIP test mpdu 1", TKIP, 0),
 };
 
 struct tkip_ctx {
@@ -151,7 +178,7 @@ cmpfail(const void *gen, size_t genlen, const void *ref, size_t reflen)
 }
 
 static int
-tkip_test(struct ieee80211vap *vap)
+runtest(struct ieee80211vap *vap, struct ciphertest *t)
 {
 	struct tkip_ctx *ctx;
 	struct ieee80211_key *key;
@@ -159,7 +186,8 @@ tkip_test(struct ieee80211vap *vap)
 	const struct ieee80211_cipher *cip;
 	u_int8_t mac[IEEE80211_ADDR_LEN];
 	int hdrlen;
-	const int keyix = 0;
+
+	printk("%s: ", t->name);
 
 	if (!ieee80211_crypto_available(vap, IEEE80211_CIPHER_TKIP)) {
 		printk("FAIL: ieee80211_crypto_available failed\n");
@@ -169,16 +197,16 @@ tkip_test(struct ieee80211vap *vap)
 	/*
 	 * Setup key.
 	 */
-	key = &vap->iv_nw_keys[keyix];
-	key->wk_keyix = keyix;
-	if (!ieee80211_crypto_newkey(vap, IEEE80211_CIPHER_TKIP,
+	key = &vap->iv_nw_keys[t->keyix];
+	key->wk_keyix = t->keyix;
+	if (!ieee80211_crypto_newkey(vap, t->cipher,
 				     IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV,
 				     key)) {
 		printk("ieee80211_crypto_newkey failed\n");
 		goto bad;
 	}
 
-	memcpy(key->wk_key, ref_key, sizeof(ref_key));
+	memcpy(key->wk_key, t->key, t->key_len);
 	key->wk_keylen = 128 / NBBY;
 	memset(key->wk_keyrsc, 0, sizeof(key->wk_keyrsc));
 	key->wk_keytsc = 0;
@@ -193,15 +221,15 @@ tkip_test(struct ieee80211vap *vap)
 	 * and then check it against the reference data.
 	 */
 	cip = key->wk_cipher;
-	skb = ieee80211_dev_alloc_skb(sizeof(ref_plaintext) +
+	skb = ieee80211_dev_alloc_skb(t->plaintext_len +
 		cip->ic_miclen + cip->ic_header + cip->ic_trailer);
 	if (skb == NULL) {
 		printk("unable to allocate skbuff\n");
 		goto bad;
 	}
 	skb_reserve(skb, cip->ic_header);
-	memcpy(skb_put(skb, sizeof(ref_plaintext) - cip->ic_miclen),
-		ref_plaintext, sizeof(ref_plaintext) - cip->ic_miclen);
+	memcpy(skb_put(skb, t->plaintext_len - cip->ic_miclen),
+		t->plaintext, t->plaintext_len - cip->ic_miclen);
 
 	/*
 	 * Add MIC.
@@ -213,16 +241,16 @@ tkip_test(struct ieee80211vap *vap)
 	/*
 	 * Verify: frame length, frame contents.
 	 */
-	if (skb->len != sizeof(ref_plaintext)) {
+	if (skb->len != t->plaintext_len) {
 		printk("enmic botch; length mismatch\n");
 		cmpfail(skb->data, skb->len,
-			ref_plaintext, sizeof(ref_plaintext));
+			t->plaintext, t->plaintext_len);
 		goto bad;
 	}
-	if (memcmp(skb->data, ref_plaintext, sizeof(ref_plaintext))) {
+	if (memcmp(skb->data, t->plaintext, t->plaintext_len)) {
 		printk("enmic botch\n");
 		cmpfail(skb->data, skb->len,
-			ref_plaintext, sizeof(ref_plaintext));
+			t->plaintext, t->plaintext_len);
 		goto bad;
 	}
 	/*
@@ -236,26 +264,26 @@ tkip_test(struct ieee80211vap *vap)
 	 * Verify: phase1, phase2, frame length, frame contents.
 	 */
 	ctx = key->wk_private;
-	if (memcmp(ctx->tx_ttak, ref_phase1, sizeof(ref_phase1))) {
+	if (memcmp(ctx->tx_ttak, t->phase1, t->phase1_len)) {
 		printk("encrypt phase1 botch\n");
 		cmpfail(ctx->tx_ttak, sizeof(ctx->tx_ttak),
-			ref_phase1, sizeof(ref_phase1));
+			t->phase1, t->phase1_len);
 		goto bad;
-	} else if (memcmp(ctx->tx_rc4key, ref_phase2, sizeof(ref_phase2))) {
+	} else if (memcmp(ctx->tx_rc4key, t->phase2, t->phase2_len)) {
 		printf("encrypt phase2 botch\n");
 		cmpfail(ctx->tx_rc4key, sizeof(ctx->tx_rc4key),
-			ref_phase2, sizeof(ref_phase2));
+			t->phase2, t->phase2_len);
 		goto bad;
-	} else if (skb->len != sizeof(ref_encrypted)) {
+	} else if (skb->len != t->encrypted_len) {
 		printk("encrypt data length mismatch\n");
 		cmpfail(skb->data, skb->len,
-			ref_encrypted, sizeof(ref_encrypted));
+			t->encrypted, t->encrypted_len);
 		goto bad;
-	} else if (memcmp(skb->data, ref_encrypted, skb->len)) {
+	} else if (memcmp(skb->data, t->encrypted, skb->len)) {
 		printk("encrypt data does not compare\n");
 		cmpfail(skb->data, skb->len,
-			ref_encrypted, sizeof(ref_encrypted));
-		dumpdata("Plaintext", ref_plaintext, sizeof(ref_plaintext));
+			t->encrypted, t->encrypted_len);
+		dumpdata("Plaintext", t->plaintext, t->plaintext_len);
 		goto bad;
 	}
 
@@ -268,34 +296,34 @@ tkip_test(struct ieee80211vap *vap)
 		/*
 		 * Check reason for failure: phase1, phase2, frame data (ICV).
 		 */
-		if (memcmp(ctx->rx_ttak, ref_phase1, sizeof(ref_phase1))) {
+		if (memcmp(ctx->rx_ttak, t->phase1, t->phase1_len)) {
 			printk("decrypt phase1 botch\n");
 			cmpfail(ctx->rx_ttak, sizeof(ctx->rx_ttak),
-				ref_phase1, sizeof(ref_phase1));
-		} else if (memcmp(ctx->rx_rc4key, ref_phase2, sizeof(ref_phase2))) {
+				t->phase1, t->phase1_len);
+		} else if (memcmp(ctx->rx_rc4key, t->phase2, t->phase2_len)) {
 			printf("decrypt phase2 botch\n");
 			cmpfail(ctx->rx_rc4key, sizeof(ctx->rx_rc4key),
-				ref_phase2, sizeof(ref_phase2));
+				t->phase2, t->phase2_len);
 		} else {
 			printk("decrypt data does not compare\n");
 			cmpfail(skb->data, skb->len,
-				ref_plaintext, sizeof(ref_plaintext));
+				t->plaintext, t->plaintext_len);
 		}
 		goto bad;
 	}
 	/*
 	 * Verify: frame length, frame contents.
 	 */
-	if (skb->len != sizeof(ref_plaintext)) {
+	if (skb->len != t->plaintext_len) {
 		printk("decap botch; length mismatch\n");
 		cmpfail(skb->data, skb->len,
-			ref_plaintext, sizeof(ref_plaintext));
+			t->plaintext, t->plaintext_len);
 		goto bad;
 	}
-	if (memcmp(skb->data, ref_plaintext, sizeof(ref_plaintext))) {
+	if (memcmp(skb->data, t->plaintext, t->plaintext_len)) {
 		printk("decap botch; data does not compare\n");
 		cmpfail(skb->data, skb->len,
-			ref_plaintext, sizeof(ref_plaintext));
+			t->plaintext, t->plaintext_len);
 		goto bad;
 	}
 	/*
@@ -326,15 +354,19 @@ MODULE_DESCRIPTION("802.11 wireless support: TKIP cipher tester");
 MODULE_LICENSE("Dual BSD/GPL");
 #endif
 
+static int tests = -1;
 static int debug = 0;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,52))
+MODULE_PARM(tests, "i");
 MODULE_PARM(debug, "i");
 #else
 #include <linux/moduleparam.h>
+module_param(tests, int, 0600);
 module_param(debug, int, 0600);
 #endif
 
+MODULE_PARM_DESC(tests, "Specify which tests to run");
 MODULE_PARM_DESC(debug, "Enable IEEE80211_MSG_CRYPTO");
 
 static int __init
@@ -342,8 +374,7 @@ init_crypto_tkip_test(void)
 {
 	struct ieee80211com ic;
 	struct ieee80211vap vap;
-	int pass = 0;
-	const int total = 1;
+	int i, pass, total;
 
 	memset(&ic, 0, sizeof(ic));
 	memset(&vap, 0, sizeof(vap));
@@ -353,8 +384,14 @@ init_crypto_tkip_test(void)
 	ieee80211_crypto_attach(&ic);
 	ieee80211_crypto_vattach(&vap);
 
-	pass += tkip_test(&vap);
-
+	pass = 0;
+	total = 0;
+	for (i = 0; i < ARRAY_SIZE(tkiptests); i++)
+		if (tests & (1 << i)) {
+			total++;
+			pass += runtest(&vap, &tkiptests[i]);
+		}
+	printk("%u of %u 802.11i TKIP test vectors passed\n", pass, total);
 	ieee80211_crypto_vdetach(&vap);
 	ieee80211_crypto_detach(&ic);
 	return (pass == total ? 0 : -ENXIO);
