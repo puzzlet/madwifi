@@ -135,20 +135,6 @@ static struct ciphertest {
 	TEST(1, "TKIP test mpdu 1", TKIP, 0),
 };
 
-struct tkip_ctx {
-	struct ieee80211vap *tc_vap;	/* for diagnostics + statistics */
-	struct ieee80211com *tc_ic;
-
-	u16	tx_ttak[5];
-	int	tx_phase1_done;
-	u8	tx_rc4key[16];
-
-	u16	rx_ttak[5];
-	int	rx_phase1_done;
-	u8	rx_rc4key[16];
-	u_int64_t rx_rsc;		/* held until MIC verified */
-};
-
 static void
 dumpdata(const char *tag, const void *p, size_t len)
 {
@@ -177,19 +163,33 @@ cmpfail(const void *gen, size_t genlen, const void *ref, size_t reflen)
 	dumpdata("Reference", ref, reflen);
 }
 
+struct tkip_ctx {
+	struct ieee80211vap *tc_vap;	/* for diagnostics + statistics */
+	struct ieee80211com *tc_ic;
+
+	u16	tx_ttak[5];
+	int	tx_phase1_done;
+	u8	tx_rc4key[16];		/* XXX for test module; make locals? */
+
+	u16	rx_ttak[5];
+	int	rx_phase1_done;
+	u8	rx_rc4key[16];		/* XXX for test module; make locals? */
+	uint64_t rx_rsc;		/* held until MIC verified */
+};
+
 static int
 runtest(struct ieee80211vap *vap, struct ciphertest *t)
 {
-	struct tkip_ctx *ctx;
 	struct ieee80211_key *key;
 	struct sk_buff *skb = NULL;
 	const struct ieee80211_cipher *cip;
 	u_int8_t mac[IEEE80211_ADDR_LEN];
+	struct tkip_ctx *ctx;
 	int hdrlen;
 
 	printk("%s: ", t->name);
 
-	if (!ieee80211_crypto_available(vap, IEEE80211_CIPHER_TKIP)) {
+	if (!ieee80211_crypto_available(vap, t->cipher)) {
 		printk("FAIL: ieee80211_crypto_available failed\n");
 		return 0;
 	}
@@ -202,7 +202,7 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	if (!ieee80211_crypto_newkey(vap, t->cipher,
 				     IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV,
 				     key)) {
-		printk("ieee80211_crypto_newkey failed\n");
+		printk("FAIL: ieee80211_crypto_newkey failed\n");
 		goto bad;
 	}
 
@@ -211,7 +211,7 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	memset(key->wk_keyrsc, 0, sizeof(key->wk_keyrsc));
 	key->wk_keytsc = 0;
 	if (!ieee80211_crypto_setkey(vap, key, mac, NULL)) {
-		printk("ieee80211_crypto_setkey failed\n");
+		printk("FAIL: ieee80211_crypto_setkey failed\n");
 		goto bad;
 	}
 
@@ -224,7 +224,7 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	skb = ieee80211_dev_alloc_skb(t->plaintext_len +
 		cip->ic_miclen + cip->ic_header + cip->ic_trailer);
 	if (skb == NULL) {
-		printk("unable to allocate skbuff\n");
+		printk("FAIL: unable to allocate skbuff\n");
 		goto bad;
 	}
 	skb_reserve(skb, cip->ic_header);
@@ -235,20 +235,20 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	 * Add MIC.
 	 */
 	if (!ieee80211_crypto_enmic(vap, key, skb, 0)) {
-		printk("tkip enmic failed\n");
+		printk("FAIL: tkip enmic failed\n");
 		goto bad;
 	}
 	/*
 	 * Verify: frame length, frame contents.
 	 */
 	if (skb->len != t->plaintext_len) {
-		printk("enmic botch; length mismatch\n");
+		printk("FAIL: enmic botch; length mismatch\n");
 		cmpfail(skb->data, skb->len,
 			t->plaintext, t->plaintext_len);
 		goto bad;
 	}
 	if (memcmp(skb->data, t->plaintext, t->plaintext_len)) {
-		printk("enmic botch\n");
+		printk("FAIL: enmic botch\n");
 		cmpfail(skb->data, skb->len,
 			t->plaintext, t->plaintext_len);
 		goto bad;
@@ -256,8 +256,8 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	/*
 	 * Encrypt frame w/ MIC.
 	 */
-	if (!(*cip->ic_encap)(key, skb, 0 << 6)) {
-		printk("tkip encap failed\n");
+	if (!(*cip->ic_encap)(key, skb, t->keyix << 6)) {
+		printk("FAIL: tkip encap failed\n");
 		goto bad;
 	}
 	/*
@@ -265,22 +265,22 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	 */
 	ctx = key->wk_private;
 	if (memcmp(ctx->tx_ttak, t->phase1, t->phase1_len)) {
-		printk("encrypt phase1 botch\n");
+		printk("FAIL: encrypt phase1 botch\n");
 		cmpfail(ctx->tx_ttak, sizeof(ctx->tx_ttak),
 			t->phase1, t->phase1_len);
 		goto bad;
 	} else if (memcmp(ctx->tx_rc4key, t->phase2, t->phase2_len)) {
-		printf("encrypt phase2 botch\n");
+		printf("FAIL: encrypt phase2 botch\n");
 		cmpfail(ctx->tx_rc4key, sizeof(ctx->tx_rc4key),
 			t->phase2, t->phase2_len);
 		goto bad;
 	} else if (skb->len != t->encrypted_len) {
-		printk("encrypt data length mismatch\n");
+		printk("FAIL: encrypt data length mismatch\n");
 		cmpfail(skb->data, skb->len,
 			t->encrypted, t->encrypted_len);
 		goto bad;
 	} else if (memcmp(skb->data, t->encrypted, skb->len)) {
-		printk("encrypt data does not compare\n");
+		printk("FAIL: encrypt data does not compare\n");
 		cmpfail(skb->data, skb->len,
 			t->encrypted, t->encrypted_len);
 		dumpdata("Plaintext", t->plaintext, t->plaintext_len);
@@ -292,7 +292,7 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	 */
 	hdrlen = ieee80211_hdrspace(vap->iv_ic, skb->data);
 	if (!(*cip->ic_decap)(key, skb, hdrlen)) {
-		printk("tkip decap failed\n");
+		printk("FAIL: tkip decap failed\n");
 		/*
 		 * Check reason for failure: phase1, phase2, frame data (ICV).
 		 */
@@ -315,13 +315,13 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	 * Verify: frame length, frame contents.
 	 */
 	if (skb->len != t->plaintext_len) {
-		printk("decap botch; length mismatch\n");
+		printk("FAIL: decap botch; length mismatch\n");
 		cmpfail(skb->data, skb->len,
 			t->plaintext, t->plaintext_len);
 		goto bad;
 	}
 	if (memcmp(skb->data, t->plaintext, t->plaintext_len)) {
-		printk("decap botch; data does not compare\n");
+		printk("FAIL: decap botch; data does not compare\n");
 		cmpfail(skb->data, skb->len,
 			t->plaintext, t->plaintext_len);
 		goto bad;
@@ -330,13 +330,13 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	 * De-MIC decrypted frame.
 	 */
 	if (!ieee80211_crypto_demic(vap, key, skb, hdrlen)) {
-		printk("tkip demic failed\n");
+		printk("FAIL: tkip demic failed\n");
 		goto bad;
 	}
 	/* XXX check frame length and contents... */
 	ieee80211_dev_kfree_skb(&skb);
 	ieee80211_crypto_delkey(vap, key, NULL);
-	printk("802.11i TKIP test vectors passed\n");
+	printk("PASS\n");
 	return 1;
 bad:
 	if (skb != NULL)
