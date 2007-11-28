@@ -50,15 +50,13 @@ ifneq (svnversion.h,$(MAKECMDGOALS))
 include $(TOP)/Makefile.inc
 endif
 
-DIRS_MODULES = $(ATH) $(ATH_HAL) $(ATH_RATE) $(WLAN)
-
 obj-y := ath/ ath_hal/ ath_rate/ net80211/
 
 all: modules tools
 
 modules: configcheck svnversion.h
 ifdef LINUX24
-	for i in $(DIRS_MODULES); do \
+	for i in $(obj-y); do \
 		$(MAKE) -C $$i || exit 1; \
 	done
 else
@@ -90,7 +88,7 @@ install-modules: modules
 	@# might cause make to abort the build
 	sh scripts/find-madwifi-modules.sh -r $(KERNELRELEASE) $(DESTDIR)
 
-	for i in $(DIRS_MODULES); do \
+	for i in $(obj-y); do \
 		$(MAKE) -C $$i install || exit 1; \
 	done
 ifeq ($(DESTDIR),)
@@ -116,7 +114,7 @@ reinstall-tools: uninstall-tools install-tools
 reinstall-modules: uninstall-modules install-modules
 
 clean:
-	for i in $(DIRS_MODULES); do \
+	for i in $(obj-y); do \
 		$(MAKE) -C $$i clean; \
 	done
 	-$(MAKE) -C $(TOOLS) clean
