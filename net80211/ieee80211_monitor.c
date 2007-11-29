@@ -246,6 +246,11 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 					p = start + roundup(p - start, 8) + 8;
 					break;
 
+				case IEEE80211_RADIOTAP_DATA_RETRIES:
+					ph->try0 = *p;
+					p++;
+					break;
+
 				default:
 					present = 0;
 					break;
@@ -256,7 +261,8 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			/* Remove FCS from the end of frames to transmit */
 			skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
 		wh = (struct ieee80211_frame *)skb->data;
-		if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_CTL)
+		if (!ph->try0 &&
+		    (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_CTL)
 			ph->try0 = 1;
 		break;
 	}
