@@ -388,7 +388,6 @@ unref_skb(struct sk_buff *skb, int type,
 		return;
 	}
 
-	/* decrement skb_refs_counter and print a message */
         if (skb_shared(skb)) {
 		atomic_dec(&skb_refs_counter);
 		print_skb_refchange_message(skb, -1, func1, line1, func2, line2);
@@ -513,14 +512,11 @@ void ieee80211_dev_kfree_skb(struct sk_buff** pskb)
 	dev_kfree_skb_any(skb);
 #endif
 
-	/* guard against use */
 	*pskb = NULL;
 }
 
-/*
- * ieee80211_dev_kfree_skb_list will invoke ieee80211_dev_kfree_skb on each node in
- * a list of skbs, starting with the first.
-*/
+/* ieee80211_dev_kfree_skb_list will invoke ieee80211_dev_kfree_skb on each node in
+ * a list of skbs, starting with the first. */
 #ifdef IEEE80211_DEBUG_REFCNT
 void
 ieee80211_dev_kfree_skb_list_debug(struct sk_buff** pskb, const char* func, int line) 
@@ -531,27 +527,21 @@ ieee80211_dev_kfree_skb_list(struct sk_buff** pskb)
 {
 	struct sk_buff *skb, *tskb;
 
-	/* Do not fail on null, we are going to use this in cleanup code */
+	/* Do not fail on null, as we are going to use this in cleanup code */
 	if (!pskb || !(skb = *pskb))
 		return;
 
-	/* free sk_buffs */
 	while (skb) {
-		/* Save next skb */
 		tskb = skb->next;
 
-		/* Free the skb, and remove it from next in chain if unshared
-		 * and in a list. */
 #ifdef IEEE80211_DEBUG_REFCNT
 		ieee80211_dev_kfree_skb_debug(&skb, func, line);
 #else
 		ieee80211_dev_kfree_skb(&skb);
 #endif
-		/* Advance to next skb */
 		skb = tskb;
 	}
 
-	/* guard against use */
 	*pskb = NULL;
 }
 
@@ -563,7 +553,6 @@ struct sk_buff*
 ieee80211_dev_alloc_skb(int size) 
 #endif
 {
-	/* allocate the skb */
 	struct sk_buff *skb = dev_alloc_skb(size);
 	if (skb == NULL) {
 		skb_print_message(

@@ -11656,29 +11656,30 @@ ath_registers_dump_delta(struct ieee80211com *ic)
 /* Caller must have the TXBUF_LOCK */
 static void
 #ifdef IEEE80211_DEBUG_REFCNT
-ath_return_txbuf_locked_debug(struct ath_softc *sc, struct ath_buf **buf, const char* func, int line) 
+ath_return_txbuf_locked_debug(struct ath_softc *sc, struct ath_buf **bf, 
+		const char* func, int line) 
 #else
-ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **buf) 
+ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **bf) 
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
-	struct ath_buf *bufaddr;
+	struct ath_buf *bfaddr;
 	ATH_TXBUF_LOCK_ASSERT(sc);
 
-	if ((buf == NULL) || ((*buf) == NULL)) 
+	if ((bf == NULL) || ((*bf) == NULL)) 
 		return;
-	bufaddr = *buf;
+	bfaddr = *bf;
 #ifdef IEEE80211_DEBUG_REFCNT
-	cleanup_ath_buf_debug(sc, (*buf), BUS_DMA_TODEVICE, func, line);
+	cleanup_ath_buf_debug(sc, (*bf), BUS_DMA_TODEVICE, func, line);
 #else
-	cleanup_ath_buf(sc, (*buf), BUS_DMA_TODEVICE);
+	cleanup_ath_buf(sc, (*bf), BUS_DMA_TODEVICE);
 #endif
-	STAILQ_INSERT_TAIL(&sc->sc_txbuf, (*buf), bf_list);
+	STAILQ_INSERT_TAIL(&sc->sc_txbuf, (*bf), bf_list);
 	atomic_dec(&ath_buf_counter);
 #ifdef IEEE80211_DEBUG_REFCNT
 	DPRINTF(sc, ATH_DEBUG_TXBUF, 
 		"[TXBUF=%03d/%03d] %s:%d -> %s:%d returned txbuf %p.\n", 
 		ath_get_buffer_count(), ATH_TXBUF,
-		func, line, __func__, __LINE__, bufaddr);
+		func, line, __func__, __LINE__, bfaddr);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	if (sc->sc_devstopped) {
 		++sc->sc_reapcount;
@@ -11696,22 +11697,23 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **buf)
 			ATH_SCHEDULE_TQUEUE(&sc->sc_txtq, NULL);
 	}
 
-	*buf = NULL;
+	*bf = NULL;
 }
 
 /* Takes the TXBUF_LOCK */
 static void 
 #ifdef IEEE80211_DEBUG_REFCNT
-ath_return_txbuf_debug(struct ath_softc *sc, struct ath_buf **buf, const char* func, int line) 
+ath_return_txbuf_debug(struct ath_softc *sc, struct ath_buf **bf, 
+		const char* func, int line) 
 #else
-ath_return_txbuf(struct ath_softc *sc, struct ath_buf **buf) 
+ath_return_txbuf(struct ath_softc *sc, struct ath_buf **bf) 
 #endif 
 {
 	ATH_TXBUF_LOCK_IRQ(sc);
 #ifdef IEEE80211_DEBUG_REFCNT
-	ath_return_txbuf_locked_debug(sc, buf, func, line);
+	ath_return_txbuf_locked_debug(sc, bf, func, line);
 #else
-	ath_return_txbuf_locked(sc, buf);
+	ath_return_txbuf_locked(sc, bf);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	ATH_TXBUF_UNLOCK_IRQ(sc);
 }
@@ -11719,7 +11721,8 @@ ath_return_txbuf(struct ath_softc *sc, struct ath_buf **buf)
 /* Takes the lock */
 static void 
 #ifdef IEEE80211_DEBUG_REFCNT
-ath_return_txbuf_list_debug(struct ath_softc *sc, ath_bufhead *bfhead, const char* func, int line) 
+ath_return_txbuf_list_debug(struct ath_softc *sc, ath_bufhead *bfhead, 
+		const char* func, int line) 
 #else
 ath_return_txbuf_list(struct ath_softc *sc, ath_bufhead *bfhead) 
 #endif
@@ -11744,7 +11747,8 @@ ath_return_txbuf_list(struct ath_softc *sc, ath_bufhead *bfhead)
 /* Caller must have the lock */
 static void 
 #ifdef IEEE80211_DEBUG_REFCNT
-ath_return_txbuf_list_locked_debug(struct ath_softc *sc, ath_bufhead *bfhead, const char* func, int line)
+ath_return_txbuf_list_locked_debug(struct ath_softc *sc, ath_bufhead *bfhead, 
+		const char* func, int line)
 #else
 ath_return_txbuf_list_locked(struct ath_softc *sc, ath_bufhead *bfhead)
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
@@ -11769,79 +11773,72 @@ ath_return_txbuf_list_locked(struct ath_softc *sc, ath_bufhead *bfhead)
 
 static struct ath_buf* 
 #ifdef IEEE80211_DEBUG_REFCNT
-cleanup_ath_buf_debug(struct ath_softc *sc, struct ath_buf *buf, int direction, const char* func, int line) 
+cleanup_ath_buf_debug(struct ath_softc *sc, struct ath_buf *bf, int direction, 
+		const char* func, int line) 
 #else /* #ifdef IEEE80211_DEBUG_REFCNT */
-cleanup_ath_buf(struct ath_softc *sc, struct ath_buf *buf, int direction) 
+cleanup_ath_buf(struct ath_softc *sc, struct ath_buf *bf, int direction) 
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 {
-	if (buf == NULL) 
-		return buf;
+	if (bf == NULL) 
+		return bf;
 
-	/* Release dma mappings, if present */
-	if (buf->bf_skbaddr) {
-		/* Unmap DMA memory */
+	if (bf->bf_skbaddr) {
 		bus_unmap_single(
 			sc->sc_bdev,
-			buf->bf_skbaddr, 
-			(direction == BUS_DMA_FROMDEVICE ? sc->sc_rxbufsize : buf->bf_skb->len),
+			bf->bf_skbaddr, 
+			(direction == BUS_DMA_FROMDEVICE ? 
+				sc->sc_rxbufsize : bf->bf_skb->len),
 			direction);
-		buf->bf_skbaddr = 0;
-		buf->bf_desc->ds_link = 0;
-		buf->bf_desc->ds_data = 0;
-	}
-	/* Free node reference, if present */
-	if (buf->bf_node != NULL) {
-#ifdef IEEE80211_DEBUG_REFCNT
-		ieee80211_unref_node_debug(&buf->bf_node, func, line);
-#else
-		ieee80211_unref_node(&buf->bf_node);
-#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
+		bf->bf_skbaddr = 0;
+		bf->bf_desc->ds_link = 0;
+		bf->bf_desc->ds_data = 0;
 	}
 
 #ifdef ATH_SUPERG_FF
-{
-	unsigned int i = 0;
-	struct sk_buff* next_ffskb = NULL;
-	/* Start with the second skb for FF */
-	struct sk_buff* ffskb = buf->bf_skb ? 
-		buf->bf_skb->next : 
-		NULL;
-	while (ffskb) {
-		next_ffskb = ffskb->next;
+	{
+		unsigned int i = 0;
+		struct sk_buff* next_ffskb = NULL;
+		/* Start with the second skb for FF */
+		struct sk_buff* ffskb = bf->bf_skb ? 
+			bf->bf_skb->next : NULL;
+		while (ffskb) {
+			next_ffskb = ffskb->next;
 
-		/* Unmap DMA memory */
-		if (buf->bf_skbaddrff[i] != 0) {
-			bus_unmap_single(
-				sc->sc_bdev,
-				buf->bf_skbaddrff[i], 
-				(direction == BUS_DMA_TODEVICE ? 
-				 sc->sc_rxbufsize : ffskb->len), 
-				direction);
-			buf->bf_skbaddrff[i] = 0;
+			if (bf->bf_skbaddrff[i] != 0) {
+				bus_unmap_single(
+					sc->sc_bdev,
+					bf->bf_skbaddrff[i], 
+					(direction == BUS_DMA_TODEVICE ? 
+					 sc->sc_rxbufsize : ffskb->len), 
+					direction);
+				bf->bf_skbaddrff[i] = 0;
+			}
+
+			ffskb = next_ffskb;
+			i++;
 		}
-
-		/* Release skb and move to the next */
-		ffskb = next_ffskb;
-		i++;
+		memset(bf->bf_skbaddrff, 0, sizeof(bf->bf_skbaddrff));
+		bf->bf_numdescff = 0;
 	}
-	memset(buf->bf_skbaddrff, 0, sizeof(buf->bf_skbaddrff));
-	buf->bf_numdescff = 0;
-}
 #endif /* ATH_SUPERG_FF */
-	buf->bf_node = NULL;
-	buf->bf_flags = 0;
 
-	if (buf->bf_desc) {
-		buf->bf_desc->ds_link = 0;
-		buf->bf_desc->ds_data = 0;
+	if (bf->bf_node != NULL) {
+#ifdef IEEE80211_DEBUG_REFCNT
+		ieee80211_unref_node_debug(&bf->bf_node, func, line);
+#else
+		ieee80211_unref_node(&bf->bf_node);
+#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	}
 
-	/* Free the SKBs when we free the node */
-	if (buf->bf_skb != NULL) {
-		ieee80211_dev_kfree_skb_list(&buf->bf_skb);
+	bf->bf_flags = 0;
+	if (bf->bf_desc) {
+		bf->bf_desc->ds_link = 0;
+		bf->bf_desc->ds_data = 0;
 	}
 
-	/* passthrough */
-	return buf;
+	if (bf->bf_skb != NULL)
+		ieee80211_dev_kfree_skb_list(&bf->bf_skb);
+
+	return bf;
 }
 
