@@ -446,9 +446,9 @@ enum {
 	ATH_DEBUG_RECV_DESC	= 0x00000008,	/* recv descriptors */
 	ATH_DEBUG_RATE		= 0x00000010,	/* rate control */
 	ATH_DEBUG_RESET		= 0x00000020,	/* reset processing */
-	ATH_DEBUG_SKB_REF	= 0x00000040,	/* sbk references */
-	ATH_DEBUG_BEACON 	= 0x00000080,	/* beacon handling */
-	ATH_DEBUG_WATCHDOG 	= 0x00000100,	/* watchdog timeout */
+	ATH_DEBUG_SKB_REF	= 0x00000040,	/* skb references */
+	ATH_DEBUG_BEACON	= 0x00000080,	/* beacon handling */
+	ATH_DEBUG_WATCHDOG	= 0x00000100,	/* watchdog timeout */
 	ATH_DEBUG_INTR		= 0x00001000,	/* ISR */
 	ATH_DEBUG_TX_PROC	= 0x00002000,	/* tx ISR proc */
 	ATH_DEBUG_RX_PROC	= 0x00004000,	/* rx ISR proc */

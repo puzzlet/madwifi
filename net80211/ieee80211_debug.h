@@ -40,7 +40,7 @@
 /* Set to true if ANY sc has skb debugging on */
 extern int ath_debug_global;
 enum {
-	GLOBAL_DEBUG_SKB_REF  = 0x00000040,	/* SKB referernce counting */
+	GLOBAL_DEBUG_SKB_REF  = 0x00000040,	/* SKB reference counting */
 	GLOBAL_DEBUG_SKB      = 0x40000000,     /* SKB usage/leak debugging,
 	                                           must match ATH_DEBUG_SKB */
 };
