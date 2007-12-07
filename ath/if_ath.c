@@ -456,6 +456,7 @@ enum {
 	ATH_DEBUG_CALIBRATE	= 0x00010000,	/* periodic calibration */
 	ATH_DEBUG_KEYCACHE	= 0x00020000,	/* key cache management */
 	ATH_DEBUG_STATE		= 0x00040000,	/* 802.11 state transitions */
+	ATH_DEBUG_TSF		= 0x00080000,	/* timestamp processing */
 	ATH_DEBUG_LED		= 0x00100000,	/* led management */
 	ATH_DEBUG_FF		= 0x00200000,	/* fast frames */
 	ATH_DEBUG_TURBO		= 0x00400000,	/* turbo/dynamic turbo */
@@ -1659,7 +1660,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 		bf->bf_status |= ATH_BUFSTATUS_RXTSTAMP;
 		count++;
 
-		DPRINTF(sc, ATH_DEBUG_BEACON,
+		DPRINTF(sc, ATH_DEBUG_TSF,
 			"%s: rs_tstamp=%10llx count=%d\n",
 			DEV_NAME(sc->sc_dev),
 			bf->bf_tsf, count);
@@ -1667,7 +1668,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 		/* compute rollover */
 		if (last_rs_tstamp > rs->rs_tstamp) {
 			rollover++;
-			DPRINTF(sc, ATH_DEBUG_BEACON,
+			DPRINTF(sc, ATH_DEBUG_TSF,
 				"%s: %d rollover detected\n",
 				DEV_NAME(sc->sc_dev),
 				rollover);
@@ -1932,7 +1933,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 		hw_tsf = ath_hal_gettsf64(ah);
 		if (last_rs_tstamp > (hw_tsf & TSTAMP_MASK)) {
 			rollover++;
-			DPRINTF(sc, ATH_DEBUG_BEACON,
+			DPRINTF(sc, ATH_DEBUG_TSF,
 				"%s: %d rollover detected for hw_tsf=%10llx\n",
 				DEV_NAME(sc->sc_dev),
 				rollover, hw_tsf);
@@ -1962,7 +1963,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 					(hw_tsf & ~TSTAMP_MASK) | bf->bf_tsf;
 				bf->bf_tsf -= rollover * (TSTAMP_MASK + 1);
 
-				DPRINTF(sc, ATH_DEBUG_BEACON,
+				DPRINTF(sc, ATH_DEBUG_TSF,
 					"%s: bf_tsf=%10llx hw_tsf=%10llx\n",
 					DEV_NAME(sc->sc_dev),
 					bf->bf_tsf, hw_tsf);
