@@ -478,8 +478,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 
 				th->wt_flags = 0;
 				th->wt_rate = ieeerate;
-				th->wt_txpower = 0;
 				th->wt_antenna = antenna;
+				th->wt_pad = 0;
 
 				if (bf->bf_dsstatus.ds_txstat.ts_status & HAL_TXERR_XRETRY)
 					th->wt_txflags |= cpu_to_le16(IEEE80211_RADIOTAP_F_TX_FAIL);

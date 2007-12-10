@@ -131,7 +131,6 @@ struct ath_rx_radiotap_header {
 	(1 << IEEE80211_RADIOTAP_TSFT)		| \
 	(1 << IEEE80211_RADIOTAP_FLAGS)         | \
 	(1 << IEEE80211_RADIOTAP_RATE)          | \
-	(1 << IEEE80211_RADIOTAP_DBM_TX_POWER)  | \
 	(1 << IEEE80211_RADIOTAP_ANTENNA)       | \
 	(1 << IEEE80211_RADIOTAP_TX_FLAGS)	| \
 	(1 << IEEE80211_RADIOTAP_DATA_RETRIES)	| \
@@ -142,8 +141,8 @@ struct ath_tx_radiotap_header {
 	__le64		wt_tsft;
 	u_int8_t	wt_flags;
 	u_int8_t	wt_rate;
-	u_int8_t	wt_txpower;
 	u_int8_t	wt_antenna;
+	u_int8_t	wt_pad; /* Padding to ensure txflags is aligned */
 	__le16		wt_txflags;
 	u_int8_t	wt_dataretries;
 }__attribute__((__packed__));
