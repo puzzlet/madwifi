@@ -7520,6 +7520,17 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	} else
 		antenna = sc->sc_txantenna;
 
+	/* should be ok, but just to be sure */
+	if (txrate == 0)
+		return -EIO;
+
+	DPRINTF(sc, ATH_DEBUG_XMIT, "%s: set up txdesc: pktlen %d hdrlen %d "
+		"atype %d txpower %d txrate %d try0 %d keyix %d ant %d flags %x "
+		"ctsrate %d ctsdur %d icvlen %d ivlen %d comp %d\n",
+		__func__, pktlen, hdrlen, atype, MIN(ni->ni_txpower, 60), txrate,
+		try0, keyix, antenna, flags, ctsrate, ctsduration, icvlen, ivlen,
+		comp);
+
 	/*
 	 * Formulate first tx descriptor with tx controls.
 	 */
@@ -7551,6 +7562,20 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	if (try0 != ATH_TXMAXTRY) {
 		sc->sc_rc->ops->get_mrr(sc, an, shortPreamble, skb->len, rix,
 					&mrr);
+		/*
+		 * if rate module fucks up and gives us 0 rates we disable the
+		 * multi rate retries. this is important since 0 rates can lead
+		 * to a card continously sending noise (in A band at least)
+		 */
+		if (!mrr.rate1) mrr.retries1 = 0;
+		if (!mrr.rate2) mrr.retries2 = 0;
+		if (!mrr.rate3) mrr.retries3 = 0;
+
+		DPRINTF(sc, ATH_DEBUG_XMIT, "%s: set up multi rate/retry "
+			"1:%d/%d 2:%d/%d 3:%d/%d\n", __func__,
+			mrr.rate1, mrr.retries1, mrr.rate2, mrr.retries2,
+			mrr.rate3, mrr.retries3);
+
 		ath_hal_setupxtxdesc(sc->sc_ah, ds, mrr.rate1, mrr.retries1,
 				     mrr.rate2, mrr.retries2,
 				     mrr.rate3, mrr.retries3);

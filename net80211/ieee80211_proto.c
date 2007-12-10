@@ -425,6 +425,20 @@ ieee80211_fix_rate(struct ieee80211_node *ni, int flags)
 		}
 		r = nrs->rs_rates[i] & IEEE80211_RATE_VAL;
 		badrate = r;
+
+		/*
+		 * remove 0 rates
+		 * they don't make sense and can lead to trouble later
+		 */
+		if (r == 0) {
+			nrs->rs_nrates--;
+			nrs->rs_nrates--;
+			for (j = i; j < nrs->rs_nrates; j++)
+				nrs->rs_rates[j] = nrs->rs_rates[j + 1];
+			nrs->rs_rates[j] = 0;
+			continue;
+		}
+
 		/*
 		 * Check for fixed rate. 
 		 */
