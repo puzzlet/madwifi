@@ -7520,10 +7520,15 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	} else
 		antenna = sc->sc_txantenna;
 
-	/* should be ok, but just to be sure */
-	if (txrate == 0)
+	if (txrate == 0) {
+		/* Drop frame, if the rate is 0.
+		 * Otherwise this may lead to the continuous transmission of
+		 * noise. */
+		printk("%s: invalid TX rate %u (%s: %u)\n", DEV_NAME(dev),
+			txrate, __func__, __LINE__);
 		return -EIO;
-
+	}
+	
 	DPRINTF(sc, ATH_DEBUG_XMIT, "%s: set up txdesc: pktlen %d hdrlen %d "
 		"atype %d txpower %d txrate %d try0 %d keyix %d ant %d flags %x "
 		"ctsrate %d ctsdur %d icvlen %d ivlen %d comp %d\n",
@@ -7562,11 +7567,9 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	if (try0 != ATH_TXMAXTRY) {
 		sc->sc_rc->ops->get_mrr(sc, an, shortPreamble, skb->len, rix,
 					&mrr);
-		/*
-		 * if rate module fucks up and gives us 0 rates we disable the
-		 * multi rate retries. this is important since 0 rates can lead
-		 * to a card continously sending noise (in A band at least)
-		 */
+		/* Explicitly disable retries, if the retry rate is 0.
+		 * Otherwise this may lead to the continuous transmission of
+		 * noise. */
 		if (!mrr.rate1) mrr.retries1 = 0;
 		if (!mrr.rate2) mrr.retries2 = 0;
 		if (!mrr.rate3) mrr.retries3 = 0;
