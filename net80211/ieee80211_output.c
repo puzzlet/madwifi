@@ -478,7 +478,7 @@ ieee80211_send_nulldata(struct ieee80211_node *ni)
 		skb_push(skb, sizeof(struct ieee80211_frame));
 	ieee80211_send_setup(vap, ni, wh,
 		IEEE80211_FC0_TYPE_DATA | IEEE80211_FC0_SUBTYPE_NODATA,
-		vap->iv_myaddr, ni->ni_macaddr, ni->ni_bssid);
+		vap->iv_myaddr, ni->ni_macaddr, vap->iv_bss->ni_bssid);
 	/* NB: power management bit is never sent by an AP */
 	if ((IEEE80211_VAP_IS_SLEEPING(ni->ni_vap)) &&
 	    vap->iv_opmode != IEEE80211_M_HOSTAP &&
@@ -533,7 +533,7 @@ ieee80211_send_qosnulldata(struct ieee80211_node *ni, int ac)
 		IEEE80211_FC0_TYPE_DATA,
 		vap->iv_myaddr, /* SA */
 		ni->ni_macaddr, /* DA */
-		ni->ni_bssid);
+		vap->iv_bss->ni_bssid);
 
 	qwh->i_fc[0] = IEEE80211_FC0_VERSION_0 | IEEE80211_FC0_TYPE_DATA |
 		IEEE80211_FC0_SUBTYPE_QOS_NULL;
