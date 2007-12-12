@@ -759,6 +759,8 @@ struct ath_softc {
 #endif
 	u_int sc_slottimeconf;			/* manual override for slottime */
 	u_int64_t sc_tsf;			/* TSF at last rx interrupt */
+
+	u_int32_t sc_nexttbtt;
 };
 
 typedef void (*ath_callback) (struct ath_softc *);
