@@ -2765,7 +2765,6 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		if (frm > efrm)
 			return;
 		IEEE80211_VERIFY_ELEMENT(scan.rates, IEEE80211_RATE_MAXSIZE);
-		IEEE80211_VERIFY_ELEMENT(scan.xrates, IEEE80211_RATE_MAXSIZE);
 		IEEE80211_VERIFY_ELEMENT(scan.ssid, IEEE80211_NWID_LEN);
 #if IEEE80211_CHAN_MAX < 255
 		if (scan.chan > IEEE80211_CHAN_MAX) {
