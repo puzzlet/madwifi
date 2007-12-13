@@ -992,9 +992,8 @@ static struct notifier_block ieee80211_event_block = {
 /*
  * Module glue.
  */
-#include "version.h"
 #include "release.h"
-static char *version = WLAN_VERSION " (" RELEASE_VERSION ")";
+static char *version = RELEASE_VERSION;
 static char *dev_info = "wlan";
 
 MODULE_AUTHOR("Errno Consulting, Sam Leffler");

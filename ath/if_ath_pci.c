@@ -343,9 +343,8 @@ static struct pci_driver ath_pci_drv_id = {
 /*
  * Module glue.
  */
-#include "version.h"
 #include "release.h"
-static char *version = ATH_PCI_VERSION " (" RELEASE_VERSION ")";
+static char *version = RELEASE_VERSION;
 static char *dev_info = "ath_pci";
 
 #include <linux/ethtool.h>
