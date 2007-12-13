@@ -205,12 +205,7 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	pci_set_drvdata(pdev, dev);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
 	if (request_irq(dev->irq, ath_intr, IRQF_SHARED, dev->name, dev)) {
-#else
-	if (request_irq(dev->irq, ath_intr, SA_SHIRQ, dev->name, dev)) {
-#endif
-
 		printk(KERN_WARNING "%s: request_irq failed\n", dev->name);
 		goto bad3;
 	}

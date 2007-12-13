@@ -144,6 +144,10 @@ static inline int timeval_compare(struct timeval *lhs, struct timeval *rhs)
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)
+#define IRQF_SHARED SA_SHIRQ
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)
 #define skb_end_pointer(_skb) ((_skb)->end)
 #define skb_tail_pointer(_skb) ((_skb)->tail)
