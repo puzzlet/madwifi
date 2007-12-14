@@ -2041,22 +2041,19 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 
 			if (vap->iv_opmode == IEEE80211_M_IBSS) {
 				u_int64_t hw_tsf = ath_hal_gettsf64(ah);
-				/*
-				 * Update next beacon target time to keep track of HW
-				 * merges (TSF updates) we would not notice otherwise
-				 */
+				/* Update next beacon target time to keep 
+				 * track of HW merges (TSF updates) we would 
+				 * not notice otherwise. */
 				sc->sc_nexttbtt += vap->iv_bss->ni_intval;
 				DPRINTF(sc, ATH_DEBUG_INTR,
 					"ath_intr HAL_INT_SWBA at tsf %10llx"
 					" nexttbtt %10llx\n", hw_tsf,
-					(u_int64_t)sc->sc_nexttbtt<<10);
+					(u_int64_t)sc->sc_nexttbtt << 10);
 			} else { /* AP mode */
-				/*
-				 * Software beacon alert--time to send a beacon.
-				 * Handle beacon transmission directly; deferring
-				 * this is too slow to meet timing constraints
-				 * under load.
-				 */
+				/* Software beacon alert - time to send a 
+				 * beacon. Handle beacon transmission directly;
+				 * deferring this is too slow to meet timing 
+				 * constraints under load. */
 				ath_beacon_send(sc, &needmark);
 			}
 		}
@@ -4925,7 +4922,6 @@ ath_beacon_update_timers(struct ath_softc *sc, struct ieee80211vap *vap)
 		nexttbtt = intval;
 	} else if (intval) {	/* NB: can be 0 for monitor mode */
 		if (tsf == 1) {
-
 			/* We have not received any beacons or probe
 			 * responses. Since a beacon should be sent
 			 * every 'intval' ms, we compute the next
@@ -4940,16 +4936,16 @@ ath_beacon_update_timers(struct ath_softc *sc, struct ieee80211vap *vap)
 			}
 		} else {
 			if (tsf > hw_tsf) {
-			  /* We received a beacon, but the HW TSF has
-			   * not been updated (otherwise hw_tsf > tsf)
-			   * We cannot use the hardware TSF, so we
-			   * wait to synchronize beacons again. */
+				/* We received a beacon, but the HW TSF has
+				 * not been updated (otherwise hw_tsf > tsf)
+				 * We cannot use the hardware TSF, so we
+				 * wait to synchronize beacons again. */
 				sc->sc_syncbeacon = 1;
 				goto ath_beacon_config_debug;
 			} else {
-			  /* Normal case: we received a beacon to which
-			   * we have synchronized. Make sure that nexttbtt
-			   * is at least FUDGE ms ahead of hw_tsf */
+				/* Normal case: we received a beacon to which
+				 * we have synchronized. Make sure that nexttbtt
+				 * is at least FUDGE ms ahead of hw_tsf */
 				nexttbtt = tsftu + intval;
 				while (nexttbtt <= hw_tsftu + FUDGE) {
 					nexttbtt += intval;
@@ -4966,7 +4962,6 @@ ath_beacon_update_timers(struct ath_softc *sc, struct ieee80211vap *vap)
 		/* Setup DTIM and CTP parameters according to last
 		 * beacon we received (which may not have
 		 * happened). */
-
 		dtimperiod = vap->iv_dtim_period;
 		if (dtimperiod <= 0)		/* NB: 0 if not known */
 			dtimperiod = 1;
@@ -4975,10 +4970,9 @@ ath_beacon_update_timers(struct ath_softc *sc, struct ieee80211vap *vap)
 			dtimcount = 0;		/* XXX? */
 		cfpperiod = 1;			/* NB: no PCF support yet */
 		cfpcount = 0;
-		/*
-		 * Pull nexttbtt forward to reflect the current
-		 * TSF and calculate dtim+cfp state for the result.
-		 */
+
+		/* Pull nexttbtt forward to reflect the current
+		 * TSF and calculate dtim+cfp state for the result. */
 		nexttbtt = tsftu;
 		if (nexttbtt == 0)		/* e.g. for ap mode */
 			nexttbtt = intval;
@@ -5107,13 +5101,14 @@ ath_beacon_config_debug:
 				"%s: no beacon received...\n", __func__);
 		} else {
 			if (tsf > hw_tsf) {
-			  /* We did receive a beacon but the hw TSF has not been updated
-			   * - must have been a different BSSID */
+				/* We did receive a beacon but the hw TSF has 
+				 * not been updated - must have been a 
+				 * different BSSID */
 				DPRINTF(sc, ATH_DEBUG_BEACON,
 					"%s: beacon received, but TSF has not "
 					"been updated\n", __func__);
 			} else {
-			  /* We did receive a beacon, normal case */
+				/* We did receive a beacon, normal case */
 				DPRINTF(sc, ATH_DEBUG_BEACON,
 					"%s: beacon received, TSF and timers "
 					"synchronized\n", __func__);
