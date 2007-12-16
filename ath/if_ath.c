@@ -4787,7 +4787,7 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 	struct sk_buff *skb;
 
 	avp = ATH_VAP(vap);
-	if (avp->av_bcbuf == NULL) {
+	if (avp == NULL || avp->av_bcbuf == NULL) {
 		DPRINTF(sc, ATH_DEBUG_ANY, "%s: avp=%p av_bcbuf=%p\n",
 			 __func__, avp, avp != NULL ? avp->av_bcbuf : NULL);
 		return;
