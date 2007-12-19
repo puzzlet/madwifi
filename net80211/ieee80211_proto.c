@@ -248,8 +248,6 @@ EXPORT_SYMBOL(ieee80211_authenticator_backend_unregister);
 const struct ieee80211_authenticator_backend *
 ieee80211_authenticator_backend_get(const char *name)
 {
-	if (backend == NULL)
-		ieee80211_load_module("wlan_radius");
 	return backend && strcmp(backend->iab_name, name) == 0 ? backend : NULL;
 }
 EXPORT_SYMBOL(ieee80211_authenticator_backend_get);

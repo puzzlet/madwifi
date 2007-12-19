@@ -72,9 +72,9 @@ This code is derived from work that first appeared in NetBSD and
 then FreeBSD.  The wlan module may also force the loading of
 additional modules for crypto support (wlan_wep, wlan_tkip, wlan_ccmp,
 etc.), for MAC-based ACL support (wlan_acl), and for 802.1x
-authenticator support (wlan_auth, wlan_radius)).  The latter modules
-are only used when operating as an AP.  The crypto modules are
-loaded when keys of that type are created.
+authenticator support (wlan_xauth).  The latter modules are only 
+used when operating as an AP.  The crypto modules are loaded when 
+keys of that type are created.
 
 %prep 
 #%setup -q 
