@@ -3400,7 +3400,7 @@ ieee80211_ioctl_delkey(struct net_device *dev, struct iw_request_info *info,
 
 	/* XXX: This cast can be removed when struct ieee80211req_del_key is 
 	 * fixed. */
-	if (dk->idk_keyix == (u_int8_t) IEEE80211_KEYIX_NONE) {
+	if (dk->idk_keyix == IEEE80211_KEYIX_NONE) {
 		struct ieee80211_node *ni;
 
 		ni = ieee80211_find_node(&ic->ic_sta, dk->idk_macaddr);

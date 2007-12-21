@@ -221,8 +221,7 @@ struct ieee80211req_key {
  * to IEEE80211_KEYIX_NONE when deleting a unicast key.
  */
 struct ieee80211req_del_key {
-	/* XXX: This should be ieee80211_keyix_t, but it changes API/ABI for hostapd */
-	u_int8_t idk_keyix;	/* key index */
+	ieee80211_keyix_t idk_keyix;	/* key index */
 	u_int8_t idk_macaddr[IEEE80211_ADDR_LEN];
 };
 
