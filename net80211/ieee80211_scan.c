@@ -645,7 +645,7 @@ scan_next(unsigned long arg)
 
 again:
 	scandone = (ss->ss_next >= ss->ss_last) ||
-		(SCAN_PRIVATE(ss)->ss_iflags & ISCAN_CANCEL) != 0;
+		((SCAN_PRIVATE(ss)->ss_iflags & ISCAN_CANCEL) != 0);
 	scanend = SCAN_PRIVATE(ss)->ss_scanend;
 	if (!scandone &&
 	    (ss->ss_flags & IEEE80211_SCAN_GOTPICK) == 0 &&
@@ -719,8 +719,8 @@ again:
 		if (scandone)
 			ic->ic_lastscan = jiffies;
 		/* return to the bss channel */
-		if (ic->ic_bsschan != IEEE80211_CHAN_ANYC &&
-		    ic->ic_curchan != ic->ic_bsschan)
+		if ((ic->ic_bsschan != IEEE80211_CHAN_ANYC) &&
+		    (ic->ic_curchan != ic->ic_bsschan))
 			change_channel(ic, ic->ic_bsschan);
 		/* clear internal flags and any indication of a pick */
 		SCAN_PRIVATE(ss)->ss_iflags &= ~ISCAN_REP;

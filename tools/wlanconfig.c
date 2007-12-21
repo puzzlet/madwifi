@@ -146,7 +146,7 @@ main(int argc, char *argv[])
 				strncpy(ifr.ifr_name, argv[4], IFNAMSIZ);
 				argc--;
 				argv++;
-			} else if (strcmp(argv[3], "nounit" ) == 0) {
+			} else if (strcmp(argv[3], "nounit") == 0) {
 				bnounit = 1;
 			} else {
 				int flag = getflag(argv[3]);

@@ -345,7 +345,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			/* Accept PHY, CRC and decrypt errors. Discard the rest. */
 			if (bf->bf_dsstatus.ds_rxstat.rs_status &~
 					(HAL_RXERR_DECRYPT | HAL_RXERR_MIC |
-					 HAL_RXERR_PHY | HAL_RXERR_CRC ))
+					 HAL_RXERR_PHY | HAL_RXERR_CRC))
 				continue;
 
 			/* We can't use addr1 to determine direction at this point */
@@ -539,7 +539,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				}
 
 				th->wr_dbm_antnoise = (int8_t) noise;
-				th->wr_dbm_antsignal = th->wr_dbm_antnoise + rssi;
+				th->wr_dbm_antsignal = 
+					th->wr_dbm_antnoise + rssi;
 				th->wr_antenna = antenna;
 				th->wr_antsignal = rssi;
 
@@ -549,21 +550,24 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 		}
 		case ARPHRD_IEEE80211_ATHDESC: {
 			if (skb_headroom(skb1) < ATHDESC_HEADER_SIZE) {
-				printk("%s:%d %s\n", __FILE__, __LINE__, __func__);
+				printk("%s:%d %s\n", __FILE__, 
+						__LINE__, __func__);
 				ieee80211_dev_kfree_skb(&skb1);
 				break;
 			}
-			memcpy(skb_push(skb1, ATHDESC_HEADER_SIZE), ds, ATHDESC_HEADER_SIZE);
+			memcpy(skb_push(skb1, ATHDESC_HEADER_SIZE), 
+					ds, ATHDESC_HEADER_SIZE);
 			break;
 		}
 		default:
 			break;
 		}
 		if (skb1 != NULL) {
-			struct ieee80211_node *ni_tmp;
-			if (!tx && (vap->iv_dev->type != ARPHRD_IEEE80211_RADIOTAP) && (skb1->len >= IEEE80211_CRC_LEN)) {
-				/* Remove FCS from end of rx frames when
-				 * delivering to non-Radiotap VAPs */
+			if (!tx && (skb1->len >= IEEE80211_CRC_LEN) && 
+					(vap->iv_dev->type != 
+					 ARPHRD_IEEE80211_RADIOTAP)) {
+				/* Remove FCS from end of RX frames when
+				 * delivering to non-Radiotap VAPs. */
 				skb_trim(skb1, skb1->len - IEEE80211_CRC_LEN);
 			}
 			skb1->dev = dev; /* NB: deliver to wlanX */
@@ -571,18 +575,18 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 
 			skb1->ip_summed = CHECKSUM_NONE;
 			skb1->pkt_type = pkttype;
-			skb1->protocol = __constant_htons(0x0019); /* ETH_P_80211_RAW */
+			skb1->protocol = 
+				__constant_htons(0x0019); /* ETH_P_80211_RAW */
 
-			ni_tmp = SKB_CB(skb1)->ni;
 			if (netif_rx(skb1) == NET_RX_DROP) {
 				/* If netif_rx dropped the packet because 
-				 * device was too busy */
-				if (ni_tmp != NULL) {
-					/* node reference was leaked */
-					ieee80211_unref_node(&ni_tmp);
-				}
+				 * device was too busy, reclaim the ref. in 
+				 * the skb. */
+				if (SKB_CB(skb1)->ni != NULL)
+					ieee80211_unref_node(&SKB_CB(skb1)->ni);
 				vap->iv_devstats.rx_dropped++;
 			}
+
 			vap->iv_devstats.rx_packets++;
 			vap->iv_devstats.rx_bytes += skb1->len;
 		}

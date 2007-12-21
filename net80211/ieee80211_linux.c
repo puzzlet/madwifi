@@ -329,7 +329,7 @@ ieee80211_notify_replay_failure(struct ieee80211vap *vap,
 	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_CRYPTO, wh->i_addr2,
 		"%s replay detected <keyix %d, rsc %llu >",
 		k->wk_cipher->ic_name, k->wk_keyix,
-		(unsigned long long)rsc );
+		(unsigned long long)rsc);
 
 	/* TODO: needed parameters: count, keyid, key type, src address, TSC */
 	snprintf(buf, sizeof(buf), "%s(keyid=%d %scast addr=%s)", tag,

@@ -1702,7 +1702,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 		bus_dma_sync_single(sc->sc_bdev, bf->bf_skbaddr,
 				sizeof(struct ieee80211_qosframe),
 				BUS_DMA_FROMDEVICE);
-		qwh = (struct ieee80211_qosframe *) skb->data;
+		qwh = (struct ieee80211_qosframe *)skb->data;
 
 		/* Find the node; it MUST be in the keycache. */
 		if (rs->rs_keyix == HAL_RXKEYIX_INVALID ||
@@ -2661,7 +2661,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	struct ath_desc *ds = NULL;
 	struct ieee80211_frame *wh;
 
-	wh = (struct ieee80211_frame *) skb->data;
+	wh = (struct ieee80211_frame *)skb->data;
 	try0 = ph->try0;
 	rt = sc->sc_currates;
 	txrate = dot11_to_ratecode(sc, rt, ph->rate0);
@@ -3002,7 +3002,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		return NETDEV_TX_OK;
 	}
 
-	eh = (struct ether_header *) skb->data;
+	eh = (struct ether_header *)skb->data;
 	ni = SKB_CB(skb)->ni;		/* NB: always passed down by 802.11 layer */
 	if (ni == NULL) {
 		/* NB: this happens if someone marks the underlying device up */
@@ -3936,7 +3936,7 @@ static void
 ath_beacon_dturbo_config(struct ieee80211vap *vap, u_int32_t intval)
 {
 #define	IS_CAPABLE(vap) \
-	(vap->iv_bss && (vap->iv_bss->ni_ath_flags & (IEEE80211_ATHC_TURBOP )) == \
+	(vap->iv_bss && (vap->iv_bss->ni_ath_flags & (IEEE80211_ATHC_TURBOP)) == \
 		(IEEE80211_ATHC_TURBOP))
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ath_softc *sc = ic->ic_dev->priv;
@@ -4011,15 +4011,12 @@ ath_beacon_dturbo_update(struct ieee80211vap *vap, int *needmark, u_int8_t dtim)
 	sc->sc_dturbo_bytes = sc->sc_devstats.tx_bytes
 			    + sc->sc_devstats.rx_bytes;
 	if (ic->ic_ath_cap & IEEE80211_ATHC_BOOST) {
-		/*
-		* before switching to base mode,
-		* make sure that the conditions( low rssi, low bw) to switch mode
-		* hold for some time and time in turbo exceeds minimum turbo time.
-		*/
-
-		if (sc->sc_dturbo_tcount >= sc->sc_dturbo_turbo_tmin &&
-		   sc->sc_dturbo_hold ==0 &&
-		   (bss_traffic < sc->sc_dturbo_bw_base || !sc->sc_rate_recn_state)) {
+		/* Before switching to base mode, make sure that the 
+		 * conditions (low RSSI, low BW) to switch mode hold for some 
+		 * time and time in turbo exceeds minimum turbo time. */
+		if ((sc->sc_dturbo_tcount >= sc->sc_dturbo_turbo_tmin) &&
+		    (sc->sc_dturbo_hold == 0) &&
+		    (bss_traffic < sc->sc_dturbo_bw_base || !sc->sc_rate_recn_state)) {
 			sc->sc_dturbo_hold = 1;
 		} else {
 			if (sc->sc_dturbo_hold &&
@@ -4312,7 +4309,7 @@ ath_beacon_alloc(struct ath_softc *sc, struct ieee80211_node *ni)
 			__func__, sc->sc_stagbeacons ? "stagger" : "burst",
 			avp->av_bslot, ni->ni_intval, (unsigned long long) tuadjust);
 
-		wh = (struct ieee80211_frame *) skb->data;
+		wh = (struct ieee80211_frame *)skb->data;
 		memcpy(&wh[1], &tsfadjust, sizeof(tsfadjust));
 	}
 
@@ -5611,7 +5608,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 				}
 				count++;
 				skb = bf_tmp->bf_skb;
-				wh = (struct ieee80211_frame *) skb->data;
+				wh = (struct ieee80211_frame *)skb->data;
 				if (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_QOS) {
 					/* XXX validate skb->priority, remove 
 					 * mask */
@@ -6201,7 +6198,7 @@ ath_rx_tasklet(TQUEUE_ARG data)
 #if 0
 /* XXX revalidate MIC, lookup ni to find VAP */
 					ieee80211_notify_michael_failure(ic,
-					    (struct ieee80211_frame *) skb->data,
+					    (struct ieee80211_frame *)skb->data,
 					    sc->sc_splitmic ?
 					        rs->rs_keyix - 32 : rs->rs_keyix
 					);
@@ -6314,12 +6311,11 @@ rx_accept:
 			 * add the node to the mapping table if possible.
 			 */
 			ni = ieee80211_find_rxnode(ic,
-				(const struct ieee80211_frame_min *) skb->data);
+				(const struct ieee80211_frame_min *)skb->data);
 			if (ni != NULL) {
-				struct ath_node *an = ATH_NODE(ni);
 				ieee80211_keyix_t keyix;
 
-				ATH_RSSI_LPF(an->an_avgrssi, rs->rs_rssi);
+				ATH_RSSI_LPF(ATH_NODE(ni)->an_avgrssi, rs->rs_rssi);
 				type = ieee80211_input(ni, skb,	rs->rs_rssi, bf->bf_tsf);
 				/*
 				 * If the station has a key cache slot assigned
@@ -6329,7 +6325,6 @@ rx_accept:
 				if (keyix != IEEE80211_KEYIX_NONE &&
 				    sc->sc_keyixmap[keyix] == NULL)
 					sc->sc_keyixmap[keyix] = ieee80211_ref_node(ni);
-				an = NULL;
 				ieee80211_unref_node(&ni);
 			} else
 				type = ieee80211_input_all(ic, skb, rs->rs_rssi, bf->bf_tsf);
@@ -6679,7 +6674,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 				flags |= HAL_TXDESC_CTSENA;
 				type = HAL_PKT_TYPE_GRP_POLL;
 			}
-			if (i == 0 && amode == HAL_ANTENNA_FIXED_A ) {
+			if (i == 0 && amode == HAL_ANTENNA_FIXED_A) {
 				flags |= HAL_TXDESC_CLRDMASK;
 				head = bf;
 			}
@@ -7181,12 +7176,12 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	u_int8_t antenna;
 	struct ieee80211_mrr mrr;
 
-	wh = (struct ieee80211_frame *) skb->data;
+	wh = (struct ieee80211_frame *)skb->data;
 	isprot = wh->i_fc[1] & IEEE80211_FC1_PROT;
 	ismcast = IEEE80211_IS_MULTICAST(wh->i_addr1);
 	hdrlen = ieee80211_anyhdrsize(wh);
 	istxfrag = (wh->i_fc[1] & IEEE80211_FC1_MORE_FRAG) ||
-		(((le16toh(*(__le16 *) &wh->i_seq[0]) >>
+		(((le16toh(*(__le16 *)&wh->i_seq[0]) >>
 		IEEE80211_SEQ_FRAG_SHIFT) & IEEE80211_SEQ_FRAG_MASK) > 0);
 
 	pktlen = skb->len;
@@ -7297,7 +7292,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	/* setup descriptors */
 	ds = bf->bf_desc;
 #ifdef ATH_SUPERG_XR
-	if (vap->iv_flags & IEEE80211_F_XR )
+	if (vap->iv_flags & IEEE80211_F_XR)
 		rt = sc->sc_xr_rates;
 	else
 		rt = sc->sc_currates;
@@ -7415,7 +7410,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	}
 
 #ifdef ATH_SUPERG_XR
-	if (vap->iv_flags & IEEE80211_F_XR ) {
+	if (vap->iv_flags & IEEE80211_F_XR) {
 		txq = sc->sc_xrtxq;
 		if (!txq)
 			txq = sc->sc_ac2q[WME_AC_BK];
@@ -8432,7 +8427,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 static void
 ath_mib_enable(unsigned long arg)
 {
-	struct ath_softc *sc = (struct ath_softc *) arg;
+	struct ath_softc *sc = (struct ath_softc *)arg;
 
 	sc->sc_imask |= HAL_INT_MIB;
 	ath_hal_intrset(sc->sc_ah, sc->sc_imask);
@@ -8445,7 +8440,7 @@ ath_mib_enable(unsigned long arg)
 static void
 ath_calibrate(unsigned long arg)
 {
-	struct net_device *dev = (struct net_device *) arg;
+	struct net_device *dev = (struct net_device *)arg;
 	struct ath_softc *sc = dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211com *ic = &sc->sc_ic;
@@ -8497,7 +8492,7 @@ ath_calibrate(unsigned long arg)
 
 	DPRINTF(sc, ATH_DEBUG_CALIBRATE, "%s: channel %u/%x -- IQ %s.\n",
 		__func__, sc->sc_curchan.channel, sc->sc_curchan.channelFlags,
-		isIQdone ? "done" : "not done" );
+		isIQdone ? "done" : "not done");
 
 	sc->sc_cal_ch.expires = jiffies + (ath_calinterval * HZ);
 	add_timer(&sc->sc_cal_ch);
@@ -8616,7 +8611,8 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		 * disable beacon interrupts.
 		 */
 		TAILQ_FOREACH(tmpvap, &ic->ic_vaps, iv_next) {
-			if (tmpvap != vap && tmpvap->iv_state == IEEE80211_S_RUN )
+			if ((tmpvap != vap) && 
+					(tmpvap->iv_state == IEEE80211_S_RUN))
 				break;
 		}
 		if (!tmpvap) {
@@ -8658,7 +8654,7 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		ath_hal_setassocid(ah, sc->sc_curbssid, sc->sc_curaid);
 
 	if ((vap->iv_opmode != IEEE80211_M_STA) &&
-		 (vap->iv_flags & IEEE80211_F_PRIVACY)) {
+			(vap->iv_flags & IEEE80211_F_PRIVACY)) {
 		for (i = 0; i < IEEE80211_WEP_NKID; i++)
 			if (ath_hal_keyisvalid(ah, i))
 				ath_hal_keysetmac(ah, i, ni->ni_bssid);
@@ -8703,8 +8699,8 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			/* Set default key index for static wep case */
 			ni->ni_ath_defkeyindex = IEEE80211_INVAL_DEFKEY;
 			if (((vap->iv_flags & IEEE80211_F_WPA) == 0) &&
-			    (ni->ni_authmode != IEEE80211_AUTH_8021X) &&
-			    (vap->iv_def_txkey != IEEE80211_KEYIX_NONE)) {
+					(ni->ni_authmode != IEEE80211_AUTH_8021X) &&
+					(vap->iv_def_txkey != IEEE80211_KEYIX_NONE)) {
 				ni->ni_ath_defkeyindex = vap->iv_def_txkey;
 			}
 
@@ -8723,8 +8719,9 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			 * needs to be reconfigured.
 			 */
 			TAILQ_FOREACH(tmpvap, &ic->ic_vaps, iv_next) {
-				if (tmpvap != vap && tmpvap->iv_state == IEEE80211_S_RUN &&
-					tmpvap->iv_opmode == IEEE80211_M_HOSTAP)
+				if ((tmpvap != vap) && 
+						(tmpvap->iv_state == IEEE80211_S_RUN) &&
+						(tmpvap->iv_opmode == IEEE80211_M_HOSTAP))
 					break;
 			}
 			if (!tmpvap)
@@ -8732,14 +8729,13 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			break;
 		case IEEE80211_M_STA:
 #ifdef ATH_SUPERG_COMP
-			/* have we negotiated compression? */
+			/* Have we negotiated compression? */
 			if (!(vap->iv_ath_cap & ni->ni_ath_flags & IEEE80211_NODE_COMP))
 				ni->ni_ath_flags &= ~IEEE80211_NODE_COMP;
 #endif
-			/*
-			 * Allocate a key cache slot to the station.
-			 */
+			/* Allocate a key cache slot to the station. */
 			ath_setup_keycacheslot(sc, ni);
+
 			/*
 			 * Record negotiated dynamic turbo state for
 			 * use by rate control modules.
@@ -8786,7 +8782,7 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		sc->sc_halstats.ns_avgtxrssi = ATH_RSSI_DUMMY_MARKER;
 		/* if it is a DFS channel and has not been checked for radar
 		 * do not let the 80211 state machine to go to RUN state. */
-		if (sc->sc_dfswait && vap->iv_opmode == IEEE80211_M_HOSTAP ) {
+		if (sc->sc_dfswait && vap->iv_opmode == IEEE80211_M_HOSTAP) {
 			/* push the VAP to RUN state once DFS is cleared */
 			DPRINTF(sc, ATH_DEBUG_STATE, "%s: %s: VAP  -> DFS_WAIT\n",
 				__func__, DEV_NAME(dev));
@@ -8816,18 +8812,16 @@ done:
 	/* Invoke the parent method to complete the work. */
 	error = avp->av_newstate(vap, nstate, arg);
 
-	/* Finally, start any timers. */
-	if (nstate == IEEE80211_S_RUN) {
-		/* start periodic recalibration timer */
-		mod_timer(&sc->sc_cal_ch, jiffies + (ath_calinterval * HZ));
-	}
-
-#ifdef ATH_SUPERG_XR
-	if (vap->iv_flags & IEEE80211_F_XR &&
-		nstate == IEEE80211_S_RUN)
-		ATH_SETUP_XR_VAP(sc, vap, rfilt);
-	if (vap->iv_flags & IEEE80211_F_XR &&
-		nstate == IEEE80211_S_INIT && sc->sc_xrgrppoll)
+	/* Finally, restart the periodic recalibration timer */
+	if (nstate == IEEE80211_S_RUN)
+  		mod_timer(&sc->sc_cal_ch, jiffies + (ath_calinterval * HZ));
+  
+  #ifdef ATH_SUPERG_XR
+	if ((vap->iv_flags & IEEE80211_F_XR) &&
+			(nstate == IEEE80211_S_RUN))
+  		ATH_SETUP_XR_VAP(sc, vap, rfilt);
+	if ((vap->iv_flags & IEEE80211_F_XR) && 
+			(nstate == IEEE80211_S_INIT) && (sc->sc_xrgrppoll))
 		ath_grppoll_stop(vap);
 #endif
 bad:
@@ -8843,7 +8837,7 @@ bad:
  *
  * Context: Timer (softIRQ) */
 static void
-ath_check_dfs_clear(unsigned long data )
+ath_check_dfs_clear(unsigned long data)
 {
 	struct ath_softc *sc = (struct ath_softc *)data;
 	struct ieee80211com *ic = &sc->sc_ic;
@@ -8881,7 +8875,7 @@ ath_check_dfs_clear(unsigned long data )
 				mod_timer(&sc->sc_cal_ch, jiffies + 
 						(ath_calinterval * HZ));
 #ifdef ATH_SUPERG_XR
-				if (vap->iv_flags & IEEE80211_F_XR ) {
+				if (vap->iv_flags & IEEE80211_F_XR) {
 					u_int32_t rfilt = 0;
 					rfilt = ath_calcrxfilter(sc);
 					ATH_SETUP_XR_VAP(sc, vap, rfilt);
@@ -9213,7 +9207,7 @@ ath_getchannels(struct net_device *dev, u_int cc,
 static void
 ath_led_done(unsigned long arg)
 {
-	struct ath_softc *sc = (struct ath_softc *) arg;
+	struct ath_softc *sc = (struct ath_softc *)arg;
 
 	sc->sc_blinking = 0;
 }
@@ -9225,7 +9219,7 @@ ath_led_done(unsigned long arg)
 static void
 ath_led_off(unsigned long arg)
 {
-	struct ath_softc *sc = (struct ath_softc *) arg;
+	struct ath_softc *sc = (struct ath_softc *)arg;
 
 	ath_hal_gpioset(sc->sc_ah, sc->sc_ledpin, !sc->sc_ledon);
 	sc->sc_ledtimer.function = ath_led_done;
@@ -9815,7 +9809,7 @@ ath_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		if (!capable(CAP_NET_ADMIN))
 			error = -EPERM;
 		else
-			error = ath_ioctl_diag(sc, (struct ath_diag *) ifr);
+			error = ath_ioctl_diag(sc, (struct ath_diag *)ifr);
 		break;
 	case SIOCETHTOOL:
 		if (copy_from_user(&cmd, ifr->ifr_data, sizeof(cmd)))

@@ -614,8 +614,8 @@ ieee80211_sta_join1(struct ieee80211_node *selbs)
 	 * Check if old+new node have the same ssid in which
 	 * case we can reassociate when operating in sta mode.
 	 */
-	canreassoc = (obss != NULL &&
-		vap->iv_state == IEEE80211_S_RUN && ssid_equal(obss, selbs));
+	canreassoc = ((obss != NULL) &&
+		(vap->iv_state == IEEE80211_S_RUN) && ssid_equal(obss, selbs));
 	vap->iv_bss = selbs;
 	if (obss != NULL)
 		ieee80211_unref_node(&obss);
@@ -734,8 +734,8 @@ ieee80211_sta_leave(struct ieee80211_node *ni)
 	struct ieee80211vap *vap = ni->ni_vap;
 
 	/* WDS/Repeater: Stop software beacon timer for STA */
-	if (vap->iv_opmode == IEEE80211_M_STA &&
-	    vap->iv_flags_ext & IEEE80211_FEXT_SWBMISS) {
+	if ((vap->iv_opmode == IEEE80211_M_STA) &&
+			(vap->iv_flags_ext & IEEE80211_FEXT_SWBMISS)) {
 		del_timer(&vap->iv_swbmiss);
 	}
 

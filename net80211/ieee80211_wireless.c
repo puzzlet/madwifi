@@ -4173,7 +4173,7 @@ get_sta_info(void *arg, struct ieee80211_node *ni)
 		si->isi_rxseqs[0] = ni->ni_rxseqs[0];
 	}
 	si->isi_uapsd = ni->ni_uapsd;
-	if ( vap == req->vap->iv_xrvap)
+	if (vap == req->vap->iv_xrvap)
 		si->isi_opmode = IEEE80211_STA_OPMODE_XR;
 	else
 		si->isi_opmode = IEEE80211_STA_OPMODE_NORMAL;

@@ -407,7 +407,7 @@ ieee80211_fix_rate(struct ieee80211_node *ni, int flags)
 	srs = &ic->ic_sup_rates[ieee80211_chan2mode(ni->ni_chan)];
 	nrs = &ni->ni_rates;
 	fixedrate = IEEE80211_FIXED_RATE_NONE;
-	for (i = 0; i < nrs->rs_nrates; ) {
+	for (i = 0; i < nrs->rs_nrates;) {
 		ignore = 0;
 		if (flags & IEEE80211_F_DOSORT) {
 			/*
@@ -1268,7 +1268,8 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 		ieee80211_state_name[ostate], ieee80211_state_name[nstate]);
 	vap->iv_state = nstate;			/* state transition */
 	del_timer(&vap->iv_mgtsend);
-	if (vap->iv_opmode != IEEE80211_M_HOSTAP && ostate != IEEE80211_S_SCAN)
+	if ((vap->iv_opmode != IEEE80211_M_HOSTAP) && 
+			(ostate != IEEE80211_S_SCAN))
 		ieee80211_cancel_scan(vap);	/* background scan */
 	ni = vap->iv_bss;			/* NB: no reference held */
 	switch (nstate) {
@@ -1682,11 +1683,11 @@ ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int ar
 		break;
 
 	case IEEE80211_S_RUN:
-		if (ostate == IEEE80211_S_SCAN ||		/* AP coming out of scan */
-		    vap->iv_opmode == IEEE80211_M_STA) {	/* STA in WDS/Repeater needs to bring up other VAPs  */
+		if ((ostate == IEEE80211_S_SCAN) ||		/* AP coming out of scan */
+		    (vap->iv_opmode == IEEE80211_M_STA)) {	/* STA in WDS/Repeater needs to bring up other VAPs  */
 			__ieee80211_newstate(vap, nstate, arg);
 
-			/* bring up all other vaps pending on the scan*/
+			/* bring up all other vaps pending on the scan */
 			TAILQ_FOREACH(tmpvap, &ic->ic_vaps, iv_next) {
 				if (vap != tmpvap) {
 					if (tmpvap->iv_flags_ext & IEEE80211_FEXT_SCAN_PENDING) {
@@ -1700,7 +1701,7 @@ ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int ar
 		break;
 
 	case IEEE80211_S_INIT:
-		if (ostate == IEEE80211_S_INIT && vap->iv_flags_ext & IEEE80211_FEXT_SCAN_PENDING)
+		if (ostate == IEEE80211_S_INIT)
 			vap->iv_flags_ext &= ~IEEE80211_FEXT_SCAN_PENDING;
 		/* fall through */
 

@@ -212,15 +212,15 @@ struct wmeParams {
 
 struct chanAccParams{
 	/* XXX: is there any reason to have multiple instances of cap_info_count??? */
-	u_int8_t cap_info_count;		 		/* ver. of the current param set */
-	struct wmeParams cap_wmeParams[WME_NUM_AC];	/*WME params for each access class */
+	u_int8_t cap_info_count;		 	/* ver. of the current param set */
+	struct wmeParams cap_wmeParams[WME_NUM_AC];	/* WME params for each access class */
 };
 
 struct ieee80211_wme_state {
 	u_int32_t wme_flags;
 #define	WME_F_AGGRMODE	0x00000001	/* STATUS: WME aggressive mode */
 
-	u_int wme_hipri_traffic;			/* VI/VO frames in beacon interval */
+	u_int wme_hipri_traffic;		/* VI/VO frames in beacon interval */
 	u_int wme_hipri_switch_thresh;		/* aggressive mode switch threshold */
 	u_int wme_hipri_switch_hysteresis;	/* aggressive mode switch hysteresis */
 

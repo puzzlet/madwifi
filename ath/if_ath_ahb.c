@@ -155,7 +155,7 @@ ahb_disable_wmac(u_int16_t devid, u_int16_t wlanNum)
 		((devid & AR5315_REV_MAJ_M) == AR5317_REV_MAJ)) {
 		u_int32_t *en = (u_int32_t *) AR5315_AHB_ARB_CTL;
 
-		KASSERT(wlanNum == 0, ("invalid wlan # %d", wlanNum) );
+		KASSERT(wlanNum == 0, ("invalid wlan # %d", wlanNum));
 
 		/* Enable Arbitration for WLAN */
 		*en &= ~AR5315_ARB_WLAN;

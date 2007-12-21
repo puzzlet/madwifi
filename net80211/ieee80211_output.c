@@ -320,7 +320,7 @@ void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 	skb->dev = vap->iv_ic->ic_dev;
 
 	ni = SKB_CB(skb)->ni;
-	if ( dev_queue_xmit(skb) == NET_XMIT_DROP ) {
+	if (dev_queue_xmit(skb) == NET_XMIT_DROP) {
 		/* If queue dropped the packet because device was
 		 * too busy */
 		vap->iv_devstats.tx_dropped++;
@@ -1754,7 +1754,7 @@ ieee80211_send_probereq(struct ieee80211_node *ni,
 		ether_sprintf(wh->i_addr1),
 		ieee80211_chan2ieee(ic, ic->ic_curchan));
 
-	(void) ic->ic_mgtstart(ic, skb);
+	(void)ic->ic_mgtstart(ic, skb);
 	return 0;
 }
 

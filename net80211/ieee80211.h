@@ -503,9 +503,13 @@ struct ieee80211_wme_param {
 #define WME_CAPINFO_UAPSD_MAXSP_SHIFT		5
 #define WME_CAPINFO_UAPSD_MAXSP_MASK		0x3
 #define WME_CAPINFO_IE_OFFSET			8
-#define WME_UAPSD_MAXSP(_qosinfo) (((_qosinfo) >> WME_CAPINFO_UAPSD_MAXSP_SHIFT) & WME_CAPINFO_UAPSD_MAXSP_MASK)
-#define WME_UAPSD_AC_ENABLED(_ac, _qosinfo) ( (1<<(3 - (_ac))) &   \
-		(((_qosinfo) >> WME_CAPINFO_UAPSD_ACFLAGS_SHIFT) & WME_CAPINFO_UAPSD_ACFLAGS_MASK) )
+#define WME_UAPSD_MAXSP(_qosinfo)					\
+		(((_qosinfo) >> WME_CAPINFO_UAPSD_MAXSP_SHIFT) & 	\
+		 WME_CAPINFO_UAPSD_MAXSP_MASK)
+#define WME_UAPSD_AC_ENABLED(_ac, _qosinfo)				\
+		((1 << (3 - (_ac))) & (					\
+		 ((_qosinfo) >> WME_CAPINFO_UAPSD_ACFLAGS_SHIFT) &	\
+		 WME_CAPINFO_UAPSD_ACFLAGS_MASK))
 
 /*
  * Atheros Advanced Capability information element.

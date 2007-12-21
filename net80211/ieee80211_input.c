@@ -1146,7 +1146,7 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 			skb1->protocol = __constant_htons(ETH_P_802_2);
 			/* XXX insert vlan tag before queue it? */
 			ni_tmp = SKB_CB(skb1)->ni; /* remember node so we can free it */
-			if ( dev_queue_xmit(skb1) == NET_XMIT_DROP ) {
+			if (dev_queue_xmit(skb1) == NET_XMIT_DROP) {
 				/* If queue dropped the packet because device was
 				 * too busy */
 				vap->iv_devstats.tx_dropped++;
@@ -1659,7 +1659,7 @@ bad:
 		IEEE80211_DISCARD(vap, IEEE80211_MSG_ELEMID,		\
 			wh, ieee80211_mgt_subtype_name[subtype >>	\
 				IEEE80211_FC0_SUBTYPE_SHIFT],		\
-			"%s", "no " #__elem );				\
+			"%s", "no " #__elem);				\
 		vap->iv_stats.is_rx_elem_missing++;			\
 		return;							\
 	}								\
@@ -3024,7 +3024,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
  * XR vap does not process  probe requests.
  */
 #ifdef ATH_SUPERG_XR
-	if (vap->iv_flags & IEEE80211_F_XR )
+	if (vap->iv_flags & IEEE80211_F_XR)
 		return;
 #endif
 		/*

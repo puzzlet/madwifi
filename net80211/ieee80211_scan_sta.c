@@ -908,7 +908,7 @@ notfound:
 	st->st_action = ss->ss_ops->scan_default;
 	if (action)
 		st->st_action = action;
-	if ((selbss = select_bss(ss, vap)) == NULL ) {
+	if ((selbss = select_bss(ss, vap)) == NULL) {
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
 			"%s: select_bss failed\n", __func__);
 		goto notfound;
@@ -1300,7 +1300,7 @@ adhoc_pick_bss(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 	 */
 	/* NB: unlocked read should be ok */
 	if (TAILQ_FIRST(&st->st_entry) == NULL ||
-		(selbs = select_bss(ss, vap)) == NULL ) {
+		(selbs = select_bss(ss, vap)) == NULL) {
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
 			"%s: no scan candidate\n", __func__);
 		if (vap->iv_des_nssid) {
