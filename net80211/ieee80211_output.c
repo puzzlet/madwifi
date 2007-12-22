@@ -706,8 +706,8 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 		int n = 0;
 		if (need_headroom > skb_headroom(skb))
 			n = need_headroom - skb_headroom(skb);
-		if (pskb_expand_head(skb, n,
-			need_tailroom - skb_tailroom(skb), GFP_ATOMIC)) {
+		if (pskb_expand_head(skb, n, need_tailroom - 
+					skb_tailroom(skb), GFP_ATOMIC)) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
 				"%s: cannot expand storage (tail)\n", __func__);
 			vap->iv_stats.is_tx_nobuf++;
