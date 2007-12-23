@@ -52,6 +52,11 @@
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_proto.h>
 
+#ifndef	NETDEV_TX_OK
+#define	NETDEV_TX_OK	0
+#define	NETDEV_TX_BUSY	1
+#endif
+
 static void ieee80211_set_tim(struct ieee80211_node *ni, int set);
 
 void
@@ -205,9 +210,10 @@ ieee80211_set_tim(struct ieee80211_node *ni, int set)
  * The new packet is placed on the node's saved queue, and the TIM
  * is changed, if necessary.
  */
-void
-ieee80211_pwrsave(struct ieee80211_node *ni, struct sk_buff *skb)
+int
+ieee80211_pwrsave(struct sk_buff *skb)
 {
+	struct ieee80211_node *ni = SKB_CB(skb)->ni;
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
 	struct sk_buff *tail;
@@ -226,7 +232,7 @@ ieee80211_pwrsave(struct ieee80211_node *ni, struct sk_buff *skb)
 #endif
 		ieee80211_unref_node(&SKB_CB(skb)->ni);
 		ieee80211_dev_kfree_skb(&skb);
-		return;
+		return NETDEV_TX_BUSY;
 	}
 
 	/*
@@ -253,6 +259,8 @@ ieee80211_pwrsave(struct ieee80211_node *ni, struct sk_buff *skb)
 
 	if (qlen == 1 && vap->iv_set_tim != NULL)
 		vap->iv_set_tim(ni, 1);
+
+	return NETDEV_TX_OK;
 }
 
 /*
@@ -331,7 +339,7 @@ ieee80211_node_pwrsave(struct ieee80211_node *ni, int enable)
 				skb->dev = vap->iv_dev;		/* XXX? unnecessary */
 #endif
 
-			ieee80211_parent_queue_xmit(skb);
+			(void)ieee80211_parent_queue_xmit(skb);
 		}
 		vap->iv_set_tim(ni, 0);
 	}
@@ -372,7 +380,7 @@ ieee80211_sta_pwrsave(struct ieee80211vap *vap, int enable)
 				IEEE80211_NODE_SAVEQ_UNLOCK_IRQ(ni);
 				if (skb == NULL)
 					break;
-				ieee80211_parent_queue_xmit(skb);
+				(void)ieee80211_parent_queue_xmit(skb);
 			}
 		}
 	} else {

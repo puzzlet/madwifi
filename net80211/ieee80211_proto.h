@@ -71,9 +71,8 @@ void ieee80211_saveie(u_int8_t **, const u_int8_t *);
 void ieee80211_saveath(struct ieee80211_node *, u_int8_t *);
 void ieee80211_recv_mgmt(struct ieee80211_node *, struct sk_buff *,
 	int, int, u_int64_t);
-void ieee80211_sta_pwrsave(struct ieee80211vap *, int);
 int ieee80211_hardstart(struct sk_buff *, struct net_device *);
-void ieee80211_parent_queue_xmit(struct sk_buff *);
+int ieee80211_parent_queue_xmit(struct sk_buff *);
 int ieee80211_send_nulldata(struct ieee80211_node *);
 int ieee80211_send_qosnulldata(struct ieee80211_node *, int);
 int ieee80211_send_mgmt(struct ieee80211_node *, int, int);
@@ -83,7 +82,6 @@ int ieee80211_send_probereq(struct ieee80211_node *,
 	const u_int8_t bssid[IEEE80211_ADDR_LEN],
 	const u_int8_t *, size_t, const void *, size_t);
 struct sk_buff *ieee80211_encap(struct ieee80211_node *, struct sk_buff *, int *);
-void ieee80211_pwrsave(struct ieee80211_node *, struct sk_buff *);
 
 void ieee80211_reset_erp(struct ieee80211com *, enum ieee80211_phymode);
 void ieee80211_set_shortslottime(struct ieee80211com *, int);

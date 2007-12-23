@@ -232,8 +232,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 		ieee80211_monitor_encap(vap, skb);
-		ieee80211_parent_queue_xmit(skb);
-		return 0;
+		return ieee80211_parent_queue_xmit(skb);
 	}
 	
 	/* Cancel any running BG scan */
@@ -248,11 +247,11 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		ni = ieee80211_find_txnode(vap, vap->wds_mac);
 	else
 		ni = ieee80211_find_txnode(vap, eh->ether_dhost);
-
 	if (ni == NULL) {
 		/* NB: ieee80211_find_txnode does stat+msg */
 		goto bad;
 	}
+
 	/* calculate priority so drivers can find the TX queue */
 	if (ieee80211_classify(ni, skb)) {
 		IEEE80211_NOTE(vap, IEEE80211_MSG_OUTPUT, ni,
@@ -268,14 +267,11 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		/* XXXAPSD: assuming triggerable means deliverable */
 		M_FLAG_SET(skb, M_UAPSD);
 	} else if ((ni->ni_flags & IEEE80211_NODE_PWR_MGT)) {
-		/*
-		 * Station in power save mode; stick the frame
+		/* Station in power save mode; stick the frame
 		 * on the STA's power save queue and continue.
-		 * We'll get the frame back when the time is right.
-		 */
-		ieee80211_pwrsave(ni, skb);
+		 * We'll get the frame back when the time is right. */
 		ieee80211_unref_node(&ni);
-		return 0;
+		return ieee80211_pwrsave(skb);
 	}
 
 	dev->trans_start = jiffies;
@@ -293,13 +289,13 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 			SKB_CB(skb1)->ni = ieee80211_find_txnode(vap->iv_xrvap, 
 						       eh->ether_dhost);
-			ieee80211_parent_queue_xmit(skb1);
+			/* Ignore this return code. */
+			(void)ieee80211_parent_queue_xmit(skb1);
 		}
 	}
 #endif
-	ieee80211_parent_queue_xmit(skb);
 	ieee80211_unref_node(&ni);
-	return 0;
+	return ieee80211_parent_queue_xmit(skb);
 
 bad:
 	if (skb != NULL)
@@ -309,8 +305,9 @@ bad:
 	return 0;
 }
 
-void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
+int ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 	struct ieee80211vap *vap = skb->dev->priv;
+	int ret;
 
 	vap->iv_devstats.tx_packets++;
 	vap->iv_devstats.tx_bytes += skb->len;
@@ -319,8 +316,10 @@ void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 	/* Dispatch the packet to the parent device */
 	skb->dev = vap->iv_ic->ic_dev;
 
-	if (dev_queue_xmit(skb) == NET_XMIT_DROP)
+	if ((ret = dev_queue_xmit(skb)) == NET_XMIT_DROP)
 		vap->iv_devstats.tx_dropped++;
+
+	return ret;
 }
 
 /*

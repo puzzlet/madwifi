@@ -3731,7 +3731,7 @@ ieee80211_recv_pspoll(struct ieee80211_node *ni, struct sk_buff *skb0)
 	}
 	M_PWR_SAV_SET(skb);		/* ensure MORE_DATA bit is set correctly */
 
- 	ieee80211_parent_queue_xmit(skb);	/* Submit to parent device, including updating stats */
+ 	(void)ieee80211_parent_queue_xmit(skb);	/* Submit to parent device, including updating stats */
 }
 
 #ifdef ATH_SUPERG_FF

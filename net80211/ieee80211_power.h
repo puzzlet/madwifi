@@ -47,7 +47,7 @@ struct ieee80211_node;
 
 int	ieee80211_node_saveq_drain(struct ieee80211_node *);
 int	ieee80211_node_saveq_age(struct ieee80211_node *);
-void	ieee80211_pwrsave(struct ieee80211_node *, struct sk_buff *);
+int	ieee80211_pwrsave(struct sk_buff *);
 void	ieee80211_node_pwrsave(struct ieee80211_node *, int);
 void	ieee80211_sta_pwrsave(struct ieee80211vap *, int);
 #endif /* _NET80211_IEEE80211_POWER_H_ */
