@@ -278,10 +278,11 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		return 0;
 	}
 
+	dev->trans_start = jiffies;
+
 #ifdef ATH_SUPERG_XR
 	/* Broadcast/multicast packets need to be sent on XR vap in addition to
 	 * normal vap. */
-
 	if (vap->iv_xrvap && (ni == vap->iv_bss) &&
 	    vap->iv_xrvap->iv_sta_assoc) {
 		struct sk_buff *skb1 = skb_clone(skb, GFP_ATOMIC);
