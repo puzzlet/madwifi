@@ -311,7 +311,6 @@ bad:
 
 void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 	struct ieee80211vap *vap = skb->dev->priv;
-	struct ieee80211_node *ni;
 
 	vap->iv_devstats.tx_packets++;
 	vap->iv_devstats.tx_bytes += skb->len;
@@ -320,21 +319,8 @@ void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 	/* Dispatch the packet to the parent device */
 	skb->dev = vap->iv_ic->ic_dev;
 
-	ni = SKB_CB(skb)->ni;
-	if (dev_queue_xmit(skb) == NET_XMIT_DROP) {
-		/* If queue dropped the packet because device was
-		 * too busy */
+	if (dev_queue_xmit(skb) == NET_XMIT_DROP)
 		vap->iv_devstats.tx_dropped++;
-		if (ni != NULL) {
-			/* node reference was leaked */
-			ieee80211_unref_node(&ni);
-		}
-	}
-	else {
-		/* node reference was not leaked, forget about it */
-		ni = NULL;
-	}
-	skb = NULL; /* skb is no longer ours */
 }
 
 /*
