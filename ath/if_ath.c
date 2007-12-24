@@ -1547,13 +1547,13 @@ ath_extend_tsf(u_int64_t tsf, u_int32_t rstamp)
 
 	u_int64_t result;
 
-	result = (tsf & ~TSTAMP_MASK) | rstamp;
+	result = (tsf & ~TSTAMP_RX_MASK) | rstamp;
 	if (result > tsf) {
-		if ((result - tsf) > (TSTAMP_MASK / 2))
-			result -= (TSTAMP_MASK + 1);
+		if ((result - tsf) > (TSTAMP_RX_MASK / 2))
+			result -= (TSTAMP_RX_MASK + 1);
 	} else {
-		if ((tsf - result) > (TSTAMP_MASK / 2))
-			result += (TSTAMP_MASK + 1);
+		if ((tsf - result) > (TSTAMP_RX_MASK / 2))
+			result += (TSTAMP_RX_MASK + 1);
 	}
 
 	return result;
