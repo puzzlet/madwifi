@@ -303,11 +303,19 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 {
 	struct ieee80211vap *vap, *next;
 	struct ath_desc *ds = bf->bf_desc;
-	int noise = 0;
-	int antenna = 0;
-	int ieeerate = 0;
+	int noise = 0, antenna = 0, ieeerate = 0;
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
+	unsigned int mon_hdrspace = A_MAX(sizeof(struct ath_tx_radiotap_header),
+				    (A_MAX(sizeof(struct wlan_ng_prism2_header),
+					   ATHDESC_HEADER_SIZE)));
+
+	if ((skb_headroom(skb) < mon_hdrspace) &&
+			pskb_expand_head(skb, mon_hdrspace, 0, GFP_ATOMIC)) {
+		printk("No headroom for monitor header - %s:%d %s\n", 
+				__FILE__, __LINE__, __func__);
+		return;
+	}
 
 	if (tx) {
 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;

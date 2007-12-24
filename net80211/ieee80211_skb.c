@@ -481,30 +481,26 @@ void ieee80211_dev_kfree_skb(struct sk_buff** pskb)
 {
 	struct sk_buff *skb;
 
-	/* Do not fail on null, we are going to use this in cleanup code */
+	/* Do not fail on null, as we are going to use this in cleanup code. */
 	if (!pskb || !(skb = *pskb))
 		return;
 
-	if (!skb_shared(skb)) {
-		/* Release the SKB references, for fragments of chain that are
-		 * unshared... starting at skb passed in. */
-		if (skb->prev == NULL) {
-			if (skb->next != NULL) {
-				skb->next->prev = NULL;
-			}
-			skb->next = NULL;
-		}
-		/* Release node reference, if any */
-		if (SKB_CB(skb)->ni != NULL) {
-#ifdef IEEE80211_DEBUG_REFCNT
-			ieee80211_unref_node_debug(&SKB_CB(skb)->ni, func, line);
-#else
-			ieee80211_unref_node(&SKB_CB(skb)->ni);
-#endif
-		}
+	/* Release the SKB references, for fragments of chain that are
+	 * unshared... starting at skb passed in. */
+	if (skb->prev == NULL) {
+		if (skb->next != NULL)
+			skb->next->prev = NULL;
+		skb->next = NULL;
 	}
 
-	/* Decrement the ref count for the skb, possibly freeing the memory */
+	if (SKB_CB(skb)->ni != NULL) {
+#ifdef IEEE80211_DEBUG_REFCNT
+		ieee80211_unref_node_debug(&SKB_CB(skb)->ni, func, line);
+#else
+		ieee80211_unref_node(&SKB_CB(skb)->ni);
+#endif
+	}
+
 #ifdef IEEE80211_DEBUG_REFCNT
 	unref_skb(skb, UNREF_USE_DEV_KFREE_SKB_ANY, 
 		  func, line, __func__, __LINE__);

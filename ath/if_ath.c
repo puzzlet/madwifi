@@ -1543,7 +1543,7 @@ ath_resume(struct net_device *dev)
 static __inline u_int64_t
 ath_extend_tsf(u_int64_t tsf, u_int32_t rstamp)
 {
-#define TSTAMP_MASK  0x7fff
+#define TSTAMP_RX_MASK  0x7fff
 
 	u_int64_t result;
 
@@ -1931,7 +1931,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 	/* SECOND PASS - FIX RX TIMESTAMPS */
 	if (count > 0) {
 		hw_tsf = ath_hal_gettsf64(ah);
-		if (last_rs_tstamp > (hw_tsf & TSTAMP_MASK)) {
+		if (last_rs_tstamp > (hw_tsf & TSTAMP_RX_MASK)) {
 			rollover++;
 			DPRINTF(sc, ATH_DEBUG_TSF,
 				"%s: %d rollover detected for hw_tsf=%10llx\n",
@@ -1960,8 +1960,8 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 				/* update last_rs_tstamp */
 				last_rs_tstamp = bf->bf_tsf;
 				bf->bf_tsf = 
-					(hw_tsf & ~TSTAMP_MASK) | bf->bf_tsf;
-				bf->bf_tsf -= rollover * (TSTAMP_MASK + 1);
+					(hw_tsf & ~TSTAMP_RX_MASK) | bf->bf_tsf;
+				bf->bf_tsf -= rollover * (TSTAMP_RX_MASK + 1);
 
 				DPRINTF(sc, ATH_DEBUG_TSF,
 					"%s: bf_tsf=%10llx hw_tsf=%10llx\n",
@@ -5865,124 +5865,70 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 	return 0;
 }
 
+/* This function calculates the presence of, and then removes any padding
+ * bytes between the frame header and frame body, and returns a modified 
+ * SKB. If padding is removed and copy_skb is specified, then a new SKB is 
+ * created, otherwise the same SKB is used.
+ *
+ * NB: MAY ALLOCATE */
+struct sk_buff *
+ath_skb_removepad(struct sk_buff *skb, unsigned int copy_skb)
+{
+	struct sk_buff *tskb = skb;
+	struct ieee80211_frame *wh = (struct ieee80211_frame *)skb->data;
+	unsigned int padbytes = 0, headersize = 0;
+
+	/* Only non-control frames have bodies, and hence padding. */
+	if (IEEE80211_FRM_HAS_BODY(wh)) {
+		headersize = ieee80211_anyhdrsize(wh);
+		padbytes = roundup(headersize, 4) - headersize;
+		if (padbytes > 0) {
+			if (copy_skb) {
+				/* Copy skb and remove HW pad bytes */
+				tskb = skb_copy(skb, GFP_ATOMIC);
+				if (tskb == NULL)
+					return NULL;
+				/* Reference any node from the source skb. */
+				if (SKB_CB(skb)->ni != NULL)
+					SKB_CB(tskb)->ni = ieee80211_ref_node(
+							SKB_CB(skb)->ni);
+			}
+			memmove(tskb->data + padbytes, tskb->data, headersize);
+			skb_pull(tskb, padbytes);
+		}
+  	}
+	return tskb;
+}
+
 /*
  * Add a prism2 header to a received frame and
  * dispatch it to capture tools like kismet.
  */
 static void
-ath_rx_capture(struct net_device *dev, const struct ath_buf *bf,
-		struct sk_buff *skb, u_int64_t rtsf)
+ath_capture(struct net_device *dev, const struct ath_buf *bf,
+		struct sk_buff *skb, u_int64_t tsf, unsigned int tx)
 {
 	struct ath_softc *sc = dev->priv;
 	struct ieee80211com *ic = &sc->sc_ic;
-	struct ieee80211_frame *wh = (struct ieee80211_frame *)skb->data;
-	struct sk_buff *tskb = skb;
-	unsigned int headersize;
-	int padbytes;
+	struct sk_buff *tskb = NULL;
   
   	KASSERT(ic->ic_flags & IEEE80211_F_DATAPAD,
   		("data padding not enabled?"));
   
-	/* Only non-control frames have bodies, and hence padding. */
-	if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=  
-			IEEE80211_FC0_TYPE_CTL) {
-		headersize = ieee80211_anyhdrsize(wh);
-		padbytes = roundup(headersize, 4) - headersize;
-		if (padbytes > 0) {
-			/* Copy skb and remove HW pad bytes */
-			tskb = skb_copy(skb, GFP_ATOMIC);
-			if (tskb == NULL)
-				return;
-			/* Reference any node from the source skb. */
-			if (SKB_CB(skb)->ni != NULL)
-				SKB_CB(tskb)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-			memmove(tskb->data + padbytes, tskb->data, headersize);
-			skb_pull(tskb, padbytes);
-		}
-  	}
+	if (sc->sc_nmonvaps <= 0)
+		return;
+
+	/* Never copy the SKB, as it is ours on the RX side, and this is the 
+	 * last process on the TX side and we only modify our own headers. */
+	tskb = ath_skb_removepad(skb, 0 /* Copy SKB */);
+	if (tskb == NULL)
+		return;
 	
-	ieee80211_input_monitor(ic, tskb, bf, 0, rtsf, sc);
-	if (tskb != skb)
-		ieee80211_dev_kfree_skb(&tskb);
-}
-
-
-static void
-ath_tx_capture(struct net_device *dev, const struct ath_buf *bf,  struct sk_buff *skb,
-		u_int64_t tsf)
-{
-	struct ath_softc *sc = dev->priv;
-	const struct ath_tx_status *ts = &bf->bf_dsstatus.ds_txstat;
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ieee80211_frame *wh;
-	unsigned int extra = A_MAX(sizeof(struct ath_tx_radiotap_header),
-				   A_MAX(sizeof(struct wlan_ng_prism2_header),
-					 ATHDESC_HEADER_SIZE));
-	u_int32_t tstamp;
-	unsigned int headersize;
-	int padbytes;
-
-	/* If the skb data is shared, we will copy it so we can strip padding
-	 * without affecting any other users. 
-	 * Note that it is uncommon to see copies with MadWifi, but we are
-	 * cautious here just in case. */
-	if (skb_shared(skb)) {
-		/* Remember the original SKB so we can free up our references */
-		struct sk_buff *skb_orig = skb;
-		skb = skb_copy(skb, GFP_ATOMIC);
-		if (skb == NULL) {
-			ieee80211_dev_kfree_skb(&skb_orig);
-			return;
-		}
-		/* If the clone works, bump the reference count for our copy. */
-		SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(skb_orig)->ni);
-		ieee80211_dev_kfree_skb(&skb_orig);
-	} else {
-		if (SKB_CB(skb)->ni != NULL) 
-			ieee80211_unref_node(&SKB_CB(skb)->ni);
-		skb_orphan(skb);
-	}
-
-	/* Only non-control frames have bodies, and hence padding. */
-	wh = (struct ieee80211_frame *)skb->data;
-	if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=  
-			IEEE80211_FC0_TYPE_CTL) {
-		headersize = ieee80211_anyhdrsize(wh);
-		padbytes = roundup(headersize, 4) - headersize;
-		if (padbytes > 0) {
-			/* Unlike in rx_capture, we're freeing the skb at the 
-			 * end anyway, so we don't need to worry about using a 
-			 * copy. */
-			memmove(skb->data + padbytes, skb->data, headersize);
-			skb_pull(skb, padbytes);
-		}
-	}
-
-	if ((skb_headroom(skb) < extra) &&
-	    pskb_expand_head(skb, extra, 0, GFP_ATOMIC)) {
-		printk("%s:%d %s\n", __FILE__, __LINE__, __func__);
-		goto done;
-	}
-
-	if (sc->sc_nmonvaps > 0) {
-		/* Pass up tsf clock in mactime
-		 * TX descriptor contains the transmit time in TUs,
-		 * (bits 25-10 of the TSF). */
-		tstamp = ts->ts_tstamp << 10;
-
-		if ((tsf & 0x3ffffff) < tstamp)
-			tsf -= 0x4000000;
-		tsf = ((tsf &~ 0x3ffffff) | tstamp);
-
-		ieee80211_input_monitor(ic, skb, bf, 1, tsf, sc);
-	}
-done:
-	/* Free only one skb ref, not subsequent linked skbs */
-	ieee80211_dev_kfree_skb(&skb);
+	ieee80211_input_monitor(ic, tskb, bf, tx, tsf, sc);
 }
 
 /*
- * Intercept management frames to collect beacon rssi data and to do
+ * Intercept management frames to collect beacon RSSI data and to do
  * ibss merges. This function is called for all management frames,
  * including those belonging to other BSS.
  */
@@ -6236,26 +6182,21 @@ rx_accept:
 		skb_put(skb, len);
 		skb->protocol = __constant_htons(ETH_P_CONTROL);
 
-		if (sc->sc_nmonvaps > 0) {
-			/*
-			 * Some vap is in monitor mode, so send to
-			 * ath_rx_capture for monitor encapsulation
-			 */
 #if 0
-			if (len < IEEE80211_ACK_LEN) {
-				DPRINTF(sc, ATH_DEBUG_RECV,
+		if (len < IEEE80211_ACK_LEN) {
+			DPRINTF(sc, ATH_DEBUG_RECV,
 					"%s: runt packet %d\n", __func__, len);
-				sc->sc_stats.ast_rx_tooshort++;
-				ieee80211_dev_kfree_skb(&skb);
-				goto rx_next;
-			}
+			sc->sc_stats.ast_rx_tooshort++;
+			ieee80211_dev_kfree_skb(&skb);
+			goto rx_next;
+		}
 #endif
-			ath_rx_capture(dev, bf, skb, bf->bf_tsf);
-			if (sc->sc_ic.ic_opmode == IEEE80211_M_MONITOR) {
-				/* no other VAPs need the packet */
-				ieee80211_dev_kfree_skb(&skb);
-				goto rx_next;
-			}
+		ath_capture(dev, bf, skb, bf->bf_tsf, 0 /* RX */);
+		if ((sc->sc_nmonvaps > 0) && 
+				(sc->sc_ic.ic_opmode == IEEE80211_M_MONITOR)) {
+			/* No other VAPs need the packet. */
+			ieee80211_dev_kfree_skb(&skb);
+			goto rx_next;
 		}
 
 		/*
@@ -7949,15 +7890,30 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 		}
 
 		{
+			u_int32_t tstamp;
+			/* Extend tstamp to a full TSF.
+			 * TX descriptor contains the transmit time in TUs,
+			 * (bits 25-10 of the TSF). */
+#define TSTAMP_TX_MASK	((2 ^ (27 - 1)) - 1)	/* First 27 bits. */
+
+			tstamp = ts->ts_tstamp << 10;
+			bf->bf_tsf = ((bf->bf_tsf & ~TSTAMP_TX_MASK) | tstamp);
+			if ((bf->bf_tsf & TSTAMP_TX_MASK) < tstamp)
+				bf->bf_tsf -= TSTAMP_TX_MASK + 1;
+		}
+
+		{
 			struct sk_buff *tskb = NULL, *skb = bf->bf_skb;
 #ifdef ATH_SUPERG_FF
 			unsigned int i;
 #endif
 
+			/* ath_capture modifies skb data; must be last process
+			 * in TX path. */
 			tskb = skb->next;
 			DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: free skb %p\n", 
 					__func__, bf->bf_skb);
-			ath_tx_capture(sc->sc_dev, bf, skb, tsf);
+			ath_capture(sc->sc_dev, bf, skb, bf->bf_tsf, 1 /* TX */);
 			skb = tskb;
 
 #ifdef ATH_SUPERG_FF
@@ -7967,14 +7923,13 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 				tskb = skb->next;
 				DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: capture/free skb %p\n",
 					__func__, skb);
-				ath_tx_capture(sc->sc_dev, bf, skb, tsf);
+				ath_capture(sc->sc_dev, bf, skb, bf->bf_tsf, 1 /* TX */);
 				skb = tskb;
 			}
 			bf->bf_numdescff = 0;
 #endif
 		}
 
-		bf->bf_skb = NULL;
 		ni = NULL;
 		ath_return_txbuf(sc, &bf);
 	}

@@ -603,13 +603,6 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 				need_tailroom += cip->ic_miclen;
 	}
 
-	if (skb_shared(skb)) {
-		/* Take our own reference to the node in the clone */
-		ieee80211_ref_node(SKB_CB(skb)->ni);
-		/* Unshare the node, decrementing users in the old skb */
-		skb = skb_unshare(skb, GFP_ATOMIC);
-	}
-
 #ifdef ATH_SUPERG_FF
 	if (isff) {
 		if (skb == NULL) {

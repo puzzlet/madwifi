@@ -186,6 +186,10 @@ struct ieee80211_ctlframe_addr2 {
 #define	IEEE80211_QOS_EOSP_S			4
 #define	IEEE80211_QOS_TID			0x0f
 
+#define IEEE80211_FRM_HAS_BODY(_wh)			\
+	(((_wh)->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=	\
+			IEEE80211_FC0_TYPE_CTL)
+
 /*
  * Country/Region Codes from MS WINNLS.H
  * Numbering from ISO 3166
