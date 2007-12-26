@@ -606,38 +606,40 @@ struct ath_softc {
 	struct ath_ratectrl *sc_rc;		/* tx rate control support */
 	struct ath_tx99 *sc_tx99; 		/* tx99 support */
 	void (*sc_setdefantenna)(struct ath_softc *, u_int);
-	unsigned int 	sc_invalid:1,		/* being detached */
-			sc_mrretry:1,		/* multi-rate retry support */
-			sc_softled:1,		/* enable LED gpio status */
-			sc_splitmic:1,		/* split TKIP MIC keys */
-			sc_needmib:1,		/* enable MIB stats intr */
-			sc_hasdiversity:1,	/* rx diversity available */
-			sc_diversity:1, 	/* enable rx diversity */
-			sc_olddiversity:1, 	/* diversity setting before XR enable */
-			sc_hasveol:1,		/* tx VEOL support */
-			sc_hastpc:1,		/* per-packet TPC support */
-			sc_dturbo:1,		/* dynamic turbo capable */
-			sc_dturbo_switch:1,	/* turbo switch mode*/
-			sc_dturbo_hold:1,	/* dynamic turbo hold state */
-			sc_rate_recn_state:1,	/* dynamic turbo state recmded by ratectrl */
-			sc_ignore_ar:1,		/* ignore AR during transition */
-			sc_ledstate:1,		/* LED on/off state */
-			sc_blinking:1,		/* LED blink operation active */
-			sc_beacons:1,		/* beacons running */
-			sc_hasbmask:1,		/* bssid mask support */
-			sc_mcastkey:1,		/* mcast key cache search */
-			sc_hastsfadd:1,		/* tsf adjust support */
-			sc_scanning:1,		/* scanning active */
-			sc_nostabeacons:1,	/* no beacons for station */
-			sc_xrgrppoll:1,		/* xr group polls are active */
-			sc_syncbeacon:1,	/* sync/resync beacon timers */
-			sc_hasclrkey:1,		/* CLR key supported */
-			sc_devstopped:1,	/* stopped due to of no tx bufs */
-			sc_stagbeacons:1,	/* use staggered beacons */
-			sc_dfswait:1,		/* waiting on channel for radar detect */
-			sc_ackrate:1,		/* send acks at high bitrate */
-			sc_hasintmit:1,		/* Interference mitigation */
-			sc_txcont:1;        	/* Is continuous transmit enabled? */
+
+	unsigned int 	sc_invalid:1;		/* being detached */
+	unsigned int	sc_mrretry:1;		/* multi-rate retry support */
+	unsigned int	sc_softled:1;		/* enable LED gpio status */
+	unsigned int	sc_splitmic:1;		/* split TKIP MIC keys */
+	unsigned int	sc_needmib:1;		/* enable MIB stats intr */
+	unsigned int	sc_hasdiversity:1;	/* rx diversity available */
+	unsigned int	sc_diversity:1;		/* enable rx diversity */
+	unsigned int	sc_olddiversity:1;	/* diversity setting before XR enable */
+	unsigned int	sc_hasveol:1;		/* tx VEOL support */
+	unsigned int	sc_hastpc:1;		/* per-packet TPC support */
+	unsigned int	sc_dturbo:1;		/* dynamic turbo capable */
+	unsigned int	sc_dturbo_switch:1;	/* turbo switch mode*/
+	unsigned int	sc_dturbo_hold:1;	/* dynamic turbo hold state */
+	unsigned int	sc_rate_recn_state:1;	/* dynamic turbo state recmded by ratectrl */
+	unsigned int	sc_ignore_ar:1;		/* ignore AR during transition */
+	unsigned int	sc_ledstate:1;		/* LED on/off state */
+	unsigned int	sc_blinking:1;		/* LED blink operation active */
+	unsigned int	sc_beacons:1;		/* beacons running */
+	unsigned int	sc_hasbmask:1;		/* bssid mask support */
+	unsigned int	sc_mcastkey:1;		/* mcast key cache search */
+	unsigned int	sc_hastsfadd:1;		/* tsf adjust support */
+	unsigned int	sc_scanning:1;		/* scanning active */
+	unsigned int	sc_nostabeacons:1;	/* no beacons for station */
+	unsigned int	sc_xrgrppoll:1;		/* xr group polls are active */
+	unsigned int	sc_syncbeacon:1;	/* sync/resync beacon timers */
+	unsigned int	sc_hasclrkey:1;		/* CLR key supported */
+	unsigned int	sc_devstopped:1;	/* stopped due to of no tx bufs */
+	unsigned int	sc_stagbeacons:1;	/* use staggered beacons */
+	unsigned int	sc_dfswait:1;		/* waiting on channel for radar detect */
+	unsigned int	sc_ackrate:1;		/* send acks at high bitrate */
+	unsigned int	sc_hasintmit:1;		/* Interference mitigation */
+	unsigned int	sc_txcont:1;		/* Is continuous transmit enabled? */
+
 	unsigned int sc_txcont_power; /* Continuous transmit power in 0.5dBm units */
 	unsigned int sc_txcont_rate;  /* Continuous transmit rate in Mbps */
 
