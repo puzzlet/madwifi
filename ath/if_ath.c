@@ -5941,6 +5941,11 @@ ath_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 	u_int64_t hw_tsf, beacon_tsf;
 	u_int32_t hw_tu;
 
+	DPRINTF(sc, ATH_DEBUG_BEACON,
+		"%s: vap:%p[" MAC_FMT "] ni:%p[" MAC_FMT "]\n",
+		__func__, vap, MAC_ADDR(vap->iv_bss->ni_bssid),
+		ni, MAC_ADDR(ni->ni_macaddr));
+
 	/*
 	 * Call up first so subsequent work can use information
 	 * potentially stored in the node (e.g. for ibss merge).
@@ -6231,6 +6236,27 @@ rx_accept:
 			ieee80211_dump_pkt(ic, skb->data, skb->len,
 				   sc->sc_hwmap[rs->rs_rate].ieeerate,
 				   rs->rs_rssi);
+
+		{
+			struct ieee80211_frame * wh =
+				(struct ieee80211_frame *) skb->data;
+
+			/* only print beacons */
+
+			if ((skb->len >= sizeof(struct ieee80211_frame)) &&
+			    ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK)
+			     == IEEE80211_FC0_TYPE_MGT) &&
+			    ((wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK)
+			     == IEEE80211_FC0_SUBTYPE_BEACON)) {
+
+				DPRINTF(sc, ATH_DEBUG_BEACON,
+					"%s: RA:" MAC_FMT " TA:" MAC_FMT
+					" BSSID:" MAC_FMT "\n",
+					__func__, MAC_ADDR(wh->i_addr1),
+					MAC_ADDR(wh->i_addr2),
+					MAC_ADDR(wh->i_addr3));
+			}
+		}
 
 		/*
 		 * Locate the node for sender, track state, and then
@@ -8597,6 +8623,10 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 	if (stamode && nstate == IEEE80211_S_RUN) {
 		sc->sc_curaid = ni->ni_associd;
 		IEEE80211_ADDR_COPY(sc->sc_curbssid, ni->ni_bssid);
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+			"%s: sc_curbssid " MAC_FMT " from " MAC_FMT "\n",
+			__func__, MAC_ADDR(sc->sc_curbssid),
+			MAC_ADDR(ni->ni_macaddr));
 	} else
 		sc->sc_curaid = 0;
 
@@ -8605,8 +8635,12 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		 sc->sc_curaid);
 
 	ath_hal_setrxfilter(ah, rfilt);
-	if (stamode)
+	if (stamode) {
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+			"%s: setassocid " MAC_FMT "\n",
+			__func__, MAC_ADDR(sc->sc_curbssid));
 		ath_hal_setassocid(ah, sc->sc_curbssid, sc->sc_curaid);
+	}
 
 	if ((vap->iv_opmode != IEEE80211_M_STA) &&
 			(vap->iv_flags & IEEE80211_F_PRIVACY)) {

@@ -665,4 +665,16 @@ ieee80211_anyhdrspace(struct ieee80211com *ic, const void *data)
 		size = roundup(size, sizeof(u_int32_t));
 	return size;
 }
+
+/* Macros to print MAC address used in 802.11 headers */
+
+#define MAC_FMT "%02x:%02x:%02x:%02x:%02x:%02x"
+#define MAC_ADDR(addr) \
+  ((unsigned char *)(addr)) [0], \
+  ((unsigned char *)(addr)) [1], \
+  ((unsigned char *)(addr)) [2], \
+  ((unsigned char *)(addr)) [3], \
+  ((unsigned char *)(addr)) [4], \
+  ((unsigned char *)(addr)) [5]
+
 #endif /* _NET80211_IEEE80211_VAR_H_ */

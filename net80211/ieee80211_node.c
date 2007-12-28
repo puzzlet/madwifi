@@ -306,12 +306,15 @@ ieee80211_create_ibss(struct ieee80211vap* vap, struct ieee80211_channel *chan)
 		"%s: creating ibss on channel %u\n", __func__,
 		ieee80211_chan2ieee(ic, chan));
 
-	/* Check to see if we already have a node for this mac 
+	/* Check to see if we already have a node for this mac
 	 * NB: we gain a node reference here
 	 */
 	ni = ieee80211_find_node(&ic->ic_sta, vap->iv_myaddr);
 	if (ni == NULL) {
 		ni = ieee80211_alloc_node_table(vap, vap->iv_myaddr);
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
+				  "%s: ni:%p allocated for " MAC_FMT "\n",
+				  __func__, ni, MAC_ADDR(vap->iv_myaddr));
 		if (ni == NULL) {
 			/* XXX recovery? */
 			return;
@@ -401,6 +404,9 @@ ieee80211_reset_bss(struct ieee80211vap *vap)
 	ieee80211_reset_erp(ic, ic->ic_curmode);
 
 	ni = ieee80211_alloc_node_table(vap, vap->iv_myaddr);
+	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
+			  "%s: ni:%p allocated for " MAC_FMT "\n",
+			  __func__, ni, MAC_ADDR(vap->iv_myaddr));
 	KASSERT(ni != NULL, ("unable to setup inital BSS node"));
 
 	/* New reference for caller */
@@ -551,12 +557,17 @@ ieee80211_ibss_merge(struct ieee80211_node *ni)
 #ifdef IEEE80211_DEBUG
 	struct ieee80211com *ic = ni->ni_ic;
 #endif
+	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
+			  "%s: ni:%p[" MAC_FMT "] iv_bss:%p[" MAC_FMT "]\n",
+			  __func__, ni, MAC_ADDR(ni->ni_macaddr),
+			  vap->iv_bss, MAC_ADDR(vap->iv_bss->ni_macaddr));
 
 	if (ni == vap->iv_bss ||
 	    IEEE80211_ADDR_EQ(ni->ni_bssid, vap->iv_bss->ni_bssid)) {
 		/* unchanged, nothing to do */
 		return 0;
 	}
+
 	if (!check_bss(vap, ni)) {
 		/* capabilities mismatch */
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
@@ -676,6 +687,9 @@ ieee80211_sta_join(struct ieee80211vap *vap,
 	ni = ieee80211_find_node(&ic->ic_sta, se->se_macaddr);
 	if (ni == NULL) {
 		ni = ieee80211_alloc_node_table(vap, se->se_macaddr);
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
+				  "%s: ni:%p allocated for " MAC_FMT "\n",
+				  __func__, ni, MAC_ADDR(se->se_macaddr));
 		if (ni == NULL) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
 			"%s: Unable to allocate node for BSS: %s\n", __func__,
@@ -1263,6 +1277,9 @@ ieee80211_dup_bss(struct ieee80211vap *vap, const u_int8_t *macaddr,
 #else
 		ni = ieee80211_alloc_node_table(vap, macaddr);
 #endif
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
+				  "%s: ni:%p allocated for " MAC_FMT "\n",
+				  __func__, ni, MAC_ADDR(macaddr));
 	}
 
 	if (ni != NULL) {

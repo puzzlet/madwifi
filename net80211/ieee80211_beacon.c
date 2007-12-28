@@ -270,6 +270,9 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 	IEEE80211_ADDR_COPY(wh->i_addr1, ic->ic_dev->broadcast);
 	IEEE80211_ADDR_COPY(wh->i_addr2, vap->iv_myaddr);
 	IEEE80211_ADDR_COPY(wh->i_addr3,  vap->iv_bss->ni_bssid);
+	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
+			  "%s: beacon bssid:" MAC_FMT "\n",
+			  __func__, MAC_ADDR(wh->i_addr3));
 	*(u_int16_t *)wh->i_seq = 0;
 
 	return skb;

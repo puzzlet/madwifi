@@ -2635,6 +2635,11 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 	frm = (u_int8_t *)&wh[1];
 	efrm = skb->data + skb->len;
 
+	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
+		"%s: vap:%p[" MAC_FMT "] ni:%p[" MAC_FMT "]\n",
+		__func__, vap, MAC_ADDR(vap->iv_bss->ni_bssid),
+		ni, MAC_ADDR(ni->ni_macaddr));
+
 	/* forward management frame to application */
 	if (vap->iv_opmode != IEEE80211_M_MONITOR)
 		forward_mgmt_to_app(vap, subtype, skb, wh);
@@ -3814,9 +3819,9 @@ ieee80211_note(struct ieee80211vap *vap, const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	printk("%s/%s[%s]: %s", 
-	       VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
-	       ether_sprintf(vap->iv_myaddr), 
+	printk("%s/%s[" MAC_FMT "]: %s",
+	       vap->iv_ic->ic_dev->name, vap->iv_dev->name,
+	       MAC_ADDR(vap->iv_myaddr),
 	       buf);	/* NB: no \n */
 }
 EXPORT_SYMBOL(ieee80211_note);
@@ -3831,10 +3836,10 @@ ieee80211_note_frame(struct ieee80211vap *vap, const struct ieee80211_frame *wh,
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[%s]: %s %s\n", 
-		VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
-	        ether_sprintf(vap->iv_myaddr), 
-		ether_sprintf(ieee80211_getbssid(vap, wh)), buf);
+	printk("%s/%s[" MAC_FMT "]: " MAC_FMT " %s\n",
+		vap->iv_ic->ic_dev->name, vap->iv_dev->name,
+	        MAC_ADDR(vap->iv_myaddr),
+		MAC_ADDR(ieee80211_getbssid(vap, wh)), buf);
 }
 EXPORT_SYMBOL(ieee80211_note_frame);
 
@@ -3848,10 +3853,10 @@ ieee80211_note_mac(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_L
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[%s]: %s %s\n", 
-	       VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
-	       ether_sprintf(vap->iv_myaddr), 
-	       ether_sprintf(mac), buf);
+	printk("%s/%s[" MAC_FMT "]: " MAC_FMT " %s\n",
+	       vap->iv_ic->ic_dev->name, vap->iv_dev->name,
+	       MAC_ADDR(vap->iv_myaddr),
+	       MAC_ADDR(mac), buf);
 }
 EXPORT_SYMBOL(ieee80211_note_mac);
 
@@ -3865,13 +3870,13 @@ ieee80211_discard_frame(struct ieee80211vap *vap, const struct ieee80211_frame *
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[%s]: %s discard %s%sframe, %s\n", 
-		VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
-		ether_sprintf(vap->iv_myaddr), 
-		ether_sprintf(ieee80211_getbssid(vap, wh)), 
-		(type != NULL) ? type : "", 
-	        (type != NULL) ? " " : "", 
-		buf);
+	printk("%s/%s[" MAC_FMT "]: " MAC_FMT " discard %s%sframe, %s\n",
+	       vap->iv_ic->ic_dev->name, vap->iv_dev->name,
+	       MAC_ADDR(vap->iv_myaddr),
+	       MAC_ADDR(wh->i_addr2),
+	       (type != NULL) ? type : "",
+	       (type != NULL) ? " " : "",
+	       buf);
 }
 
 static void
@@ -3884,12 +3889,13 @@ ieee80211_discard_ie(struct ieee80211vap *vap, const struct ieee80211_frame *wh,
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[%s]: %s discard %s%sinformation element, %s\n",
-		VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
-		ether_sprintf(vap->iv_myaddr), 
-		ether_sprintf(ieee80211_getbssid(vap, wh)), 
-		(type != NULL) ? type : "", 
-		(type != NULL) ? " " : "", 
+	printk("%s/%s[" MAC_FMT "]: "
+	       MAC_FMT " discard %s%sinformation element, %s\n",
+		vap->iv_ic->ic_dev->name, vap->iv_dev->name,
+		MAC_ADDR(vap->iv_myaddr),
+		MAC_ADDR(ieee80211_getbssid(vap, wh)),
+		(type != NULL) ? type : "",
+		(type != NULL) ? " " : "",
 	        buf);
 }
 
@@ -3903,12 +3909,13 @@ ieee80211_discard_mac(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADD
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[%s]: %s discard %s%sframe, %s\n", 
-	       VAP_IC_DEV_NAME(vap), VAP_DEV_NAME(vap), 
-	       ether_sprintf(vap->iv_myaddr), 
-	       ether_sprintf(mac), 
-	       (type != NULL) ? type : "", 
-	       (type != NULL) ? " " : "", 
+	printk("%s/%s[" MAC_FMT "]: " MAC_FMT " discard %s%sframe, %s\n",
+	       vap->iv_ic->ic_dev->name,
+	       vap->iv_dev->name,
+	       MAC_ADDR(vap->iv_myaddr),
+	       MAC_ADDR(mac),
+	       (type != NULL) ? type : "",
+	       (type != NULL) ? " " : "",
 	       buf);
 }
 #endif /* IEEE80211_DEBUG */
