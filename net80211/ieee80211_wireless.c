@@ -3292,6 +3292,11 @@ ieee80211_ioctl_setkey(struct net_device *dev, struct iw_request_info *info,
 		if (ni == NULL)
 			return -ENOENT;
 		wk = &ni->ni_ucastkey;
+	} else if (((uint8_t)IEEE80211_KEYIX_NONE <= kix) && 
+			(kix < IEEE80211_KEYIX_NONE)) {
+		/* These values must never be used as they are ambiguous as 
+		 * some of the API uses 8-bit integers for keyix. */
+		return -EINVAL;
 	} else {
 		if (kix >= IEEE80211_WEP_NKID)
 			return -EINVAL;
@@ -3355,6 +3360,11 @@ ieee80211_ioctl_getkey(struct net_device *dev, struct iwreq *iwr)
 		if (ni == NULL)
 			return -ENOENT;
 		wk = &ni->ni_ucastkey;
+	} else if (((uint8_t)IEEE80211_KEYIX_NONE <= kix) && 
+			(kix < IEEE80211_KEYIX_NONE)) {
+		/* These values must never be used as they are ambiguous as 
+		 * some of the API uses 8-bit integers for keyix. */
+		return -EINVAL;
 	} else {
 		if (kix >= IEEE80211_WEP_NKID)
 			return -EINVAL;
@@ -3399,7 +3409,7 @@ ieee80211_ioctl_delkey(struct net_device *dev, struct iw_request_info *info,
 	ieee80211_keyix_t kix;
 
 	kix = dk->idk_keyix;
-	if (dk->idk_keyix == (u_int8_t) IEEE80211_KEYIX_NONE)
+	if (dk->idk_keyix == (u_int8_t)IEEE80211_KEYIX_NONE)
 		kix = IEEE80211_KEYIX_NONE;
 
 	if (kix == IEEE80211_KEYIX_NONE) {

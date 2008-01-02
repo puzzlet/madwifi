@@ -221,6 +221,8 @@ struct ieee80211req_key {
  * to IEEE80211_KEYIX_NONE when deleting a unicast key.
  */
 struct ieee80211req_del_key {
+	/* NB: This is different to ieee80211_keyix_t, but this is OK as 
+	 * values are unique over the low order bits. */
 	u_int8_t idk_keyix;	/* key index */
 	u_int8_t idk_macaddr[IEEE80211_ADDR_LEN];
 };
