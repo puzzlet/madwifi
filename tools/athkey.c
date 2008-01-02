@@ -207,7 +207,7 @@ getcipher(const char *name)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-i device] keyix cipher keyval [mac]\n",
+	fprintf(stderr, "usage: %s [-i device] [-d] keyix cipher keyval [mac]\n",
 		progname);
 	exit(-1);
 }

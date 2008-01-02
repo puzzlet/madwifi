@@ -171,6 +171,8 @@ getiwkeyix(struct ieee80211vap *vap, const struct iw_point* erq, ieee80211_keyix
 	ieee80211_keyix_t kix;
 
 	kix = erq->flags & IW_ENCODE_INDEX;
+	if ((erq->flags & IW_ENCODE_INDEX) == (u_int8_t)IEEE80211_KEYIX_NONE)
+		kix = IEEE80211_KEYIX_NONE;
 	if (kix < 1 || kix > IEEE80211_WEP_NKID) {
 		kix = vap->iv_def_txkey;
 		if (kix == IEEE80211_KEYIX_NONE)
@@ -3397,10 +3399,10 @@ ieee80211_ioctl_delkey(struct net_device *dev, struct iw_request_info *info,
 	ieee80211_keyix_t kix;
 
 	kix = dk->idk_keyix;
+	if (dk->idk_keyix == (u_int8_t) IEEE80211_KEYIX_NONE)
+		kix = IEEE80211_KEYIX_NONE;
 
-	/* XXX: This cast can be removed when struct ieee80211req_del_key is 
-	 * fixed. */
-	if (dk->idk_keyix == IEEE80211_KEYIX_NONE) {
+	if (kix == IEEE80211_KEYIX_NONE) {
 		struct ieee80211_node *ni;
 
 		ni = ieee80211_find_node(&ic->ic_sta, dk->idk_macaddr);
