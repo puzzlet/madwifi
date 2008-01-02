@@ -6190,12 +6190,6 @@ rx_accept:
 		}
 #endif
 		ath_capture(dev, bf, skb, bf->bf_tsf, 0 /* RX */);
-		if ((sc->sc_nmonvaps > 0) && 
-				(sc->sc_ic.ic_opmode == IEEE80211_M_MONITOR)) {
-			/* No other VAPs need the packet. */
-			ieee80211_dev_kfree_skb(&skb);
-			goto rx_next;
-		}
 
 		/*
 		 * Finished monitor mode handling, now reject
