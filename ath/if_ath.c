@@ -4569,7 +4569,13 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 		/* append the private VAP mcast list to the cabq */
 		ATH_TXQ_MOVE_MCASTQ(&avp->av_mcastq, cabq);
 		/* NB: gated by beacon so safe to start here */
-		ath_hal_txstart(ah, cabq->axq_qnum);
+		if (cabq->axq_depth > 0) {
+			if (!ath_hal_txstart(ah, cabq->axq_qnum)) {
+				DPRINTF(sc, ATH_DEBUG_TX_PROC,
+					"%s: failed to start CABQ\n",
+					__func__);
+			}
+		}
 		ATH_TXQ_UNLOCK_IRQ_INSIDE(cabq);
 		ATH_TXQ_UNLOCK_IRQ(&avp->av_mcastq);
 	}
@@ -8033,14 +8039,11 @@ ath_tx_tasklet(TQUEUE_ARG data)
 	struct ath_softc *sc = dev->priv;
 	unsigned int i;
 
-	/* Process each active queue. */
+	/* Process each active queue. This includes sc_cabq, sc_xrtq and
+	 * sc_uapsdq */
 	for (i = 0; i < HAL_NUM_TX_QUEUES; i++)
 		if (ATH_TXQ_SETUP(sc, i) && txqactive(sc->sc_ah, i))
 			ath_tx_processq(sc, &sc->sc_txq[i]);
-#ifdef ATH_SUPERG_XR
-	if (sc->sc_xrtxq && txqactive(sc->sc_ah, sc->sc_xrtxq->axq_qnum))
-		ath_tx_processq(sc, sc->sc_xrtxq);
-#endif
 
 	netif_wake_queue(dev);
 
