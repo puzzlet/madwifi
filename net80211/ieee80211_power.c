@@ -209,6 +209,7 @@ ieee80211_set_tim(struct ieee80211_node *ni, int set)
  * Save an outbound packet for a node in power-save sleep state.
  * The new packet is placed on the node's saved queue, and the TIM
  * is changed, if necessary.
+ * It must return either NETDEV_TX_OK or NETDEV_TX_BUSY
  */
 int
 ieee80211_pwrsave(struct sk_buff *skb)
@@ -231,7 +232,6 @@ ieee80211_pwrsave(struct sk_buff *skb)
 			ieee80211_dump_pkt(ni->ni_ic, skb->data, skb->len, -1, -1);
 #endif
 		ieee80211_unref_node(&SKB_CB(skb)->ni);
-		ieee80211_dev_kfree_skb(&skb);
 		return NETDEV_TX_BUSY;
 	}
 
@@ -339,7 +339,7 @@ ieee80211_node_pwrsave(struct ieee80211_node *ni, int enable)
 				skb->dev = vap->iv_dev;		/* XXX? unnecessary */
 #endif
 
-			(void)ieee80211_parent_queue_xmit(skb);
+			ieee80211_parent_queue_xmit(skb);
 		}
 		vap->iv_set_tim(ni, 0);
 	}
@@ -380,7 +380,7 @@ ieee80211_sta_pwrsave(struct ieee80211vap *vap, int enable)
 				IEEE80211_NODE_SAVEQ_UNLOCK_IRQ(ni);
 				if (skb == NULL)
 					break;
-				(void)ieee80211_parent_queue_xmit(skb);
+				ieee80211_parent_queue_xmit(skb);
 			}
 		}
 	} else {

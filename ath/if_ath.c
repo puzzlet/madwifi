@@ -2958,6 +2958,7 @@ _take_txbuf(struct ath_softc *sc, int for_management) {
  * assumed to reclaim the resources.
  *
  * Context: process context with BHs disabled
+ * It mut return either NETDEV_TX_OK or NETDEV_TX_BUSY
  */
 static int
 ath_hardstart(struct sk_buff *skb, struct net_device *dev)
@@ -5873,7 +5874,7 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
  * created, otherwise the same SKB is used.
  *
  * NB: MAY ALLOCATE */
-struct sk_buff *
+static struct sk_buff *
 ath_skb_removepad(struct sk_buff *skb, unsigned int copy_skb)
 {
 	struct sk_buff *tskb = skb;
