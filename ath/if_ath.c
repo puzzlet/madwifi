@@ -1991,6 +1991,27 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 	HAL_INT status;
 	int needmark;
 
+	DPRINTF(sc, ATH_DEBUG_INTR, "%s:%d [flags 0x%x%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s] - "
+				    "entered\n",
+		__func__, __LINE__, 
+		dev->flags,
+		(dev->flags & IFF_UP) 		? " IFF_UP" 		: "",
+		(dev->flags & IFF_BROADCAST)	? " IFF_BROADCAST"	: "",
+		(dev->flags & IFF_DEBUG)	? " IFF_DEBUG"		: "",
+		(dev->flags & IFF_LOOPBACK)	? " IFF_LOOPBACK"	: "",
+		(dev->flags & IFF_POINTOPOINT)	? " IFF_POINTOPOINT"	: "",
+		(dev->flags & IFF_NOTRAILERS)	? " IFF_NOTRAILERS"	: "",
+		(dev->flags & IFF_RUNNING)	? " IFF_RUNNING"	: "",
+		(dev->flags & IFF_NOARP)	? " IFF_NOARP"		: "",
+		(dev->flags & IFF_PROMISC)	? " IFF_PROMISC"	: "",
+		(dev->flags & IFF_ALLMULTI)	? " IFF_ALLMULTI"	: "",
+		(dev->flags & IFF_MASTER)	? " IFF_MASTER"		: "",
+		(dev->flags & IFF_SLAVE)	? " IFF_SLAVE"		: "",
+		(dev->flags & IFF_MULTICAST)	? " IFF_MULTICAST"	: "",
+		(dev->flags & IFF_PORTSEL)	? " IFF_PORTSEL"	: "",
+		(dev->flags & IFF_AUTOMEDIA)	? " IFF_AUTOMEDIA"	: "",
+		(dev->flags & IFF_DYNAMIC)	? " IFF_DYNAMIC"	: "");
+
 	if (sc->sc_invalid) {
 		/*
 		 * The hardware is not ready/present, don't touch anything.
@@ -2016,13 +2037,31 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 	 */
 	ath_hal_getisr(ah, &status);		/* NB: clears ISR too */
 	DPRINTF(sc, ATH_DEBUG_INTR,
-		"%s: status 0x%x%s%s%s%s%s%s\n", __func__, status,
-		(status & HAL_INT_RX)      ? " HAL_INT_RX"      : "",
-		(status & HAL_INT_RXNOFRM) ? " HAL_INT_RXNOFRM" : "",
-		(status & HAL_INT_TX)      ? " HAL_INT_TX"      : "",
-		(status & HAL_INT_MIB)     ? " HAL_INT_MIB"     : "",
-		(status & HAL_INT_RXPHY)   ? " HAL_INT_RXPHY"   : "",
-		(status & HAL_INT_SWBA)    ? " HAL_INT_SWBA"    : "");
+		"%s: status 0x%x%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", __func__, status,
+		(status & HAL_INT_RX)      	? " HAL_INT_RX"		: "",
+		(status & HAL_INT_RXNOFRM) 	? " HAL_INT_RXNOFRM"	: "",
+		(status & HAL_INT_TX)      	? " HAL_INT_TX"		: "",
+		(status & HAL_INT_MIB)     	? " HAL_INT_MIB"	: "",
+		(status & HAL_INT_RXPHY)   	? " HAL_INT_RXPHY"	: "",
+		(status & HAL_INT_SWBA)    	? " HAL_INT_SWBA"	: "",
+		(status & HAL_INT_RXDESC)	? " HAL_INT_RXDESC" 	: "",
+		(status & HAL_INT_RXEOL)	? " HAL_INT_RXEOL"	: "",
+		(status & HAL_INT_RXORN)	? " HAL_INT_RXORN"	: "",
+		(status & HAL_INT_TXDESC)	? " HAL_INT_TXDESC"	: "",
+		(status & HAL_INT_TXURN)	? " HAL_INT_TXURN"	: "",
+		(status & HAL_INT_RXKCM)	? " HAL_INT_RXKCM"	: "",
+		(status & HAL_INT_BMISS)	? " HAL_INT_BMISS"	: "",
+		(status & HAL_INT_BNR)		? " HAL_INT_BNR"	: "",
+		(status & HAL_INT_TIM)		? " HAL_INT_TIM"	: "",
+		(status & HAL_INT_DTIM)		? " HAL_INT_DTIM"	: "",
+		(status & HAL_INT_DTIMSYNC)	? " HAL_INT_DTIMSYNC"	: "",
+		(status & HAL_INT_GPIO)		? " HAL_INT_GPIO"	: "",
+		(status & HAL_INT_CABEND)	? " HAL_INT_CABEND"	: "",
+		(status & HAL_INT_CST)		? " HAL_INT_CST"	: "",
+		(status & HAL_INT_GTT)		? " HAL_INT_GTT"	: "",
+		(status & HAL_INT_FATAL)	? " HAL_INT_FATAL"	: "",
+		(status & HAL_INT_GLOBAL)	? " HAL_INT_GLOBAL"	: ""
+		);
 
 	status &= sc->sc_imask;			/* discard unasked for bits */
 	if (status & HAL_INT_FATAL) {
