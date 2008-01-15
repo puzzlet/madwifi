@@ -283,7 +283,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	 * normal vap. */
 	if (vap->iv_xrvap && (ni == vap->iv_bss) &&
 	    vap->iv_xrvap->iv_sta_assoc) {
-		struct sk_buff *skb1 = skb_clone(skb, GFP_ATOMIC);
+		struct sk_buff *skb1 = skb_copy(skb, GFP_ATOMIC);
 		if (skb1) {
 			memset(SKB_CB(skb1), 0, sizeof(struct ieee80211_cb));
 #ifdef IEEE80211_DEBUG_REFCNT
