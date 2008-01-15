@@ -447,8 +447,19 @@ ieee80211_input(struct ieee80211_node *ni,
 				vap->iv_stats.is_rx_wrongdir++;
 				goto out;
 			}
-			if ((dev->flags & IFF_MULTICAST) &&
-			    IEEE80211_IS_MULTICAST(wh->i_addr1)) {
+
+	        	if (IEEE80211_IS_MULTICAST(wh->i_addr1)) {
+				/* Discard multicast if IFF_MULTICAST not set */
+				if ((0 != memcmp(wh->i_addr3, dev->broadcast, ETH_ALEN)) && 
+					(0 == (dev->flags & IFF_MULTICAST))) {
+					IEEE80211_DISCARD(vap, IEEE80211_MSG_INPUT,
+						wh, NULL, "%s", "multicast disabled.");
+					printk(KERN_ERR "CONFIG ERROR: multicast flag "
+					       "cleared on radio, but multicast was used.\n");
+					vap->iv_stats.is_rx_mcastdisabled++;
+					goto out;
+				}
+				/* Discard echos of our own multicast or broadcast */
 				if (IEEE80211_ADDR_EQ(wh->i_addr3, vap->iv_myaddr)) {
 					/*
 					 * In IEEE802.11 network, multicast packet

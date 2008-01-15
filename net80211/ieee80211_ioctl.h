@@ -105,6 +105,7 @@ struct ieee80211_stats {
 	u_int32_t is_rx_dup;		/* rx discard due to it's a dup */
 	u_int32_t is_rx_wrongdir;	/* rx w/ wrong direction */
 	u_int32_t is_rx_mcastecho;	/* rx discard due to of mcast echo */
+	u_int32_t is_rx_mcastdisabled;	/* rx discard due to of mcast disabled */
 	u_int32_t is_rx_notassoc;	/* rx discard due to sta !assoc */
 	u_int32_t is_rx_noprivacy;	/* rx w/ wep but privacy off */
 	u_int32_t is_rx_unencrypted;	/* rx w/o wep and privacy on */
