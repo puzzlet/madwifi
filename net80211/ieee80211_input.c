@@ -248,10 +248,7 @@ ieee80211_input(struct ieee80211_node *ni,
 		vap->iv_devstats.tx_dropped++;
 		goto out;
 	}
-	/* Give skb back to kernel (if we are in interrupt context, it's deferred) */
 	ieee80211_skb_copy_noderef(skb, skb2);
-	if (SKB_CB(skb)->ni != NULL)
-		ieee80211_unref_node(&SKB_CB(skb)->ni);
 	ieee80211_dev_kfree_skb(&skb);
 	skb = skb2;
 
