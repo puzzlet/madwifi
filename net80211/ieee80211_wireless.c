@@ -3580,7 +3580,6 @@ ieee80211_ioctl_wdsmac(struct net_device *dev, struct iw_request_info *info,
 {
 	struct ieee80211vap *vap = dev->priv;
 	struct sockaddr *sa = (struct sockaddr *)extra;
-	struct ieee80211com *ic = vap->iv_ic;
 
 	if (!IEEE80211_ADDR_NULL(vap->wds_mac)) {
 		printk("%s: Failed to add WDS MAC: %s\n", dev->name,
@@ -3595,8 +3594,11 @@ ieee80211_ioctl_wdsmac(struct net_device *dev, struct iw_request_info *info,
 	printk("%s: Added WDS MAC: %s\n", dev->name,
 		ether_sprintf(vap->wds_mac));
 
-	if (IS_UP(vap->iv_dev))
-		return ic->ic_reset(ic->ic_dev);
+	if (IS_UP(vap->iv_dev)) {
+		/* Force us back to scan state to force us to go back through RUN
+		 * state and create/pin the WDS peer node into memory. */
+		return ieee80211_new_state(vap, IEEE80211_S_SCAN, 0);
+	}
 
 	return 0;
 }
@@ -3608,6 +3610,7 @@ ieee80211_ioctl_wdsdelmac(struct net_device *dev, struct iw_request_info *info,
 	struct ieee80211vap *vap = dev->priv;
 	struct sockaddr *sa = (struct sockaddr *)extra;
 	struct ieee80211com *ic = vap->iv_ic;
+	struct ieee80211_node *wds_ni;
 
 	/* WDS Mac address filed already? */
 	if (IEEE80211_ADDR_NULL(vap->wds_mac))
@@ -3617,9 +3620,21 @@ ieee80211_ioctl_wdsdelmac(struct net_device *dev, struct iw_request_info *info,
 	 * remove when mac address is known
 	 */
 	if (memcmp(vap->wds_mac, sa->sa_data, IEEE80211_ADDR_LEN) == 0) {
+		if (IS_UP(vap->iv_dev)) {
+			wds_ni = ieee80211_find_txnode(vap, vap->wds_mac);
+			if (wds_ni != NULL) {
+				/* Release reference created by find node */
+				ieee80211_unref_node(&wds_ni);
+				/* Release reference created by transition to RUN state,
+				 * [pinning peer node into the table] */
+				ieee80211_unref_node(&wds_ni);
+			}
+		}
 		memset(vap->wds_mac, 0x00, IEEE80211_ADDR_LEN);
-		if (IS_UP(vap->iv_dev))
+		if (IS_UP(vap->iv_dev)) {
+			/* This leaves a dead WDS node, until started again */
 			return ic->ic_reset(ic->ic_dev);
+		}
 		return 0;
 	}
 
