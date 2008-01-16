@@ -268,7 +268,8 @@ static void print_skb_trackchange_message(
 
 static struct sk_buff *
 clean_clone_or_copy(struct sk_buff *skb) {
-	SKB_CB(skb)->tracked = 0;
+	if (skb != NULL)
+		SKB_CB(skb)->tracked = 0;
 	return skb;
 }
 
