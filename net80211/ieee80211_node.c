@@ -1765,8 +1765,14 @@ restart:
 		/*
 		 * Special case ourself; we may be idle for extended periods
 		 * of time and regardless reclaiming our state is wrong.
-		 */
-		if (ni == ni->ni_vap->iv_bss) {
+		 * Special case a WDS link: it may be dead or idle, but it is 
+		 * never ok to reclaim it, as this will block transmissions
+		 * and nobody will recreate the node when the WDS peer is
+		 * available again. */
+		if ((ni == ni->ni_vap->iv_bss) ||
+		    (ni->ni_vap->iv_opmode == IEEE80211_M_WDS && 
+		     !memcmp(ni->ni_macaddr, ni->ni_vap->wds_mac, ETH_ALEN)))
+		{
 			/* NB: don't permit it to go negative */
 			if (ni->ni_inact > 0)
 				ni->ni_inact--;
