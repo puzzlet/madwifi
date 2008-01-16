@@ -64,6 +64,27 @@ enum ieee80211_opmode {
 };
 
 /*
+ * True if this mode will send beacon on a regular interval, like AP
+ * or IBSS
+ */
+#define IEEE80211_IS_MODE_BEACON(_opmode) \
+	((_opmode == IEEE80211_M_IBSS) || \
+	 (_opmode == IEEE80211_M_HOSTAP))
+
+/*
+ * True if this mode must behave like a DFS master, ie do Channel
+ * Check Availability and In Service Monitoring. We need to make sure
+ * that all modes cannot send data without being authorized. Such
+ * enforcement is not done in monitor mode however.
+ */
+
+#define IEEE80211_IS_MODE_DFS_MASTER(_opmode) \
+	((_opmode == IEEE80211_M_IBSS) || \
+	 (_opmode == IEEE80211_M_AHDEMO) || \
+	 (_opmode == IEEE80211_M_HOSTAP) || \
+	 (_opmode == IEEE80211_M_WDS))
+
+/*
  * 802.11g protection mode.
  */
 enum ieee80211_protmode {
@@ -121,6 +142,11 @@ struct ieee80211_channel {
 	int8_t ic_maxregpower;	/* maximum regulatory tx power in dBm */
 	int8_t ic_maxpower;	/* maximum tx power in dBm */
 	int8_t ic_minpower;	/* minimum tx power in dBm */
+
+	/* end of the Non-Occupancy Period, when we can use this channel again?
+	 * If <= NOW then clear IEEE80211_CHAN_RADAR in ic_flags. Initialized
+	 * to {0,0} */
+	struct timeval ic_non_occupancy_period;
 };
 
 #define	IEEE80211_CHAN_MAX	255
@@ -128,8 +154,9 @@ struct ieee80211_channel {
 #define	IEEE80211_CHAN_ANY	0xffff	/* token for ``any channel'' */
 #define	IEEE80211_CHAN_ANYC 	((struct ieee80211_channel *) IEEE80211_CHAN_ANY)
 
-#define	IEEE80211_RADAR_11HCOUNT		1
+#define	IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT	0
 #define IEEE80211_DEFAULT_CHANCHANGE_TBTT_COUNT	3
+
 #define	IEEE80211_RADAR_TEST_MUTE_CHAN	36	/* Move to channel 36 for mute test */
 
 /* bits 0-3 are for private use by drivers */
@@ -218,12 +245,57 @@ struct ieee80211_channel {
 	(((_c)->ic_flags & IEEE80211_CHAN_RADAR) != 0)
 #define	IEEE80211_IS_CHAN_PASSIVE(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_PASSIVE) != 0)
+#define	IEEE80211_ARE_CHANS_SAME_MODE(_a, _b) \
+	(((_a)->ic_flags & IEEE80211_CHAN_ALLTURBO) == ((_b)->ic_flags & IEEE80211_CHAN_ALLTURBO))
 
 /* ni_chan encoding for FH phy */
 #define	IEEE80211_FH_CHANMOD		80
 #define	IEEE80211_FH_CHAN(set,pat)	(((set) - 1) * IEEE80211_FH_CHANMOD + (pat))
 #define	IEEE80211_FH_CHANSET(chan)	((chan) / IEEE80211_FH_CHANMOD + 1)
 #define	IEEE80211_FH_CHANPAT(chan)	((chan) % IEEE80211_FH_CHANMOD)
+
+/*
+ * Spectrum Management (IEEE 802.11h-2003)
+ */
+
+/* algorithm for (re)association based on supported channels
+ * (the one mentioned in 11.6.1 as out of scope of .11h) */
+enum ieee80211_sc_algorithm {
+	IEEE80211_SC_NONE,
+	/*
+	 * Do not disallow anyone from associating. When needed, channel will
+	 * be switched to the most suitable channel, no matter client stations
+	 * support it or not.
+	 */
+
+	IEEE80211_SC_LOOSE,
+	/*
+	 * Do not disallow anyone from associating. When needed, channel will
+	 * be switched to a suitable channel, which will be chosen taking
+	 * ni->ni_suppchans and ic->ic_sc_sldg under consideration.
+	 */
+
+	IEEE80211_SC_TIGHT,
+	/*
+	 * Allow to associate if there are at least ic->ic_mincom channels
+	 * common to the associating station and all of the already associated
+	 * stations. If the number of new common channels is less than
+	 * required, consider disassociating some other STAs. Such a
+	 * disassociation will be performed if (and only if) the association we
+	 * are currently considering would be then possible and the count of
+	 * the resultant set of common channels (ic_chan_nodes[i] ==
+	 * ic_cn_total) would increase by some amount. Whether the number of
+	 * the new channels that could be gained is enough to sacrifice a
+	 * number of STAs is determined by the ic->ic_slcg parameter.
+	 */
+
+	IEEE80211_SC_STRICT
+	/*
+	 * Basically the same behavior as IEEE80211_SC_TIGHT, except that if a
+	 * station does not specify Supported Channels, then it is denied to
+	 * associate.
+	 */
+};
 
 /*
  * 802.11 rate set.

@@ -840,7 +840,7 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 		} else {
 			/* Change to a radar free 11a channel for dfstesttime seconds */
 			ic->ic_chanchange_chan = IEEE80211_RADAR_TEST_MUTE_CHAN;
-			ic->ic_chanchange_tbtt = IEEE80211_RADAR_11HCOUNT;
+			ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 			/* A timer is setup in the radar task if markdfs is not set and
 			 * we are in hostap mode.
@@ -861,7 +861,7 @@ ieee80211_dfs_test_return(struct ieee80211com *ic, u_int8_t ieeeChan)
 	if_printf(dev, "Returning to channel %d\n", ieeeChan);
 	printk("Returning to chan %d\n", ieeeChan);
 	ic->ic_chanchange_chan = ieeeChan;
-	ic->ic_chanchange_tbtt = IEEE80211_RADAR_11HCOUNT;
+	ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 	ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 }
 EXPORT_SYMBOL(ieee80211_dfs_test_return);

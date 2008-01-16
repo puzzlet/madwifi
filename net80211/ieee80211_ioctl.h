@@ -131,6 +131,7 @@ struct ieee80211_stats {
 	u_int32_t is_rx_assoc_capmismatch;/* rx assoc w/ cap mismatch */
 	u_int32_t is_rx_assoc_norate;	/* rx assoc w/ no rate match */
 	u_int32_t is_rx_assoc_badwpaie;	/* rx assoc w/ bad WPA IE */
+	u_int32_t is_rx_assoc_badscie;	/* rx assoc w/ bad SC IE */
 	u_int32_t is_rx_deauth;		/* rx deauthentication */
 	u_int32_t is_rx_disassoc;	/* rx disassociation */
 	u_int32_t is_rx_badsubtype;	/* rx frame w/ unknown subtype*/
@@ -163,6 +164,7 @@ struct ieee80211_stats {
 	u_int32_t is_scan_active;	/* active scans started */
 	u_int32_t is_scan_passive;	/* passive scans started */
 	u_int32_t is_node_timeout;	/* nodes timed out inactivity */
+	u_int32_t is_node_fdisassoc;	/* forced node disassociation */
 	u_int32_t is_crypto_nomem;	/* no memory for crypto ctx */
 	u_int32_t is_crypto_tkip;	/* tkip crypto done in s/w */
 	u_int32_t is_crypto_tkipenmic;	/* tkip en-MIC done in s/w */

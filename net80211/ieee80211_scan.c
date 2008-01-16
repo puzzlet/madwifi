@@ -978,7 +978,7 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 			  se->se_chan->ic_freq);
 		if (vap->iv_state == IEEE80211_S_RUN) {
 			ic->ic_chanchange_chan = se->se_chan->ic_ieee;
-			ic->ic_chanchange_tbtt = IEEE80211_RADAR_11HCOUNT;
+			ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 		} else {
 			/* 
@@ -1015,7 +1015,7 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 					  ic->ic_channels[chanStart].ic_ieee,
 					  ic->ic_channels[chanStart].ic_freq);
 				ic->ic_chanchange_chan = ic->ic_channels[chanStart].ic_ieee;
-				ic->ic_chanchange_tbtt = IEEE80211_RADAR_11HCOUNT;
+				ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 				ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 			}
 		}

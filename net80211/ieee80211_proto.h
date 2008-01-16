@@ -290,7 +290,7 @@ u_int8_t *ieee80211_add_xr_param(u_int8_t *, struct ieee80211vap *);
 u_int8_t *ieee80211_add_xr_param(u_int8_t *, struct ieee80211vap *);
 u_int8_t *ieee80211_add_wme_param(u_int8_t *, struct ieee80211_wme_state *, int);
 u_int8_t *ieee80211_add_country(u_int8_t *, struct ieee80211com *);
-u_int8_t *ieee80211_add_country(u_int8_t *, struct ieee80211com *);
+u_int8_t *ieee80211_add_pwrcnstr(u_int8_t *frm, struct ieee80211com *ic);
 u_int8_t *ieee80211_add_athAdvCap(u_int8_t *, u_int8_t, u_int16_t);
 
 /*

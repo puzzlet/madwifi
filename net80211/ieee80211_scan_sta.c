@@ -542,7 +542,24 @@ sta_start(struct ieee80211_scan_state *ss, struct ieee80211vap *vap)
 
 	ss->ss_next = 0;
 	/* XXX tunables */
-	ss->ss_mindwell = msecs_to_jiffies(20);		/* 20ms */
+	/* 
+	 * MT: The scanner will stay on station for ss_maxdwell ms (using a 
+	 * timer), collecting responses.  ss_maxdwell can adjusted downward
+	 * so the station gets back on channel before DTIM occurs.  If the
+	 * station receives probe responses before ss_mindwell has elapsed, the
+	 * timer continues.  If it receives probe responses after ss_mindwell
+	 * then the timer is cancelled and the next channel is chosen.  
+	 * Basically, you are going to get the mindwell if you are scanning an
+	 * occupied channel in the real world and the maxdwell if it's empty.
+	 * 
+	 * This seems somehow wrong to me, as you tend to want to fish where the
+	 * fish is bitin'.  
+	 * 
+	 * I'm bumping mindwell up to 60ms (was 20ms).  This gives us a reasonable
+	 * chance to find all the APs with active scans, and should pick up 
+	 * everything within a few passes for passive.
+	*/
+	ss->ss_mindwell = msecs_to_jiffies(60);	        /* 60ms */
 	ss->ss_maxdwell = msecs_to_jiffies(200);	/* 200ms */
 
 #ifdef IEEE80211_DEBUG

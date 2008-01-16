@@ -58,7 +58,7 @@
  */
 static const struct ieee80211_cipher *ciphers[IEEE80211_CIPHER_MAX];
 
-static int _ieee80211_crypto_delkey(struct ieee80211vap *,
+static int ieee80211_crypto_delkey_locked(struct ieee80211vap *,
 	struct ieee80211_key *, struct ieee80211_node *);
 
 /*
@@ -439,7 +439,7 @@ EXPORT_SYMBOL(ieee80211_crypto_newkey);
  * Remove the key (no locking, for internal use).
  */
 static int
-_ieee80211_crypto_delkey(struct ieee80211vap *vap, struct ieee80211_key *key,
+ieee80211_crypto_delkey_locked(struct ieee80211vap *vap, struct ieee80211_key *key,
 	struct ieee80211_node *ni)
 {
 	ieee80211_keyix_t keyix;
@@ -484,7 +484,7 @@ ieee80211_crypto_delkey(struct ieee80211vap *vap, struct ieee80211_key *key,
 		dev_comp_set(vap, ni, 0);
 #endif
 	ieee80211_key_update_begin(vap);
-	status = _ieee80211_crypto_delkey(vap, key, ni);
+	status = ieee80211_crypto_delkey_locked(vap, key, ni);
 	ieee80211_key_update_end(vap);
 
 	return status;
@@ -501,7 +501,7 @@ ieee80211_crypto_delglobalkeys(struct ieee80211vap *vap)
 
 	ieee80211_key_update_begin(vap);
 	for (i = 0; i < IEEE80211_WEP_NKID; i++)
-		(void) _ieee80211_crypto_delkey(vap, &vap->iv_nw_keys[i], NULL);
+		(void) ieee80211_crypto_delkey_locked(vap, &vap->iv_nw_keys[i], NULL);
 	ieee80211_key_update_end(vap);
 }
 EXPORT_SYMBOL(ieee80211_crypto_delglobalkeys);
