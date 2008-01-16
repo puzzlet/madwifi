@@ -4540,8 +4540,8 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	}
 #endif
 	avp = ATH_VAP(vap);
-	if (avp->av_bcbuf == NULL) {
-		DPRINTF(sc, ATH_DEBUG_ANY, "%s: avp=%p av_bcbuf=%p\n",
+	if (avp == NULL || avp->av_bcbuf == NULL) {
+		DPRINTF(sc, ATH_DEBUG_ANY, "%s: Returning NULL, one of these is NULL {avp=%p av_bcbuf=%p}\n",
 			 __func__, avp, avp->av_bcbuf);
 		return NULL;
 	}
