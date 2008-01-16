@@ -718,7 +718,7 @@ ieee80211_input(struct ieee80211_node *ni,
 			/* ether_type must be length as FF frames are always LLC/SNAP encap'd */ 
 			frame_len = ntohs(eh_tmp->ether_type); 
 
-			skb1 = skb_clone(skb, GFP_ATOMIC);
+			skb1 = skb_copy(skb, GFP_ATOMIC);
 			/* Increment reference count after copy */
 			if (NULL != skb1 && SKB_CB(skb)->ni != NULL) {
 				SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
