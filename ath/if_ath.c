@@ -3080,9 +3080,34 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		/* queue is full, let the kernel backlog the skb */
 		netif_stop_queue(dev);
 		requeue = 1;
+               
 		goto hardstart_fail;
 	}
+#endif
 
+	/* If the skb data is shared, we will copy it so we can strip padding
+	 * without affecting any other bridge ports. */
+	if (skb_cloned(skb)) {
+		/* Remember the original SKB so we can free up our references */
+		struct sk_buff *skb_orig = skb;
+		skb = skb_copy(skb, GFP_ATOMIC);
+		if (skb == NULL) {
+			requeue = 1;
+			netif_stop_queue(dev);
+			goto hardstart_fail;
+		}
+		/* If the clone works, bump the reference count for our copy. */
+		SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(skb_orig)->ni);
+		ieee80211_dev_kfree_skb(&skb_orig);
+	} else {
+		if (SKB_CB(skb)->ni != NULL) 
+			ieee80211_unref_node(&SKB_CB(skb)->ni);
+		skb_orphan(skb);
+	}
+
+	eh = (struct ether_header *) skb->data;
+
+#ifdef ATH_SUPERG_FF
 	/* NB: use this lock to protect an->an_tx_ffbuf (and txq->axq_stageq)
 	 *     in athff_can_aggregate() call too. */
 	ATH_TXQ_LOCK_IRQ(txq);
