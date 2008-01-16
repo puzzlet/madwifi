@@ -2578,7 +2578,7 @@ ieee80211_parse_csaie(struct ieee80211_node *ni, u_int8_t *frm,
 struct l2_update_frame {
 	u8 da[ETH_ALEN]; /* broadcast */
 	u8 sa[ETH_ALEN]; /* STA addr */
-	u16 len; /* 6 */
+	__be16 len; /* 6 */
 	u8 dsap; /* null DSAP address */
 	u8 ssap; /* null SSAP address, CR=Response */
 	u8 control;
