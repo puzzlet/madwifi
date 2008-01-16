@@ -1499,6 +1499,7 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 					}
 
 					if (wds_ni != NULL) {
+						ieee80211_ref_node(wds_ni); /* pin in memory */
 						ieee80211_node_authorize(wds_ni);
 						wds_ni->ni_chan =
 							vap->iv_bss->ni_chan;
