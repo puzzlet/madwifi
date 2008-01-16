@@ -1050,6 +1050,9 @@ ieee80211_alloc_node_table(struct ieee80211vap *vap,
 #endif
 		IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
 	}
+	else {
+		printk("Failed to allocate node for %s.\n", ether_sprintf(macaddr));
+	}
 
 	return ni;
 }
