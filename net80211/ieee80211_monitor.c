@@ -303,7 +303,9 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 {
 	struct ieee80211vap *vap, *next;
 	struct ath_desc *ds = bf->bf_desc;
-	int noise = 0, antenna = 0, ieeerate = 0;
+	int noise = 0;
+	int antenna = 0;
+	int ieeerate = 0;
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
 	unsigned int mon_hdrspace = A_MAX(sizeof(struct ath_tx_radiotap_header),

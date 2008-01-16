@@ -231,7 +231,9 @@ ieee80211_pwrsave(struct sk_buff *skb)
 		if (ieee80211_msg_dumppkts(vap))
 			ieee80211_dump_pkt(ni->ni_ic, skb->data, skb->len, -1, -1);
 #endif
-		ieee80211_unref_node(&SKB_CB(skb)->ni);
+		if (SKB_CB(skb)->ni != NULL)
+			ieee80211_unref_node(&SKB_CB(skb)->ni);
+		ieee80211_dev_kfree_skb(&skb);
 		return NETDEV_TX_BUSY;
 	}
 

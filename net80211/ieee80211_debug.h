@@ -78,7 +78,7 @@ enum {
 
 #ifdef IEEE80211_DEBUG
 #define ieee80211_msg_is_reported(_vap, m) \
-	(!!(((_vap)->iv_debug) & (m)))
+	(!!(((_vap)->iv_debug | (_vap)->iv_ic->ic_debug) & (m)))
 #define	IEEE80211_DPRINTF(_vap, _m, _fmt, ...) do {			\
 	if (ieee80211_msg_is_reported(_vap, _m))					\
 		ieee80211_note(_vap, _fmt, __VA_ARGS__);		\
