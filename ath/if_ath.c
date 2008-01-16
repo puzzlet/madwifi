@@ -2012,27 +2012,6 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 		(dev->flags & IFF_AUTOMEDIA)	? " IFF_AUTOMEDIA"	: "",
 		(dev->flags & IFF_DYNAMIC)	? " IFF_DYNAMIC"	: "");
 
-	DPRINTF(sc, ATH_DEBUG_INTR, "%s:%d [flags 0x%x%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s] - "
-				    "entered\n",
-		__func__, __LINE__, 
-		dev->flags,
-		(dev->flags & IFF_UP) 		? " IFF_UP" 		: "",
-		(dev->flags & IFF_BROADCAST)	? " IFF_BROADCAST"	: "",
-		(dev->flags & IFF_DEBUG)	? " IFF_DEBUG"		: "",
-		(dev->flags & IFF_LOOPBACK)	? " IFF_LOOPBACK"	: "",
-		(dev->flags & IFF_POINTOPOINT)	? " IFF_POINTOPOINT"	: "",
-		(dev->flags & IFF_NOTRAILERS)	? " IFF_NOTRAILERS"	: "",
-		(dev->flags & IFF_RUNNING)	? " IFF_RUNNING"	: "",
-		(dev->flags & IFF_NOARP)	? " IFF_NOARP"		: "",
-		(dev->flags & IFF_PROMISC)	? " IFF_PROMISC"	: "",
-		(dev->flags & IFF_ALLMULTI)	? " IFF_ALLMULTI"	: "",
-		(dev->flags & IFF_MASTER)	? " IFF_MASTER"		: "",
-		(dev->flags & IFF_SLAVE)	? " IFF_SLAVE"		: "",
-		(dev->flags & IFF_MULTICAST)	? " IFF_MULTICAST"	: "",
-		(dev->flags & IFF_PORTSEL)	? " IFF_PORTSEL"	: "",
-		(dev->flags & IFF_AUTOMEDIA)	? " IFF_AUTOMEDIA"	: "",
-		(dev->flags & IFF_DYNAMIC)	? " IFF_DYNAMIC"	: "");
-
 	if (sc->sc_invalid) {
 		/*
 		 * The hardware is not ready/present, don't touch anything.
