@@ -219,7 +219,9 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 #define	ATH_RXBUF	40		/* number of RX buffers */
 #define	ATH_TXBUF	200		/* number of TX buffers */
 
-#define	ATH_BCBUF	4		/* number of beacon buffers */
+#define ATH_MAXVAPS_MIN 	2	/* minimum number of beacon buffers */
+#define ATH_MAXVAPS_MAX 	64	/* maximum number of beacon buffers */
+#define ATH_MAXVAPS_DEFAULT 	4	/* default number of beacon buffers */
 
 /* free buffer threshold to restart net dev */
 #define	ATH_TXBUF_FREE_THRESHOLD  (ATH_TXBUF / 20)
@@ -745,7 +747,7 @@ struct ath_softc {
 		COMMIT				/* beacon sent, commit change */
 	} sc_updateslot;			/* slot time update fsm */
 	int sc_slotupdate;			/* slot to next advance fsm */
-	struct ieee80211vap *sc_bslot[ATH_BCBUF];/* beacon xmit slots */
+	struct ieee80211vap **sc_bslot;		/* beacon xmit slots */
 	int sc_bnext;				/* next slot for beacon xmit */
 
 	struct timer_list sc_cal_ch;		/* calibration timer */

@@ -352,11 +352,13 @@ static int ath_calinterval = ATH_SHORT_CALINTERVAL;
 static int ath_countrycode = CTRY_DEFAULT;	/* country code */
 static int ath_outdoor = AH_FALSE;		/* enable outdoor use */
 static int ath_xchanmode = AH_TRUE;		/* enable extended channels */
+static int ath_maxvaps = ATH_MAXVAPS_DEFAULT;   /* set default maximum vaps */
 static char *autocreate = NULL;
 static char *ratectl = DEF_RATE_CTL;
 static int rfkill = 0;
 static int tpc = 0;
 static int countrycode = -1;
+static int maxvaps = -1;
 static int outdoor = -1;
 static int xchanmode = -1;
 
@@ -385,6 +387,7 @@ static struct notifier_block ath_event_block = {
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,52))
 MODULE_PARM(countrycode, "i");
+MODULE_PARM(maxvaps, "i");
 MODULE_PARM(outdoor, "i");
 MODULE_PARM(xchanmode, "i");
 MODULE_PARM(rfkill, "i");
@@ -396,6 +399,7 @@ MODULE_PARM(ratectl, "s");
 #else
 #include <linux/moduleparam.h>
 module_param(countrycode, int, 0600);
+module_param(maxvaps, int, 0600);
 module_param(outdoor, int, 0600);
 module_param(xchanmode, int, 0600);
 module_param(rfkill, int, 0600);
@@ -406,6 +410,7 @@ module_param(autocreate, charp, 0600);
 module_param(ratectl, charp, 0600);
 #endif
 MODULE_PARM_DESC(countrycode, "Override default country code");
+MODULE_PARM_DESC(maxvaps, "Maximum VAPs");
 MODULE_PARM_DESC(outdoor, "Enable/disable outdoor use");
 MODULE_PARM_DESC(xchanmode, "Enable/disable extended channel mode");
 MODULE_PARM_DESC(rfkill, "Enable/disable RFKILL capability");
@@ -520,7 +525,7 @@ static atomic_t ath_buf_counter = ATOMIC_INIT(0);
  * and use the higher bits as the index of the VAP.
  */
 #define ATH_SET_VAP_BSSID_MASK(bssid_mask)				\
-	((bssid_mask)[0] &= ~(((ATH_BCBUF-1) << 2) | 0x02))
+	((bssid_mask)[0] &= ~(((ath_maxvaps-1) << 2) | 0x02))
 #define ATH_GET_VAP_ID(bssid)                   ((bssid)[0] >> 2)
 #define ATH_SET_VAP_BSSID(bssid, id)					\
 		do {							\
@@ -545,6 +550,10 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ath_debug_global = (ath_debug & ATH_DEBUG_GLOBAL);
 	sc->sc_debug 	 = (ath_debug & ~ATH_DEBUG_GLOBAL);
 	DPRINTF(sc, ATH_DEBUG_ANY, "%s: devid 0x%x\n", __func__, devid);
+
+	/* Allocate space for dynamically determined maximum VAP count */
+	sc->sc_bslot = kmalloc(ath_maxvaps * sizeof(struct ieee80211vap), GFP_KERNEL);
+	memset(sc->sc_bslot, 0, ath_maxvaps * sizeof(struct ieee80211vap));
 
 	/*
 	 * Cache line size is used to size and align various
@@ -632,6 +641,13 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	 */
 	if (countrycode != -1)
 		ath_countrycode = countrycode;
+	if (maxvaps != -1) {
+		ath_maxvaps = maxvaps;
+		if (ath_maxvaps < ATH_MAXVAPS_MIN)
+			ath_maxvaps = ATH_MAXVAPS_MIN;
+		if (ath_maxvaps > ATH_MAXVAPS_MAX)
+			ath_maxvaps = ATH_MAXVAPS_MAX;
+	}
 	if (outdoor != -1)
 		ath_outdoor = outdoor;
 	if (xchanmode != -1)
@@ -1167,6 +1183,8 @@ ath_detach(struct net_device *dev)
 	ath_desc_free(sc);
 	ath_tx_cleanup(sc);
 	_ath_hal_detach(ah);
+	kfree(sc->sc_bslot);
+	sc->sc_bslot = NULL;
 
 	ath_dynamic_sysctl_unregister(sc);
 	ATH_LOCK_DESTROY(sc);
@@ -1239,7 +1257,7 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 		return NULL;
 	}
 
-	if (sc->sc_nvaps >= ATH_BCBUF) {
+	if (sc->sc_nvaps >= ath_maxvaps) {
 		printk(KERN_WARNING "too many virtual APs (already got %d)\n", 
 				sc->sc_nvaps);
 		return NULL;
@@ -1310,7 +1328,7 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 		TAILQ_FOREACH(v, &ic->ic_vaps, iv_next)
 			id_mask |= (1 << ATH_GET_VAP_ID(v->iv_myaddr));
 
-		for (id = 1; id < ATH_BCBUF; id++) {
+		for (id = 1; id < ath_maxvaps; id++) {
 			/* get the first available slot */
 			if ((id_mask & (1 << id)) == 0) {
 				ATH_SET_VAP_BSSID(vap->iv_myaddr, id);
@@ -1335,13 +1353,13 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 			 * above, this cannot fail to find one.
 			 */
 			avp->av_bslot = 0;
-			for (slot = 0; slot < ATH_BCBUF; slot++)
+			for (slot = 0; slot < ath_maxvaps; slot++)
 				if (sc->sc_bslot[slot] == NULL) {
 					/*
 					 * XXX hack, space out slots to better
 					 * deal with misses
 					 */
-					if (slot + 1 < ATH_BCBUF &&
+					if (slot + 1 < ath_maxvaps &&
 					    sc->sc_bslot[slot+1] == NULL) {
 						avp->av_bslot = slot + 1;
 						break;
@@ -1361,8 +1379,17 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 			 * of staggered beacons.
 			 */
 			/* XXX check for beacon interval too small */
-			sc->sc_stagbeacons = 1;
+			if(ath_maxvaps > 4) {
+				DPRINTF(sc, ATH_DEBUG_BEACON, "Staggered beacons are not possible "
+				       "with maxvaps set to %d.\n", ath_maxvaps);
+				sc->sc_stagbeacons = 0;
+			}
+			else {
+				sc->sc_stagbeacons = 1;
+			}
 		}
+		DPRINTF(sc, ATH_DEBUG_BEACON, "sc->sc_stagbeacons %sabled\n", 
+			(sc->sc_stagbeacons ? "en" : "dis"));
 	}
 	if (sc->sc_hastsfadd)
 		ath_hal_settsfadjust(sc->sc_ah, sc->sc_stagbeacons);
@@ -3015,6 +3042,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	ath_bufhead bf_head;
 	struct ath_buf *tbf, *tempbf;
 	struct sk_buff *tskb;
+	struct ieee80211vap *vap;
 	int framecnt;
 	int requeue = 0;
 #ifdef ATH_SUPERG_FF
@@ -3023,7 +3051,6 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ath_node *an;
 	struct ath_txq *txq = NULL;
 	int ff_flush;
-	struct ieee80211vap *vap;
 #endif
 
 	/* If an skb is passed in directly from the kernel, 
@@ -3048,7 +3075,6 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		return NETDEV_TX_OK;
 	}
 
-	eh = (struct ether_header *)skb->data;
 	ni = SKB_CB(skb)->ni;		/* NB: always passed down by 802.11 layer */
 	if (ni == NULL) {
 		/* NB: this happens if someone marks the underlying device up */
@@ -3056,8 +3082,11 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			"%s: discard, no node in cb\n", __func__);
 		goto hardstart_fail;
 	}
-#ifdef ATH_SUPERG_FF
+
 	vap = ni->ni_vap;
+
+
+#ifdef ATH_SUPERG_FF
 
 	if (M_FLAG_GET(skb, M_UAPSD)) {
 		/* bypass FF handling */
@@ -4176,7 +4205,7 @@ ath_check_beacon_done(struct ath_softc *sc)
 	/*
 	 * check if the last beacon went out with the mode change flag set.
 	 */
-	for (slot = 0; slot < ATH_BCBUF; slot++) {
+	for (slot = 0; slot < ath_maxvaps; slot++) {
 		if (sc->sc_bslot[slot]) {
 			vap = sc->sc_bslot[slot];
 			break;
@@ -4372,7 +4401,7 @@ ath_beacon_alloc(struct ath_softc *sc, struct ieee80211_node *ni)
 		 * has a timestamp in one beacon interval while the
 		 * others get a timestamp aligned to the next interval.
 		 */
-		tuadjust = (ni->ni_intval * (ATH_BCBUF - avp->av_bslot)) / ATH_BCBUF;
+		tuadjust = (ni->ni_intval * (ath_maxvaps - avp->av_bslot)) / ath_maxvaps;
 		tsfadjust = cpu_to_le64(tuadjust << 10);	/* TU->TSF */
 
 		DPRINTF(sc, ATH_DEBUG_BEACON,
@@ -4713,8 +4742,8 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 
 		tsf = ath_hal_gettsf64(ah);
 		tsftu = tsf >> 10; /* NB: 64 -> 32: See note far above. */
-		slot = ((tsftu % ic->ic_lintval) * ATH_BCBUF) / ic->ic_lintval;
-		vap = sc->sc_bslot[(slot + 1) % ATH_BCBUF];
+		slot = ((tsftu % ic->ic_lintval) * ath_maxvaps) / ic->ic_lintval;
+		vap = sc->sc_bslot[(slot + 1) % ath_maxvaps];
 		DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
 			"%s: slot %d [tsf %llu tsftu %llu intval %u] vap %p\n",
 			__func__, slot, (unsigned long long)tsf, 
@@ -4729,7 +4758,7 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 		u_int32_t *bflink = NULL;
 
 		/* XXX: rotate/randomize order? */
-		for (slot = 0; slot < ATH_BCBUF; slot++) {
+		for (slot = 0; slot < ath_maxvaps; slot++) {
 			if ((vap = sc->sc_bslot[slot]) != NULL) {
 				if ((bf = ath_beacon_generate(
 						sc, vap, 
@@ -4771,7 +4800,7 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 	 *     again.  If we miss a beacon for that slot then we'll be
 	 *     slow to transition but we'll be sure at least one beacon
 	 *     interval has passed.  When bursting slot is always left
-	 *     set to ATH_BCBUF so this check is a no-op.
+	 *     set to ath_maxvaps so this check is a no-op.
 	 */
 	/* XXX locking */
 	if (sc->sc_updateslot == UPDATE) {
@@ -4987,7 +5016,7 @@ ath_beacon_update_timers(struct ath_softc *sc, struct ieee80211vap *vap)
 		/* NB: the beacon interval is kept internally in TUs */
 		intval = ic->ic_lintval & HAL_BEACON_PERIOD;
 		if (sc->sc_stagbeacons)
-			intval /= ATH_BCBUF;	/* for staggered beacons */
+			intval /= ath_maxvaps;	/* for staggered beacons */
 		if ((sc->sc_nostabeacons) &&
 		    (vap->iv_opmode == IEEE80211_M_HOSTAP))
 			reset_tsf = 1;
@@ -5298,7 +5327,7 @@ ath_desc_alloc(struct ath_softc *sc)
 
 	/* XXX allocate beacon state together with VAP */
 	error = ath_descdma_setup(sc, &sc->sc_bdma, &sc->sc_bbuf,
-			"beacon", ATH_BCBUF, 1);
+			"beacon", ath_maxvaps, 1);
 	if (error != 0) {
 		ath_descdma_cleanup(sc, &sc->sc_txdma, &sc->sc_txbuf,
 			BUS_DMA_TODEVICE);
@@ -10046,6 +10075,8 @@ enum {
 	ATH_XR_POLL_PERIOD	= 14,
 	ATH_XR_POLL_COUNT	= 15,
 	ATH_ACKRATE		= 16,
+	/* NOTE: 17-25 reserved pending madwifi-dfs merge */
+	ATH_MAXVAPS  		= 26,
 };
 
 static int
@@ -10199,6 +10230,9 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 		case ATH_COUNTRYCODE:
 			ath_hal_getcountrycode(ah, &val);
 			break;
+		case ATH_MAXVAPS:
+			val = ath_maxvaps;
+			break;
 		case ATH_REGDOMAIN:
 			ath_hal_getregdomain(ah, &val);
 			break;
@@ -10283,6 +10317,12 @@ static const ctl_table ath_sysctl_template[] = {
 	  .mode		= 0444,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_COUNTRYCODE,
+	},
+	{ .ctl_name	= CTL_AUTO,
+	  .procname	= "maxvaps",
+	  .mode		= 0444,
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_MAXVAPS,
 	},
 	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "regdomain",
@@ -10503,6 +10543,13 @@ static ctl_table ath_static_sysctls[] = {
 	  .mode		= 0444,
 	  .data		= &ath_countrycode,
 	  .maxlen	= sizeof(ath_countrycode),
+	  .proc_handler	= proc_dointvec
+	},
+	{ .ctl_name	= CTL_AUTO,
+	  .procname	= "maxvaps",
+	  .mode		= 0444,
+	  .data		= &ath_maxvaps,
+	  .maxlen	= sizeof(ath_maxvaps),
 	  .proc_handler	= proc_dointvec
 	},
 	{ .ctl_name	= CTL_AUTO,
