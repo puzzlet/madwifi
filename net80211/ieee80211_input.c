@@ -249,10 +249,9 @@ ieee80211_input(struct ieee80211_node *ni,
 		goto out;
 	}
 	/* Give skb back to kernel (if we are in interrupt context, it's deferred) */
-	if (SKB_CB(skb)->ni != NULL) {
-		SKB_CB(skb2)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
+	ieee80211_skb_copy_noderef(skb, skb2);
+	if (SKB_CB(skb)->ni != NULL)
 		ieee80211_unref_node(&SKB_CB(skb)->ni);
-	}
 	ieee80211_dev_kfree_skb(&skb);
 	skb = skb2;
 
@@ -740,9 +739,8 @@ ieee80211_input(struct ieee80211_node *ni,
 
 			skb1 = skb_copy(skb, GFP_ATOMIC);
 			/* Increment reference count after copy */
-			if (NULL != skb1 && SKB_CB(skb)->ni != NULL) {
-				SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-			}
+			if (skb1 != NULL)
+				ieee80211_skb_copy_noderef(skb, skb1);
 
 			/* we now have 802.3 MAC hdr followed by 802.2 LLC/SNAP; convert to EthernetII.
 			 * Note that the frame is at least IEEE80211_MIN_LEN, due to the driver code. */
@@ -953,9 +951,7 @@ ieee80211_input_all(struct ieee80211com *ic,
 				continue;
 			}
 			/* We duplicate the reference after skb_copy */
-			if (SKB_CB(skb)->ni != NULL) {
-				SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-			}
+			ieee80211_skb_copy_noderef(skb, skb1);
 		} else {
 			skb1 = skb;
 			skb = NULL;
@@ -1062,9 +1058,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 				 */
 				ni->ni_rxfrag = skb_copy(skb, GFP_ATOMIC);
 				/* We duplicate the reference after skb_copy */
-				if (SKB_CB(skb)->ni != NULL) {
-					SKB_CB(ni->ni_rxfrag)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-				}
+				ieee80211_skb_copy_noderef(skb, ni->ni_rxfrag);
 				ieee80211_dev_kfree_skb(&skb);
 			}
 			/*
@@ -1079,9 +1073,8 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 					(skb_end_pointer(skb) - skb->head),
 					GFP_ATOMIC);
 				/* We duplicate the reference after skb_copy */
-				if (SKB_CB(skb)->ni != NULL && (skb != ni->ni_rxfrag)) {
-					SKB_CB(ni->ni_rxfrag)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-				}
+				if (skb != ni->ni_rxfrag)
+					ieee80211_skb_copy_noderef(skb, ni->ni_rxfrag);
 				ieee80211_dev_kfree_skb(&skb);
 			}
 		}
@@ -1143,9 +1136,7 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 		if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
 			skb1 = skb_copy(skb, GFP_ATOMIC);
 			/* We duplicate the reference after skb_copy */
-			if (SKB_CB(skb)->ni != NULL) {
-				SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-			}
+			ieee80211_skb_copy_noderef(skb, skb1);
 		}
 		else {
 			/*
@@ -1289,9 +1280,7 @@ ieee80211_decap(struct ieee80211vap *vap, struct sk_buff *skb, int hdrlen)
 		/* XXX: does this always work? */
 		tskb = skb_copy(skb, GFP_ATOMIC);
 		/* We duplicate the reference after skb_copy */
-		if (SKB_CB(skb)->ni != NULL) {
-			SKB_CB(tskb)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-		}
+		ieee80211_skb_copy_noderef(skb, tskb);
 		ieee80211_dev_kfree_skb(&skb);
 		skb = tskb;
 	}
@@ -2314,9 +2303,7 @@ forward_mgmt_to_app(struct ieee80211vap *vap, int subtype, struct sk_buff *skb,
 		if (skb1 == NULL)
 			return;
 		/* We duplicate the reference after skb_copy */
-		if (SKB_CB(skb)->ni != NULL) {
-			SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-		}
+		ieee80211_skb_copy_noderef(skb, skb1);
 		skb1->dev = dev;
 		skb_reset_mac_header(skb1);
 
