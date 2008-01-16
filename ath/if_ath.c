@@ -8685,7 +8685,8 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		HAL_LED_RUN,	/* IEEE80211_S_RUN */
 	};
 
-	DPRINTF(sc, ATH_DEBUG_STATE, "%s: %s -> %s\n", __func__,
+	DPRINTF(sc, ATH_DEBUG_STATE, "%s: %p[%s] %s -> %s\n", __func__,
+		vap, vap->iv_nickname,
 		ieee80211_state_name[vap->iv_state],
 		ieee80211_state_name[nstate]);
 
