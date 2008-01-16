@@ -6135,6 +6135,9 @@ ath_rx_tasklet(TQUEUE_ARG data)
 #endif
 		rs = &bf->bf_dsstatus.ds_rxstat;
 
+		if(rs->rs_rssi < 0)
+			rs->rs_rssi = 0;
+
 		len = rs->rs_datalen;
 		/* DMA sync. dies spectacularly if len == 0 */
 		if (len == 0)
