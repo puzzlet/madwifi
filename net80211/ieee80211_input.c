@@ -2556,21 +2556,23 @@ ieee80211_parse_csaie(struct ieee80211_node *ni, u_int8_t *frm,
 
 /* XXX. Not the right place for such a definition */
 struct l2_update_frame {
-	struct ether_header eh;
-	u8 dsap;
-	u8 ssap;
+	u8 da[ETH_ALEN]; /* broadcast */
+	u8 sa[ETH_ALEN]; /* STA addr */
+	u16 len; /* 6 */
+	u8 dsap; /* null DSAP address */
+	u8 ssap; /* null SSAP address, CR=Response */
 	u8 control;
-	u8 xid[3];
-}  __packed;
+	u8 xid_info[3];
+} __attribute__ ((packed));
+
 
 static void
-ieee80211_deliver_l2uf(struct ieee80211_node *ni)
+ieee80211_deliver_l2_rnr(struct ieee80211_node *ni)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct net_device *dev = vap->iv_dev;
 	struct sk_buff *skb;
 	struct l2_update_frame *l2uf;
-	struct ether_header *eh;
 
 	skb = ieee80211_dev_alloc_skb(sizeof(*l2uf));
 	if (skb == NULL) {
@@ -2578,20 +2580,57 @@ ieee80211_deliver_l2uf(struct ieee80211_node *ni)
 	}
 	skb_put(skb, sizeof(*l2uf));
 	l2uf = (struct l2_update_frame *)(skb->data);
-	eh = &l2uf->eh;
 	/* dst: Broadcast address */
-	IEEE80211_ADDR_COPY(eh->ether_dhost, dev->broadcast);
+	memcpy(l2uf->da, dev->broadcast, ETH_ALEN);
 	/* src: associated STA */
-	IEEE80211_ADDR_COPY(eh->ether_shost, ni->ni_macaddr);
-	eh->ether_type = htons(skb->len - sizeof(*eh));
-
+	memcpy(l2uf->sa, ni->ni_macaddr, ETH_ALEN);
+	l2uf->len  = htons(6);
 	l2uf->dsap = 0;
 	l2uf->ssap = 0;
 	l2uf->control = 0xf5;
-	l2uf->xid[0] = 0x81;
-	l2uf->xid[1] = 0x80;
-	l2uf->xid[2] = 0x00;
+	l2uf->xid_info[0] = 0x81;
+	l2uf->xid_info[1] = 0x80;
+	l2uf->xid_info[2] = 0x00;
 
+	skb->dev = dev;
+	/* eth_trans_type modifies skb state (skb_pull(ETH_HLEN)), so use
+	 * constants instead. We know the packet type anyway. */
+	skb->pkt_type = PACKET_BROADCAST;
+	skb->protocol = htons(ETH_P_802_2);
+	skb_reset_mac_header(skb);
+
+	ieee80211_deliver_data(ni, skb);
+	return;
+}
+
+static void
+ieee80211_deliver_l2_xid(struct ieee80211_node *ni)
+{
+	struct ieee80211vap *vap = ni->ni_vap;
+	struct net_device *dev = vap->iv_dev;
+	struct sk_buff *skb;
+	struct l2_update_frame *l2uf;
+
+	skb = ieee80211_dev_alloc_skb(sizeof(*l2uf));
+	if (skb == NULL) {
+		return;
+	}
+	/* Leak check / cleanup destructor */
+	skb_put(skb, sizeof(*l2uf));
+	l2uf = (struct l2_update_frame *)(skb->data);
+	/* dst: Broadcast address */
+	memcpy(l2uf->da, dev->broadcast, ETH_ALEN);
+	/* src: associated STA */
+	memcpy(l2uf->sa, ni->ni_macaddr, ETH_ALEN);
+	l2uf->len  = htons(6);
+	l2uf->dsap = 0x00; /* NULL DSAP address */
+	l2uf->ssap = 0x01;/* NULL SSAP address, CR Bit: Response */
+	l2uf->control = 0xaf; /* XID response lsb.1111F101.
+		  	       * F=0 (no poll command; unsolicited frame) */
+	l2uf->xid_info[0] = 0x81; /* XID format identifier */
+	l2uf->xid_info[1] = 1; /* LLC types/classes: Type 1 LLC */
+	l2uf->xid_info[2] = 1 << 1; /* XID sender's receive window size (RW)
+				   * FIX: what is correct RW with 802.11? */
 	skb->dev = dev;
 	/* eth_trans_type modifies skb state (skb_pull(ETH_HLEN)), so use
 	 * constants instead. We know the packet type anyway. */
@@ -3434,8 +3473,9 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 
 		ieee80211_saveath(ni, ath);
 
-		/* Send TGf L2UF frame on behalf of newly associated station */
-		ieee80211_deliver_l2uf(ni);
+		/* Send Receiver Not Ready (RNR) followed by XID for newly associated stations */
+		ieee80211_deliver_l2_rnr(ni);
+		ieee80211_deliver_l2_xid(ni);
 		ieee80211_node_join(ni, resp);
 #ifdef ATH_SUPERG_XR
 		if (ni->ni_prev_vap &&
