@@ -552,8 +552,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	DPRINTF(sc, ATH_DEBUG_ANY, "%s: devid 0x%x\n", __func__, devid);
 
 	/* Allocate space for dynamically determined maximum VAP count */
-	sc->sc_bslot = kmalloc(ath_maxvaps * sizeof(struct ieee80211vap), GFP_KERNEL);
-	memset(sc->sc_bslot, 0, ath_maxvaps * sizeof(struct ieee80211vap));
+	sc->sc_bslot = 
+		kzalloc(ath_maxvaps * sizeof(struct ieee80211vap), GFP_KERNEL);
 
 	/*
 	 * Cache line size is used to size and align various
@@ -645,7 +645,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 		ath_maxvaps = maxvaps;
 		if (ath_maxvaps < ATH_MAXVAPS_MIN)
 			ath_maxvaps = ATH_MAXVAPS_MIN;
-		if (ath_maxvaps > ATH_MAXVAPS_MAX)
+		else if (ath_maxvaps > ATH_MAXVAPS_MAX)
 			ath_maxvaps = ATH_MAXVAPS_MAX;
 	}
 	if (outdoor != -1)
@@ -1379,17 +1379,18 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 			 * of staggered beacons.
 			 */
 			/* XXX check for beacon interval too small */
-			if(ath_maxvaps > 4) {
-				DPRINTF(sc, ATH_DEBUG_BEACON, "Staggered beacons are not possible "
-				       "with maxvaps set to %d.\n", ath_maxvaps);
+			if (ath_maxvaps > 4) {
+				DPRINTF(sc, ATH_DEBUG_BEACON, 
+						"Staggered beacons are not "
+						"possible with maxvaps set "
+						"to %d.\n", ath_maxvaps);
 				sc->sc_stagbeacons = 0;
-			}
-			else {
+			} else {
 				sc->sc_stagbeacons = 1;
 			}
 		}
 		DPRINTF(sc, ATH_DEBUG_BEACON, "sc->sc_stagbeacons %sabled\n", 
-			(sc->sc_stagbeacons ? "en" : "dis"));
+				(sc->sc_stagbeacons ? "en" : "dis"));
 	}
 	if (sc->sc_hastsfadd)
 		ath_hal_settsfadjust(sc->sc_ah, sc->sc_stagbeacons);
@@ -3042,7 +3043,6 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	ath_bufhead bf_head;
 	struct ath_buf *tbf, *tempbf;
 	struct sk_buff *tskb;
-	struct ieee80211vap *vap;
 	int framecnt;
 	int requeue = 0;
 #ifdef ATH_SUPERG_FF
@@ -3083,11 +3083,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		goto hardstart_fail;
 	}
 
-	vap = ni->ni_vap;
-
-
 #ifdef ATH_SUPERG_FF
-
 	if (M_FLAG_GET(skb, M_UAPSD)) {
 		/* bypass FF handling */
 		bf = ath_take_txbuf(sc);
@@ -3141,7 +3137,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	 *     in athff_can_aggregate() call too. */
 	ATH_TXQ_LOCK_IRQ(txq);
 	if (athff_can_aggregate(sc, eh, an, skb, 
-				vap->iv_fragthreshold, &ff_flush)) {
+				ni->ni_vap->iv_fragthreshold, &ff_flush)) {
 		if (an->an_tx_ffbuf[skb->priority]) { /* i.e., frame on the staging queue */
 			bf = an->an_tx_ffbuf[skb->priority];
 
