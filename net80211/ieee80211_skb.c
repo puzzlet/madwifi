@@ -408,9 +408,9 @@ unref_skb(struct sk_buff *skb, int type,
 	}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
-	if ((in_irq() || irqs_disabled()) 
-	     && (type == UNREF_USE_KFREE_SKB || type == UNREF_USE_DEV_KFREE_SKB)) 
-	{
+	if ((in_irq() || irqs_disabled()) && 
+			(type == UNREF_USE_KFREE_SKB || 
+			 type == UNREF_USE_DEV_KFREE_SKB)) {
 		skb_print_message(0 /* show_counter */, 
 			skb, func1, line1, func2, line2,
 			"ERROR: free an skb in interrupt context using a non-"
