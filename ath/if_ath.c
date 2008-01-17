@@ -8901,10 +8901,10 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		 */
 		if (!sc->sc_beacons && vap->iv_opmode!=IEEE80211_M_WDS) {
 			ath_beacon_config(sc, vap);
-			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_BEACON | ATH_DEBUG_BEACON_PROC,
-			"%s: Beacons reconfigured by %p[%s]!\n",
-			__func__, vap, vap->iv_nickname);
-
+			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_BEACON | 
+					ATH_DEBUG_BEACON_PROC,
+					"%s: Beacons reconfigured by %p[%s]!\n",
+					__func__, vap, vap->iv_nickname);
 			sc->sc_beacons = 1;
 		}
 
