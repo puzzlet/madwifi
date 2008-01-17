@@ -131,7 +131,7 @@ static void skb_print_message(
 #else
 	printk("%s: %s%s:%d %s\n",
 #endif
-		DEV_NAME(skb->dev),
+		((skb != NULL) ? DEV_NAME(skb->dev) : "none"),
 		skb_count, 
 #ifdef IEEE80211_DEBUG_REFCNT
 		func1, line1,
