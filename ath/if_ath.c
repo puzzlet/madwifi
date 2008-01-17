@@ -3221,7 +3221,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			}
 			bf = ath_take_txbuf(sc);
 			if (bf == NULL) {
-                               netif_stop_queue(dev);
+				netif_stop_queue(dev);
 				requeue = 1;
 				goto hardstart_fail;
 			}
