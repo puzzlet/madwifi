@@ -4778,11 +4778,10 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 		if (bflink != NULL)
 			*bflink = 0;		/* link of last frame */
 
-		if(!bfaddr) {
+		if (!bfaddr)
 			DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
-				"%s: bursted beacons failed to set bfaddr!!\n", __func__);
-		}
-
+					"%s: bursted beacons failed to set "
+					"bfaddr!\n", __func__);
 	}
 
 	/*
