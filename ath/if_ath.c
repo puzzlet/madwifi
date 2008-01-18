@@ -342,9 +342,9 @@ static void ath_set_txcont_power(struct ieee80211com *, unsigned int);
 static unsigned int ath_get_txcont_rate(struct ieee80211com *);
 static void ath_set_txcont_rate(struct ieee80211com *ic, unsigned int new_rate);
 
-
 static u_int32_t ath_get_clamped_maxtxpower(struct ath_softc *sc);
-static u_int32_t ath_set_clamped_maxtxpower(struct ath_softc *sc, u_int32_t new_clamped_maxtxpower);
+static u_int32_t ath_set_clamped_maxtxpower(struct ath_softc *sc, 
+		u_int32_t new_clamped_maxtxpower);
 static u_int32_t ath_get_real_maxtxpower(struct ath_softc *sc);
 
 /* calibrate every 30 secs in steady state but check every second at first. */
@@ -1576,17 +1576,17 @@ ath_resume(struct net_device *dev)
 static __inline u_int64_t
 ath_extend_tsf(u_int64_t tsf, u_int32_t rstamp)
 {
-#define TSTAMP_MASK  0x7fff
+#define TSTAMP_RX_MASK  0x7fff
 
 	u_int64_t result;
 
-	result = (tsf & ~TSTAMP_MASK) | rstamp;
+	result = (tsf & ~TSTAMP_RX_MASK) | rstamp;
 	if (result > tsf) {
-		if ((result - tsf) > (TSTAMP_MASK / 2))
-			result -= (TSTAMP_MASK + 1);
+		if ((result - tsf) > (TSTAMP_RX_MASK / 2))
+			result -= (TSTAMP_RX_MASK + 1);
 	} else {
-		if ((tsf - result) > (TSTAMP_MASK / 2))
-			result += (TSTAMP_MASK + 1);
+		if ((tsf - result) > (TSTAMP_RX_MASK / 2))
+			result += (TSTAMP_RX_MASK + 1);
 	}
 
 	return result;
@@ -1965,7 +1965,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 	/* SECOND PASS - FIX RX TIMESTAMPS */
 	if (count > 0) {
 		hw_tsf = ath_hal_gettsf64(ah);
-		if (last_rs_tstamp > (hw_tsf & TSTAMP_MASK)) {
+		if (last_rs_tstamp > (hw_tsf & TSTAMP_RX_MASK)) {
 			rollover++;
 			DPRINTF(sc, ATH_DEBUG_TSF,
 				"%s: %d rollover detected for hw_tsf=%10llx\n",
@@ -1994,8 +1994,8 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 				/* update last_rs_tstamp */
 				last_rs_tstamp = bf->bf_tsf;
 				bf->bf_tsf = 
-					(hw_tsf & ~TSTAMP_MASK) | bf->bf_tsf;
-				bf->bf_tsf -= rollover * (TSTAMP_MASK + 1);
+					(hw_tsf & ~TSTAMP_RX_MASK) | bf->bf_tsf;
+				bf->bf_tsf -= rollover * (TSTAMP_RX_MASK + 1);
 
 				DPRINTF(sc, ATH_DEBUG_TSF,
 					"%s: bf_tsf=%10llx hw_tsf=%10llx\n",
@@ -3130,7 +3130,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		skb_orphan(skb);
 	}
 
-	eh = (struct ether_header *) skb->data;
+	eh = (struct ether_header *)skb->data;
 
 #ifdef ATH_SUPERG_FF
 	/* NB: use this lock to protect an->an_tx_ffbuf (and txq->axq_stageq)
@@ -4698,7 +4698,6 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 	u_int32_t bfaddr = 0;
 	u_int32_t n_beacon;
 
-
 	/*
 	 * Check if the previous beacon has gone out.  If
 	 * not don't try to post another, skip this period
@@ -5507,7 +5506,6 @@ ath_node_move_data(const struct ieee80211_node *ni)
 	HAL_STATUS status;
 	unsigned int index;
 
-
 	if (ni->ni_vap->iv_flags & IEEE80211_F_XR) {
 		struct ath_txq tmp_q;
 		memset(&tmp_q, 0, sizeof(tmp_q));
@@ -6198,7 +6196,7 @@ ath_rx_tasklet(TQUEUE_ARG data)
 #endif
 		rs = &bf->bf_dsstatus.ds_rxstat;
 
-		if(rs->rs_rssi < 0)
+		if (rs->rs_rssi < 0)
 			rs->rs_rssi = 0;
 
 		len = rs->rs_datalen;
@@ -6393,10 +6391,9 @@ rx_accept:
 			ni = ieee80211_find_rxnode(ic,
 				(const struct ieee80211_frame_min *)skb->data);
 			if (ni != NULL) {
-				struct ath_node *an = ATH_NODE(ni);
 				ieee80211_keyix_t keyix;
 
-				ATH_RSSI_LPF(an->an_avgrssi, rs->rs_rssi);
+				ATH_RSSI_LPF(ATH_NODE(ni)->an_avgrssi, rs->rs_rssi);
 				type = ieee80211_input(ni, skb, rs->rs_rssi, bf->bf_tsf);
 				/*
 				 * If the station has a key cache slot assigned
@@ -6406,7 +6403,6 @@ rx_accept:
 				if (keyix != IEEE80211_KEYIX_NONE &&
 				    sc->sc_keyixmap[keyix] == NULL)
 					sc->sc_keyixmap[keyix] = ieee80211_ref_node(ni);
-				an = NULL;
 				ieee80211_unref_node(&ni);
 			} else
 				type = ieee80211_input_all(ic, skb, rs->rs_rssi, bf->bf_tsf);
@@ -6633,7 +6629,6 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 
 	if (sc->sc_xrgrppoll)
 		return;
-
 
 	memset(&rates, 0, sizeof(rates));
 	pos = 0;
@@ -8072,7 +8067,6 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 #endif
 		}
 
-		bf->bf_skb = NULL;
 		ni = NULL;
 		ath_return_txbuf(sc, &bf);
 	}
@@ -8179,7 +8173,6 @@ static void
 ath_tx_timeout(struct net_device *dev)
 {
 	struct ath_softc *sc = dev->priv;
-
 
 	DPRINTF(sc, ATH_DEBUG_WATCHDOG, "%s: %sRUNNING %svalid\n",
 		__func__, (dev->flags & IFF_RUNNING) ? "" : "!",
@@ -8426,7 +8419,6 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 	   (hchan.channelFlags & IEEE80211_CHAN_TURBO) != 
 	   (sc->sc_curchan.channelFlags & IEEE80211_CHAN_TURBO))
 		tswitch = 1;
-
 
 	channel_change_required = hchan.channel != sc->sc_curchan.channel ||
 		hchan.channelFlags != sc->sc_curchan.channelFlags ||
@@ -9323,7 +9315,6 @@ ath_getchannels(struct net_device *dev, u_int cc,
 	 */
 	printk(KERN_INFO "HAL returned %d channels.\n", nchan);
 	for (i = 0; i < nchan; i++) {
-
 		HAL_CHANNEL *c = &chans[i];
 		struct ieee80211_channel *ichan = &ic->ic_channels[i];
 
@@ -9346,38 +9337,94 @@ ath_getchannels(struct net_device *dev, u_int cc,
 		ichan->ic_non_occupancy_period.tv_sec  = 0;
 		ichan->ic_non_occupancy_period.tv_usec = 0;
 
-		printk(KERN_INFO "Channel %3d (%4d MHz) Max Tx Power %d dBm%s [%d hw %d reg] Flags%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
-			, ichan->ic_ieee
-			, c->channel
-			, c->maxRegTxPower > (c->maxTxPower/2) ? (c->maxTxPower/2) : c->maxRegTxPower
-			, ( c->maxRegTxPower == (c->maxTxPower/2) ? "" : ( (c->maxRegTxPower > (c->maxTxPower/2)) ? " (hw limited)" : " (reg limited)" ) )
-			, (c->maxTxPower/2)
-			, c->maxRegTxPower
-			, (c->channelFlags & 0x0001               ? " CF & (1<<0)"          :       "" /* undocumented */)
-			, (c->channelFlags & CHANNEL_CW_INT       ? " CF_CW_INTERFERENCE"   :       "" /* CW interference detected on channel */)
-			, (c->channelFlags & 0x0004               ? " CF & (1<<2)"          :       "" /* undocumented */)
-			, (c->channelFlags & 0x0008               ? " CF & (1<<3)"          :       "" /* undocumented */)
-			, (c->channelFlags & CHANNEL_TURBO        ? " CF_TURBO"             :       "" /* Turbo channel */)
-			, (c->channelFlags & CHANNEL_CCK          ? " CF_CCK"               :       "" /* CCK channel */)
-			, (c->channelFlags & CHANNEL_OFDM         ? " CF_OFDM"              :       "" /* OFDM channel */)
-			, (c->channelFlags & CHANNEL_2GHZ         ? " CF_2GHZ"              :       "" /* 2GHz spectrum channel. */)
-			, (c->channelFlags & CHANNEL_5GHZ         ? " CF_5GHZ"              :       "" /* 5GHz spectrum channel */)
-			, (c->channelFlags & CHANNEL_PASSIVE      ? " CF_PASSIVE_SCAN_ONLY" :       "" /* Only passive scan allowed */)
-			, (c->channelFlags & CHANNEL_DYN          ? " CF_DYNAMIC_TURBO"     :       "" /* Dynamic CCK-OFDM channel */)
-			, (c->channelFlags & CHANNEL_XR           ? " CF_FHSS"              :       "" /* GFSK channel (FHSS  PHY) */)
-			, (c->channelFlags & IEEE80211_CHAN_RADAR ? " CF_RADAR_SEEN"        :       "" /* Radar found on channel */)
-			, (c->channelFlags & CHANNEL_STURBO       ? " CF_STATIC_TURBO"      :       "" /* 11a static turbo channel only  */)
-			, (c->channelFlags & CHANNEL_HALF         ? " CF_HALF_RATE"         :       "" /* Half rate channel */)
-			, (c->channelFlags & CHANNEL_QUARTER      ? " CF_QUARTER_RATE"      :       "" /* Quarter rate channel */)
-			, (c->privFlags    & CHANNEL_INTERFERENCE ? " PF_INTERFERENCE"      :       "" /* Software use: channel interference used for as AR as well as RADAR interference detection */)
-			, (c->privFlags    & CHANNEL_DFS          ? " PF_DFS_REQUIRED"      :       "" /* DFS required on channel */)
-			, (c->privFlags    & CHANNEL_4MS_LIMIT    ? " PF_4MS_LIMIT"         :       "" /* 4msec packet limit on this channel */)
-			, (c->privFlags    & CHANNEL_DFS_CLEAR    ? " PF_DFS_CLEAR"         :       "" /* if channel has been checked for DFS */)
-			, (c->privFlags    & 0x0010               ? " PF & (1<<4)"          :       "" /* undocumented */)
-			, (c->privFlags    & 0x0020               ? " PF & (1<<5)"          :       "" /* undocumented */)
-			, (c->privFlags    & 0x0040               ? " PF & (1<<6)"          :       "" /* undocumented */)
-			, (c->privFlags    & 0x0080               ? " PF & (1<<7)"          :       "" /* undocumented */)
-			);
+		printk(KERN_INFO "Channel %3d (%4d MHz) Max Tx Power %d dBm%s "
+				"[%d hw %d reg] Flags%s%s%s%s%s%s%s%s%s%s%s%s%"
+				"s%s%s%s%s%s%s%s%s%s%s%s\n",
+				ichan->ic_ieee,
+				c->channel,
+				(c->maxRegTxPower > (c->maxTxPower / 2) ? 
+				 (c->maxTxPower/2) : c->maxRegTxPower),
+				(c->maxRegTxPower == (c->maxTxPower / 2) ? 
+				 "" : 
+				 ((c->maxRegTxPower > (c->maxTxPower / 2)) ? 
+				  " (hw limited)" : " (reg limited)")),
+				(c->maxTxPower / 2),
+				c->maxRegTxPower,
+				/* undocumented */
+				(c->channelFlags & 0x0001 ? 
+				 " CF & (1 << 0)" : ""),
+				/* CW interference detected on channel */
+				(c->channelFlags & CHANNEL_CW_INT ? 
+				 " CF_CW_INTERFERENCE" : ""),
+				/* undocumented */
+				(c->channelFlags & 0x0004 ? 
+				 " CF & (1 << 2)" : ""),
+				/* undocumented */
+				(c->channelFlags & 0x0008 ? 
+				 " CF & (1 << 3)" : ""),
+				/* Turbo channel */
+				(c->channelFlags & CHANNEL_TURBO ? 
+				 " CF_TURBO" : ""),
+				/* CCK channel */
+				(c->channelFlags & CHANNEL_CCK ? 
+				 " CF_CCK" : ""),
+				/* OFDM channel */
+				(c->channelFlags & CHANNEL_OFDM ? 
+				 " CF_OFDM" : ""),
+				/* 2GHz spectrum channel. */
+				(c->channelFlags & CHANNEL_2GHZ ? 
+				 " CF_2GHZ" : ""),
+				/* 5GHz spectrum channel */
+				(c->channelFlags & CHANNEL_5GHZ ? 
+				 " CF_5GHZ" : ""),
+				/* Only passive scan allowed */
+				(c->channelFlags & CHANNEL_PASSIVE ? 
+				 " CF_PASSIVE_SCAN_ONLY" : ""),
+				/* Dynamic CCK-OFDM channel */
+				(c->channelFlags & CHANNEL_DYN ? 
+				 " CF_DYNAMIC_TURBO" : ""),
+				/* GFSK channel (FHSS  PHY) */
+				(c->channelFlags & CHANNEL_XR ? 
+				 " CF_FHSS" : ""),
+				/* Radar found on channel */
+				(c->channelFlags & IEEE80211_CHAN_RADAR ? 
+				 " CF_RADAR_SEEN" : ""),
+				/* 11a static turbo channel only */
+				(c->channelFlags & CHANNEL_STURBO ? 
+				 " CF_STATIC_TURBO"      :       ""),
+				/* Half rate channel */
+				(c->channelFlags & CHANNEL_HALF ? 
+				 " CF_HALF_RATE" : ""),
+				/* Quarter rate channel */
+				(c->channelFlags & CHANNEL_QUARTER ? 
+				 " CF_QUARTER_RATE" : ""),
+				/* Software use: channel interference used 
+				 * for as AR as well as RADAR interference 
+				 * detection. */
+				(c->privFlags & CHANNEL_INTERFERENCE ? 
+				 " PF_INTERFERENCE" : ""),
+				/* DFS required on channel */
+				(c->privFlags & CHANNEL_DFS ? 
+				 " PF_DFS_REQUIRED" : ""),
+				/* 4msec packet limit on this channel */
+				(c->privFlags & CHANNEL_4MS_LIMIT ? 
+				 " PF_4MS_LIMIT" : ""),
+				/* if channel has been checked for DFS */
+				(c->privFlags & CHANNEL_DFS_CLEAR ? 
+				 " PF_DFS_CLEAR" : ""),
+				/* undocumented */
+				(c->privFlags & 0x0010 ? 
+				 " PF & (1 << 4)" : ""),
+				/* undocumented */
+				(c->privFlags & 0x0020 ? 
+				 " PF & (1 << 5)" : ""),
+				/* undocumented */
+				(c->privFlags & 0x0040 ? 
+				 " PF & (1 << 6)" : ""),
+				/* undocumented */
+				(c->privFlags & 0x0080 ? 
+				 " PF & (1 << 7)" : "")
+				);
 	}
 	ic->ic_nchans = nchan;
 	kfree(chans);
@@ -9453,19 +9500,21 @@ set_node_txpower(void *arg, struct ieee80211_node *ni)
 }
 
 /* The HAL supports a maxtxpow which is something we can configure to be the
-minimum of the regulatory constraint and the limits of the radio.
-XXX: this function needs some locking to avoid being called twice/interrupted
-Returns the value actually stored. */
+ * minimum of the regulatory constraint and the limits of the radio.
+ * XXX: this function needs some locking to avoid being called 
+ * twice/interrupted. Returns the value actually stored. */
 static u_int32_t
-ath_set_clamped_maxtxpower(struct ath_softc *sc, u_int32_t new_clamped_maxtxpower)
+ath_set_clamped_maxtxpower(struct ath_softc *sc, 
+		u_int32_t new_clamped_maxtxpower)
 {
 	(void)ath_hal_settxpowlimit(sc->sc_ah, new_clamped_maxtxpower);
 	return ath_get_clamped_maxtxpower(sc);
 }
 
 /* The HAL supports a maxtxpow which is something we can configure to be the
-minimum of the regulatory constraint and the limits of the radio.
-XXX: this function needs some locking to avoid being called twice/interrupted */
+ * minimum of the regulatory constraint and the limits of the radio.
+ * XXX: this function needs some locking to avoid being called 
+ * twice/interrupted */
 static u_int32_t
 ath_get_clamped_maxtxpower(struct ath_softc *sc)
 {
@@ -9474,27 +9523,29 @@ ath_get_clamped_maxtxpower(struct ath_softc *sc)
 	return clamped_maxtxpower;
 }
 
-/* XXX: this function needs some locking to avoid being called twice/interrupted */
-/* 1.  Save the currently specified maximum txpower (as clamped by madwifi)
- * 2.  Determine the real maximum txpower the card can support by
- *     setting a value that exceeds the maximum range (by one) and
- *     finding out what it limits us to.
- * 3.  Restore the saved maxtxpower value we had previously specified */
+/* XXX: this function needs some locking to avoid being called 
+ * twice/interrupted */
+/* 1. Save the currently specified maximum txpower (as clamped by madwifi)
+ * 2. Determine the real maximum txpower the card can support by
+ *    setting a value that exceeds the maximum range (by one) and
+ *    finding out what it limits us to.
+ * 3. Restore the saved maxtxpower value we had previously specified */
 static u_int32_t
 ath_get_real_maxtxpower(struct ath_softc *sc)
 {
-
 	u_int32_t saved_clamped_maxtxpower;
 	u_int32_t real_maxtxpower;
 
 	saved_clamped_maxtxpower = ath_get_clamped_maxtxpower(sc);
-	real_maxtxpower = ath_set_clamped_maxtxpower(sc, IEEE80211_TXPOWER_MAX + 1);
+	real_maxtxpower = 
+		ath_set_clamped_maxtxpower(sc, IEEE80211_TXPOWER_MAX + 1);
 	ath_set_clamped_maxtxpower(sc, saved_clamped_maxtxpower);
 	return real_maxtxpower;
 }
 
 
-/* XXX: this function needs some locking to avoid being called twice/interrupted */
+/* XXX: this function needs some locking to avoid being called 
+ * twice/interrupted */
 static void
 ath_update_txpow(struct ath_softc *sc)
 {
@@ -9517,7 +9568,9 @@ ath_update_txpow(struct ath_softc *sc)
 	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
 		if (!tpc || ic->ic_newtxpowlimit != vap->iv_bss->ni_txpower) {
 			vap->iv_bss->ni_txpower = new_clamped_maxtxpower;
-			ieee80211_iterate_nodes(&vap->iv_ic->ic_sta, set_node_txpower, &new_clamped_maxtxpower);
+			ieee80211_iterate_nodes(&vap->iv_ic->ic_sta, 
+					set_node_txpower, 
+					&new_clamped_maxtxpower);
 		}
 	}
 
@@ -9526,7 +9579,6 @@ ath_update_txpow(struct ath_softc *sc)
 	if (new_clamped_maxtxpower != prev_clamped_maxtxpower)
 		ath_hal_settxpowlimit(ah, new_clamped_maxtxpower);
 }
-
 
 #ifdef ATH_SUPERG_XR
 static int
