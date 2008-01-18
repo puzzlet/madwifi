@@ -9334,8 +9334,8 @@ ath_getchannels(struct net_device *dev, u_int cc,
 		ichan->ic_maxregpower	= c->maxRegTxPower;	/* dBm */
 		ichan->ic_maxpower	= c->maxTxPower;	/* 1/2 dBm */
 		ichan->ic_minpower	= c->minTxPower;	/* 1/2 dBm */
-		ichan->ic_non_occupancy_period.tv_sec  = 0;
-		ichan->ic_non_occupancy_period.tv_usec = 0;
+		ic->ic_chan_non_occupy[i].tv_sec  = 0;
+		ic->ic_chan_non_occupy[i].tv_usec = 0;
 
 		printk(KERN_INFO "Channel %3d (%4d MHz) Max Tx Power %d dBm%s "
 				"[%d hw %d reg] Flags%s%s%s%s%s%s%s%s%s%s%s%s%"

@@ -142,11 +142,6 @@ struct ieee80211_channel {
 	int8_t ic_maxregpower;	/* maximum regulatory tx power in dBm */
 	int8_t ic_maxpower;	/* maximum tx power in dBm */
 	int8_t ic_minpower;	/* minimum tx power in dBm */
-
-	/* end of the Non-Occupancy Period, when we can use this channel again?
-	 * If <= NOW then clear IEEE80211_CHAN_RADAR in ic_flags. Initialized
-	 * to {0,0} */
-	struct timeval ic_non_occupancy_period;
 };
 
 #define	IEEE80211_CHAN_MAX	255

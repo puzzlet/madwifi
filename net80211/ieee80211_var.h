@@ -319,6 +319,7 @@ struct ieee80211com {
 	 */
 	int ic_nchans;				/* # entries in ic_channels */
 	struct ieee80211_channel ic_channels[IEEE80211_CHAN_MAX+1];
+	struct timeval ic_chan_non_occupy[IEEE80211_CHAN_MAX];
 	u_int8_t ic_chan_avail[IEEE80211_CHAN_BYTES];
 	u_int8_t ic_chan_active[IEEE80211_CHAN_BYTES];
 	struct ieee80211_channel *ic_curchan;	/* current channel */
