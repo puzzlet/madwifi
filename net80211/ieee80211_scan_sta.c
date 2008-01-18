@@ -543,7 +543,7 @@ sta_start(struct ieee80211_scan_state *ss, struct ieee80211vap *vap)
 	ss->ss_next = 0;
 	/* XXX tunables */
 	/* 
-	 * MT: The scanner will stay on station for ss_maxdwell ms (using a 
+	 * The scanner will stay on station for ss_maxdwell ms (using a 
 	 * timer), collecting responses.  ss_maxdwell can adjusted downward
 	 * so the station gets back on channel before DTIM occurs.  If the
 	 * station receives probe responses before ss_mindwell has elapsed, the

@@ -9564,7 +9564,7 @@ ath_update_txpow(struct ath_softc *sc)
 	/* Make sure the change is within limits, clamp it otherwise */
 	if (ic->ic_newtxpowlimit > ic->ic_txpowlimit)
 		new_clamped_maxtxpower = ic->ic_txpowlimit;
-	/* * Search for the VAP that needs a txpow change, if any */
+	/* Search for the VAP that needs a txpow change, if any */
 	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
 		if (!tpc || ic->ic_newtxpowlimit != vap->iv_bss->ni_txpower) {
 			vap->iv_bss->ni_txpower = new_clamped_maxtxpower;
