@@ -8846,12 +8846,21 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			 */
 			TAILQ_FOREACH(tmpvap, &ic->ic_vaps, iv_next) {
 				if ((tmpvap != vap) && 
-						(tmpvap->iv_state == IEEE80211_S_RUN) &&
-						(tmpvap->iv_opmode == IEEE80211_M_HOSTAP))
+				    (tmpvap->iv_state == IEEE80211_S_RUN) &&
+				    (tmpvap->iv_opmode == IEEE80211_M_HOSTAP))
 					break;
 			}
-			if (!tmpvap)
+			if (!tmpvap || sc->sc_nostabeacons)
 				sc->sc_beacons = 0;
+
+			DPRINTF(sc, ATH_DEBUG_STATE | 
+				ATH_DEBUG_BEACON | 
+				ATH_DEBUG_BEACON_PROC, 
+				"%s: VAP %p[%s] transitioned to RUN state and "
+				"we %s reconfiguring beacons.\n",
+				__func__, vap, vap->iv_nickname, 
+				sc->sc_beacons ? "ARE NOT" : "ARE");
+
 			break;
 		case IEEE80211_M_STA:
 #ifdef ATH_SUPERG_COMP
@@ -8868,6 +8877,28 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			 */
 			sc->sc_dturbo =
 				(ni->ni_ath_flags & IEEE80211_ATHC_TURBOP) != 0;
+
+			/* When we are in AP mode and we have a station,
+			 * any time the station is in SCAN, AUTH, or ASSOC
+			 * states - all AP VAPs are put down into INIT state
+			 * and marked 'scan pending'.  So, every time the STA
+			 * VAP returns to RUN state on an AP mode radio, we
+			 * are almost certain to have a minimum of one AP VAP
+			 * returning to RUN state, and needing beacons reset.
+			 * Without this, a STA can come back up and leave the
+			 * AP VAP in a state where it is not beaconing. */
+			if (ic->ic_opmode == IEEE80211_M_HOSTAP || 
+			    sc->sc_nostabeacons) 
+				sc->sc_beacons = 0;
+
+			DPRINTF(sc, ATH_DEBUG_STATE | 
+				    ATH_DEBUG_BEACON | 
+				    ATH_DEBUG_BEACON_PROC, 
+				"%s: VAP %p[%s] transitioned to RUN state and "
+				"we %s reconfiguring beacons.\n",
+				__func__, vap, vap->iv_nickname, 
+				sc->sc_beacons ? "ARE NOT" : "ARE");
+
 			break;
 		case IEEE80211_M_WDS:
 			wds_ni = ieee80211_find_txnode(vap, vap->wds_mac);
