@@ -233,7 +233,6 @@ ieee80211_pwrsave(struct sk_buff *skb)
 #endif
 		if (SKB_CB(skb)->ni != NULL)
 			ieee80211_unref_node(&SKB_CB(skb)->ni);
-		ieee80211_dev_kfree_skb(&skb);
 		return NETDEV_TX_BUSY;
 	}
 
