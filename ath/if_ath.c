@@ -3105,7 +3105,6 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	txq = sc->sc_ac2q[skb->priority];
 
 	if (txq->axq_depth > TAIL_DROP_COUNT) {
-		sc->sc_stats.ast_tx_discard++;
 		requeue = 1;
 		goto hardstart_fail;
 	}
