@@ -8071,7 +8071,6 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 #endif
 		}
 
-		bf->bf_skb = NULL;
 		ni = NULL;
 		ath_return_txbuf(sc, &bf);
 	}
