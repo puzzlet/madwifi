@@ -346,7 +346,7 @@ ieee80211_pass_node(struct ieee80211_node **pni) {
 	return (tmp);
 }
 
-/* Decrement ieee80211_node* refcunt, and relinquish the pointer. */
+/* Decrement ieee80211_node* refcount, and relinquish the pointer. */
 #ifdef IEEE80211_DEBUG_REFCNT
 #define ieee80211_unref_node(_pni) \
 	ieee80211_unref_node_debug(_pni, __func__, __LINE__)
