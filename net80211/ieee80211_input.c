@@ -1039,7 +1039,6 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 			 * clear current fragments
 			 */
 			ieee80211_dev_kfree_skb(&ni->ni_rxfrag);
-			ni->ni_rxfrag = NULL;
 		}
 	}
 
