@@ -4328,8 +4328,8 @@ ath_beaconq_config(struct ath_softc *sc)
 		 * Adhoc mode; important thing is to use 2x cwmin.
 		 */
 		qi.tqi_aifs = wmep->wmep_aifsn;
-		qi.tqi_cwmin = 2 * ATH_EXPONENT_TO_VALUE(wmep->wmep_logcwmin);
-		qi.tqi_cwmax = ATH_EXPONENT_TO_VALUE(wmep->wmep_logcwmax);
+		qi.tqi_cwmin = 0;
+		qi.tqi_cwmax = 2 * ATH_EXPONENT_TO_VALUE(wmep->wmep_logcwmin);
 	}
 
 	DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
