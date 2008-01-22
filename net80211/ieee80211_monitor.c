@@ -247,7 +247,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 					break;
 
 				case IEEE80211_RADIOTAP_DATA_RETRIES:
-					ph->try0 = *p;
+					ph->try0 = *p + 1;
 					p++;
 					break;
 
