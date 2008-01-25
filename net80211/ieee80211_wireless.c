@@ -3594,8 +3594,8 @@ ieee80211_ioctl_wdsmac(struct net_device *dev, struct iw_request_info *info,
 	struct sockaddr *sa = (struct sockaddr *)extra;
 
 	if (!IEEE80211_ADDR_NULL(vap->wds_mac)) {
-		printk("%s: Failed to add WDS MAC: %s\n", dev->name,
-			ether_sprintf(sa->sa_data));
+		printk("%s: Failed to add WDS MAC: " MAC_FMT "\n", dev->name,
+			MAC_ADDR(sa->sa_data));
 		printk("%s: Device already has WDS mac address attached,"
 			" remove first\n", dev->name);
 		return -1;
@@ -3603,8 +3603,8 @@ ieee80211_ioctl_wdsmac(struct net_device *dev, struct iw_request_info *info,
 
 	memcpy(vap->wds_mac, sa->sa_data, IEEE80211_ADDR_LEN);
 
-	printk("%s: Added WDS MAC: %s\n", dev->name,
-		ether_sprintf(vap->wds_mac));
+	printk("%s: Added WDS MAC: " MAC_FMT "\n", dev->name,
+		MAC_ADDR(vap->wds_mac));
 
 	if (IS_UP(vap->iv_dev)) {
 		/* Force us back to scan state to force us to go back through RUN
@@ -3650,8 +3650,8 @@ ieee80211_ioctl_wdsdelmac(struct net_device *dev, struct iw_request_info *info,
 		return 0;
 	}
 
-	printk("%s: WDS MAC address %s is not known by this interface\n",
-		dev->name, ether_sprintf(sa->sa_data));
+	printk("%s: WDS MAC address " MAC_FMT " is not known by this interface\n",
+		dev->name, MAC_ADDR(sa->sa_data));
 
 	return -1;
 }

@@ -195,8 +195,8 @@ ath_rate_update(struct ath_softc *sc, struct ieee80211_node *ni, int rate)
 
 	KASSERT(rt != NULL, ("no rate table, mode %u", sc->sc_curmode));
 
-	DPRINTF(sc, "%s: set xmit rate for %s to %dM\n",
-		__func__, ether_sprintf(ni->ni_macaddr),
+	DPRINTF(sc, "%s: set xmit rate for " MAC_FMT " to %dM\n",
+		__func__, MAC_ADDR(ni->ni_macaddr),
 		ni->ni_rates.rs_nrates > 0 ?
 			(ni->ni_rates.rs_rates[rate] & IEEE80211_RATE_VAL) / 2 : 0);
 

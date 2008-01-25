@@ -156,10 +156,10 @@ iwspy_event(struct ieee80211vap *vap, struct ieee80211_node *ni, u_int rssi)
 				union iwreq_data wrq;
 				struct iw_thrspy thr;
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_DEBUG,
-					"%s: we spy %s, threshold is active "
-					"and rssi exceeds it -> raise an iwspy"
-					" event\n", __func__, ether_sprintf(
-					 ni->ni_macaddr));
+					"%s: we spy " MAC_FMT 
+				        ", threshold is active and rssi exceeds"
+					" it -> raise an iwspy event\n", 
+					__func__, MAC_ADDR(ni->ni_macaddr));
 				memset(&wrq, 0, sizeof(wrq));
 				wrq.data.length = 1;
 				memset(&thr, 0, sizeof(struct iw_thrspy));
@@ -794,10 +794,11 @@ ieee80211_input(struct ieee80211_node *ni,
 #ifdef IEEE80211_DEBUG
 		if ((ieee80211_msg_debug(vap) && doprint(vap, subtype)) ||
 		    ieee80211_msg_dumppkts(vap)) {
-			ieee80211_note(vap, "received %s from %s rssi %d\n",
+			ieee80211_note(vap, 
+				"received %s from " MAC_FMT " rssi %d\n",
 				ieee80211_mgt_subtype_name[subtype >>
 				IEEE80211_FC0_SUBTYPE_SHIFT],
-				ether_sprintf(wh->i_addr2), rssi);
+				MAC_ADDR(wh->i_addr2), rssi);
 		}
 #endif
 		if (wh->i_fc[1] & IEEE80211_FC1_PROT) {
@@ -1705,8 +1706,8 @@ static void
 ieee80211_ssid_mismatch(struct ieee80211vap *vap, const char *tag,
 	u_int8_t mac[IEEE80211_ADDR_LEN], u_int8_t *ssid)
 {
-	printf("[%s] discard %s frame, ssid mismatch: ",
-		ether_sprintf(mac), tag);
+	printf("[" MAC_FMT "] discard %s frame, ssid mismatch: ",
+		MAC_ADDR(mac), tag);
 	ieee80211_print_essid(ssid + 2, ssid[1]);
 	printf("\n");
 }
@@ -3322,8 +3323,8 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 				else
 					IEEE80211_DPRINTF(vap,
 						IEEE80211_MSG_ASSOC | IEEE80211_MSG_WPA,
-						"[%s] ignoring RSN IE in association request\n",
-						ether_sprintf(wh->i_addr2));
+						"[" MAC_FMT "] ignoring RSN IE in association request\n",
+						MAC_ADDR(wh->i_addr2));
 				break;
 			case IEEE80211_ELEMID_VENDOR:
 				/* NB: Provide all IEs for wpa_supplicant, so
@@ -3334,8 +3335,8 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 					else
 						IEEE80211_DPRINTF(vap,
 							IEEE80211_MSG_ASSOC | IEEE80211_MSG_WPA,
-							"[%s] ignoring WPA IE in association request\n",
-							ether_sprintf(wh->i_addr2));
+							"[" MAC_FMT "] ignoring WPA IE in association request\n",
+							MAC_ADDR(wh->i_addr2));
 				} else if (iswmeinfo(frm))
 					wme = frm;
 				else if (isatherosoui(frm))
@@ -3367,8 +3368,8 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		if (wpa == NULL && (ic->ic_flags & IEEE80211_F_WPA)) {
 			IEEE80211_DPRINTF(vap,
 				IEEE80211_MSG_ASSOC | IEEE80211_MSG_WPA,
-				"[%s] no WPA/RSN IE in association request\n",
-				ether_sprintf(wh->i_addr2));
+				"[" MAC_FMT "] no WPA/RSN IE in association request\n",
+				MAC_ADDR(wh->i_addr2));
 			IEEE80211_SEND_MGMT(ni,
 				IEEE80211_FC0_SUBTYPE_DEAUTH,
 				IEEE80211_REASON_RSN_REQUIRED);

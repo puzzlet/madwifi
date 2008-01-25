@@ -1758,9 +1758,9 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 			 */
 #if 0
 			/* This print is very chatty, so removing for now. */
-			DPRINTF(sc, ATH_DEBUG_UAPSD, "%s: U-APSD node (%s) "
+			DPRINTF(sc, ATH_DEBUG_UAPSD, "%s: U-APSD node (" MAC_FMT ") "
 				"has invalid keycache entry\n",
-				__func__, ether_sprintf(qwh->i_addr2));
+				__func__, MAC_ADDR(qwh->i_addr2));
 #endif
 			continue;
 		}
@@ -1796,20 +1796,20 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 				ic->ic_uapsdmaxtriggers++;
 				WME_UAPSD_NODE_TRIGSEQINIT(ni);
 				DPRINTF(sc, ATH_DEBUG_UAPSD,
-					"%s: Node (%s) became U-APSD "
+					"%s: Node (" MAC_FMT ") became U-APSD "
 					"triggerable (%d)\n",
 					__func__,
-					ether_sprintf(qwh->i_addr2),
+					MAC_ADDR(qwh->i_addr2),
 					ic->ic_uapsdmaxtriggers);
 			} else {
 				ni->ni_flags &=
 					~IEEE80211_NODE_UAPSD_TRIG;
 				ic->ic_uapsdmaxtriggers--;
 				DPRINTF(sc, ATH_DEBUG_UAPSD,
-					"%s: Node (%s) no longer U-APSD"
+					"%s: Node (" MAC_FMT ") no longer U-APSD"
 					" triggerable (%d)\n",
 					__func__,
-					ether_sprintf(qwh->i_addr2),
+					MAC_ADDR(qwh->i_addr2),
 					ic->ic_uapsdmaxtriggers);
 				/*
 				 * XXX: Rapidly thrashing sta could get
@@ -1851,9 +1851,9 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 
 		DPRINTF(sc, ATH_DEBUG_UAPSD,
 			"%s: U-APSD trigger detected for node "
-			"(%s) on AC %d\n",
+			"(" MAC_FMT ") on AC %d\n",
 			__func__,
-			ether_sprintf(ni->ni_macaddr), ac);
+			MAC_ADDR(ni->ni_macaddr), ac);
 		if (ni->ni_flags & IEEE80211_NODE_UAPSD_SP) {
 			/* have trigger, but SP in progress,
 			 * so ignore */
@@ -3421,7 +3421,7 @@ ath_keyprint(struct ath_softc *sc, const char *tag, u_int ix,
 	printk("%s: [%02u] %-7s ", tag, ix, ciphers[hk->kv_type]);
 	for (i = 0, n = hk->kv_len; i < n; i++)
 		printk("%02x", hk->kv_val[i]);
-	printk(" mac %s", ether_sprintf(mac));
+	printk(" mac " MAC_FMT, MAC_ADDR(mac));
 	if (hk->kv_type == HAL_CIPHER_TKIP) {
 		printk(" %s ", sc->sc_splitmic ? "mic" : "rxmic");
 		for (i = 0; i < sizeof(hk->kv_mic); i++)
@@ -7843,8 +7843,8 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 		/* must lock against interrupt-time processing (i.e., not just tasklet) */
 		ATH_NODE_UAPSD_LOCK_IRQ(an);
 		DPRINTF(sc, ATH_DEBUG_UAPSD, 
-			"%s: Qing U-APSD data frame for node %s \n",
-			__func__, ether_sprintf(an->an_node.ni_macaddr));
+			"%s: Qing U-APSD data frame for node " MAC_FMT " \n",
+			__func__, MAC_ADDR(an->an_node.ni_macaddr));
 		ath_tx_uapsdqueue(sc, an, bf);
 		if (IEEE80211_NODE_UAPSD_USETIM(ni) && (an->an_uapsd_qdepth == 1))
 			vap->iv_set_tim(ni, 1);
@@ -7992,8 +7992,8 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 						"ath_buf with no node!\n"));
 			if (qwh->i_qos[0] & IEEE80211_QOS_EOSP) {
 				DPRINTF(sc, ATH_DEBUG_UAPSD, 
-					"%s: EOSP detected for node (%s) on desc %p\n",
-					__func__, ether_sprintf(ni->ni_macaddr), ds);
+					"%s: EOSP detected for node (" MAC_FMT ") on desc %p\n",
+					__func__, MAC_ADDR(ni->ni_macaddr), ds);
 				ATH_NODE_UAPSD_LOCK_IRQ(an);
 				ni->ni_flags &= ~IEEE80211_NODE_UAPSD_SP;
 				if ((an->an_uapsd_qdepth == 0) && 
@@ -8629,8 +8629,8 @@ ath_scan_start(struct ieee80211com *ic)
 	ath_hal_setrxfilter(ah, rfilt);
 	ath_hal_setassocid(ah, dev->broadcast, 0);
 
-	DPRINTF(sc, ATH_DEBUG_STATE, "%s: RX filter 0x%x bssid %s aid 0\n",
-		 __func__, rfilt, ether_sprintf(dev->broadcast));
+	DPRINTF(sc, ATH_DEBUG_STATE, "%s: RX filter 0x%x bssid " MAC_FMT " aid 0\n",
+		 __func__, rfilt, MAC_ADDR(dev->broadcast));
 }
 
 static void
@@ -8646,8 +8646,8 @@ ath_scan_end(struct ieee80211com *ic)
 	ath_hal_setrxfilter(ah, rfilt);
 	ath_hal_setassocid(ah, sc->sc_curbssid, sc->sc_curaid);
 
-	DPRINTF(sc, ATH_DEBUG_STATE, "%s: RX filter 0x%x bssid %s aid 0x%x\n",
-		 __func__, rfilt, ether_sprintf(sc->sc_curbssid),
+	DPRINTF(sc, ATH_DEBUG_STATE, "%s: RX filter 0x%x bssid " MAC_FMT " aid 0x%x\n",
+		 __func__, rfilt, MAC_ADDR(sc->sc_curbssid),
 		 sc->sc_curaid);
 }
 
@@ -8765,8 +8765,8 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 	} else
 		sc->sc_curaid = 0;
 
-	DPRINTF(sc, ATH_DEBUG_STATE, "%s: RX filter 0x%x bssid %s aid 0x%x\n",
-		 __func__, rfilt, ether_sprintf(sc->sc_curbssid),
+	DPRINTF(sc, ATH_DEBUG_STATE, "%s: RX filter 0x%x bssid " MAC_FMT " aid 0x%x\n",
+		 __func__, rfilt, MAC_ADDR(sc->sc_curbssid),
 		 sc->sc_curaid);
 
 	ath_hal_setrxfilter(ah, rfilt);
@@ -8794,12 +8794,12 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		/* nothing to do */;
 	} else if (nstate == IEEE80211_S_RUN) {
 		DPRINTF(sc, ATH_DEBUG_STATE,
-			"%s(RUN): ic_flags=0x%08x iv=%d bssid=%s "
-			"capinfo=0x%04x chan=%d\n",
+			"%s(RUN): ic_flags=0x%08x iv=%d bssid=" MAC_FMT
+			" capinfo=0x%04x chan=%d\n",
 			 __func__,
 			 vap->iv_flags,
 			 ni->ni_intval,
-			 ether_sprintf(ni->ni_bssid),
+			 MAC_ADDR(ni->ni_bssid),
 			 ni->ni_capinfo,
 			 ieee80211_chan2ieee(ic, ni->ni_chan));
 

@@ -321,25 +321,25 @@ ieee80211_dump_pkt(struct ieee80211com *ic,
 	wh = (const struct ieee80211_frame *)buf;
 	switch (wh->i_fc[1] & IEEE80211_FC1_DIR_MASK) {
 	case IEEE80211_FC1_DIR_NODS:
-		printf("NODS %s", ether_sprintf(wh->i_addr2));
-		printf("->%s", ether_sprintf(wh->i_addr1));
-		printf("(%s)", ether_sprintf(wh->i_addr3));
+		printf("NODS " MAC_FMT, MAC_ADDR(wh->i_addr2));
+		printf("->" MAC_FMT, MAC_ADDR(wh->i_addr1));
+		printf("(" MAC_FMT ")", MAC_ADDR(wh->i_addr3));
 		break;
 	case IEEE80211_FC1_DIR_TODS:
-		printf("TODS %s", ether_sprintf(wh->i_addr2));
-		printf("->%s", ether_sprintf(wh->i_addr3));
-		printf("(%s)", ether_sprintf(wh->i_addr1));
+		printf("TODS " MAC_FMT, MAC_ADDR(wh->i_addr2));
+		printf("->" MAC_FMT, MAC_ADDR(wh->i_addr3));
+		printf("(" MAC_FMT ")", MAC_ADDR(wh->i_addr1));
 		break;
 	case IEEE80211_FC1_DIR_FROMDS:
-		printf("FRDS %s", ether_sprintf(wh->i_addr3));
-		printf("->%s", ether_sprintf(wh->i_addr1));
-		printf("(%s)", ether_sprintf(wh->i_addr2));
+		printf("FRDS " MAC_FMT, MAC_ADDR(wh->i_addr3));
+		printf("->" MAC_FMT, MAC_ADDR(wh->i_addr1));
+		printf("(" MAC_FMT ")", MAC_ADDR(wh->i_addr2));
 		break;
 	case IEEE80211_FC1_DIR_DSTODS:
-		printf("DSDS %s", ether_sprintf((u_int8_t *)&wh[1]));
-		printf("->%s", ether_sprintf(wh->i_addr3));
-		printf("(%s", ether_sprintf(wh->i_addr2));
-		printf("->%s)", ether_sprintf(wh->i_addr1));
+		printf("DSDS " MAC_FMT, MAC_ADDR((u_int8_t *)&wh[1]));
+		printf("->" MAC_FMT, MAC_ADDR(wh->i_addr3));
+		printf("(" MAC_FMT, MAC_ADDR(wh->i_addr2));
+		printf("->" MAC_FMT ")", MAC_ADDR(wh->i_addr1));
 		break;
 	}
 	switch (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) {
@@ -1537,9 +1537,9 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 									IEEE80211_MSG_NODE,
 									"%s: Unable to "
 									"allocate node for "
-									"WDS: %s\n",
+									"WDS: " MAC_FMT "\n",
 									__func__,
-									ether_sprintf(
+									MAC_ADDR(
 										vap->wds_mac)
 									);
 					}
@@ -1572,10 +1572,10 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 				ni->ni_txrate));
 #ifdef IEEE80211_DEBUG
 			if (ieee80211_msg_debug(vap)) {
-				ieee80211_note(vap, "%s with %s ssid ",
+				ieee80211_note(vap, "%s with " MAC_FMT " ssid ",
 					(vap->iv_opmode == IEEE80211_M_STA ?
 					"associated" : "synchronized "),
-					ether_sprintf(ni->ni_bssid));
+					MAC_ADDR(ni->ni_bssid));
 				ieee80211_print_essid(vap->iv_bss->ni_essid,
 					ni->ni_esslen);
 				printf(" channel %d start %uMb\n",

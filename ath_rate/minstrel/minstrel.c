@@ -320,9 +320,9 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 		int mrr;
 
 		if (sn->num_rates <= 0) {
-			    printk(KERN_WARNING "%s: no rates for %s?\n",
+			    printk(KERN_WARNING "%s: no rates for " MAC_FMT "?\n",
 			           dev_info,
-			           ether_sprintf(an->an_node.ni_macaddr));
+			           MAC_ADDR(an->an_node.ni_macaddr));
 			    return;
 		}
 
@@ -374,9 +374,9 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 			    *try0 = sn->retry_adjusted_count[ndx];
 
 		KASSERT((ndx < sn->num_rates),
-			    ("%s: bad ndx (%d/%d) for %s?\n",
+			    ("%s: bad ndx (%d/%d) for " MAC_FMT "?\n",
 			     dev_info, ndx, sn->num_rates,
-			     ether_sprintf(an->an_node.ni_macaddr)));
+			     MAC_ADDR(an->an_node.ni_macaddr)));
 
 		*rix = sn->rates[ndx].rix;
 		if (shortPreamble)
@@ -407,19 +407,19 @@ ath_rate_get_mrr(struct ath_softc *sc, struct ath_node *an, int shortPreamble,
 		rc3 = 0;
 
 		KASSERT((rc1 >= 0) && (rc1 < sn->num_rates),
-			    ("%s: bad rc1 (%d/%d) for %s?\n",
+			    ("%s: bad rc1 (%d/%d) for " MAC_FMT "?\n",
 			     dev_info, rc1, sn->num_rates,
-			     ether_sprintf(an->an_node.ni_macaddr)));
+			     MAC_ADDR(an->an_node.ni_macaddr)));
 
 		KASSERT((rc2 >= 0) && (rc2 < sn->num_rates),
-			    ("%s: bad rc2 (%d/%d) for %s?\n",
+			    ("%s: bad rc2 (%d/%d) for " MAC_FMT "?\n",
 			     dev_info, rc2, sn->num_rates,
-			     ether_sprintf(an->an_node.ni_macaddr)));
+			     MAC_ADDR(an->an_node.ni_macaddr)));
 
 		KASSERT((rc3 >= 0) && (rc3 < sn->num_rates),
-			    ("%s: bad rc3 (%d/%d) for %s?\n",
+			    ("%s: bad rc3 (%d/%d) for " MAC_FMT "?\n",
 			     dev_info, rc3, sn->num_rates,
-			     ether_sprintf(an->an_node.ni_macaddr)));
+			     MAC_ADDR(an->an_node.ni_macaddr)));
 
 		if (shortPreamble) {
 			mrr->rate1 = sn->rates[rc1].shortPreambleRateCode;
@@ -473,8 +473,8 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		tries = ts->ts_shortretry + ts->ts_longretry + 1;
 
 		if (sn->num_rates <= 0) {
-			DPRINTF(sc, "%s: %s %s no rates yet\n", dev_info,
-				ether_sprintf(an->an_node.ni_macaddr), __func__);
+			DPRINTF(sc, "%s: " MAC_FMT " %s no rates yet\n", dev_info,
+				MAC_ADDR(an->an_node.ni_macaddr), __func__);
 			return;
 		}
 
@@ -536,8 +536,8 @@ ath_rate_tx_complete(struct ath_softc *sc,
 static void
 ath_rate_newassoc(struct ath_softc *sc, struct ath_node *an, int isnew)
 {
-		DPRINTF(sc, "%s: %s %s\n", dev_info,
-			ether_sprintf(an->an_node.ni_macaddr), __func__);
+		DPRINTF(sc, "%s: " MAC_FMT " %s\n", dev_info,
+			MAC_ADDR(an->an_node.ni_macaddr), __func__);
 		if (isnew)
 			ath_rate_ctl_reset(sc, &an->an_node);
 }
@@ -648,8 +648,8 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 		ni->ni_txrate = 0;
 
 		if (sn->num_rates <= 0) {
-			DPRINTF(sc, "%s: %s %s no rates (fixed %d) \n",
-				dev_info, __func__, ether_sprintf(ni->ni_macaddr),
+			DPRINTF(sc, "%s: %s " MAC_FMT " no rates (fixed %d) \n",
+				dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
 				vap->iv_fixed_rate);
 			/* There are no rates yet; we're done */
 			return;
@@ -671,8 +671,8 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 
 			sn->static_rate_ndx = srate;
 			ni->ni_txrate = srate;
-			DPRINTF(sc, "%s: %s %s fixed rate %d%sMbps\n",
-				dev_info, __func__, ether_sprintf(ni->ni_macaddr),
+			DPRINTF(sc, "%s: %s " MAC_FMT " fixed rate %d%sMbps\n",
+				dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
 				sn->rates[srate].rate / 2,
 				(sn->rates[srate].rate % 2) ? ".5 " : " ");
 			return;
@@ -933,7 +933,7 @@ ath_proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 			/* Assume each node needs 1500 bytes */
 			if ((buf + space) < (p + 1500)) {
 				if ((buf + space) > (p + 100)) {
-					p += sprintf(p, "out of room for node %s\n\n", ether_sprintf(ni->ni_macaddr));
+					p += sprintf(p, "out of room for node " MAC_FMT "\n\n", MAC_ADDR(ni->ni_macaddr));
 					break;
 				}
 				DPRINTF(sc, "%s: out of memeory to write tall of the nodes\n", __func__);
@@ -945,7 +945,7 @@ ath_proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 			if (IEEE80211_ADDR_EQ(vap->iv_myaddr, ni->ni_macaddr))
 			        continue;
 
-			p += sprintf(p, "rate data for node:: %s\n", ether_sprintf(ni->ni_macaddr));
+			p += sprintf(p, "rate data for node: " MAC_FMT "\n", MAC_ADDR(ni->ni_macaddr));
 			p += sprintf(p, "rate     throughput  ewma prob   this prob  this succ/attempt   success    attempts\n");
 			for (x = 0; x < odst->num_rates; x++) {
 				p += sprintf(p, "%s",

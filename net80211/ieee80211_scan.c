@@ -799,16 +799,16 @@ dump_probe_beacon(u_int8_t subtype, int isnew,
 	const struct ieee80211_scanparams *sp)
 {
 
-	printf("[%s] %s%s on chan %u (bss chan %u) ",
-		ether_sprintf(mac), isnew ? "new " : "",
+	printf("[" MAC_FMT "] %s%s on chan %u (bss chan %u) ",
+		MAC_ADDR(mac), isnew ? "new " : "",
 		ieee80211_mgt_subtype_name[subtype >> IEEE80211_FC0_SUBTYPE_SHIFT],
 		sp->chan, sp->bchan);
 	ieee80211_print_essid(sp->ssid + 2, sp->ssid[1]);
 	printf("\n");
 
 	if (isnew) {
-		printf("[%s] caps 0x%x bintval %u erp 0x%x",
-			ether_sprintf(mac), sp->capinfo, sp->bintval, sp->erp);
+		printf("[" MAC_FMT "] caps 0x%x bintval %u erp 0x%x",
+			MAC_ADDR(mac), sp->capinfo, sp->bintval, sp->erp);
 		if (sp->country != NULL) {
 #ifdef __FreeBSD__
 			printf(" country info %*D",

@@ -791,10 +791,10 @@ match_bss(struct ieee80211vap *vap,
 #ifdef IEEE80211_DEBUG
 	if (ieee80211_msg_is_reported(vap, IEEE80211_MSG_SCAN | IEEE80211_MSG_ROAM)) {
 		printf(" %03x", fail);
-		printf(" %c %s",
+		printf(" %c " MAC_FMT,
 			fail & 0x40 ? '=' : fail & 0x80 ? '^' : fail ? '-' : '+',
-			ether_sprintf(se->se_macaddr));
-		printf(" %s%c", ether_sprintf(se->se_bssid),
+			MAC_ADDR(se->se_macaddr));
+		printf(" " MAC_FMT "%c", MAC_ADDR(se->se_bssid),
 			fail & 0x20 ? '!' : ' ');
 		printf(" %3d%c", ieee80211_chan2ieee(ic, se->se_chan),
 			fail & 0x01 ? '!' : ' ');

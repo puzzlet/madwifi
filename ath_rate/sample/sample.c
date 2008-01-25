@@ -382,9 +382,9 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 	unsigned average_tx_time;
 
 	if (sn->num_rates <= 0) {
-		printk(KERN_WARNING "%s: no rates for %s?\n",
+		printk(KERN_WARNING "%s: no rates for " MAC_FMT "?\n",
 		       dev_info,
-		       ether_sprintf(an->an_node.ni_macaddr));
+		       MAC_ADDR(an->an_node.ni_macaddr));
 		return;
 	}
 
@@ -459,9 +459,9 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 
 			if (change_rates) {
 				if (best_ndx != sn->current_rate[size_bin]) {
-					DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s size %u switch rate %u (%u/%u) -> %u (%u/%u) after %u packets mrr %u\n",
+					DPRINTF(sc, ATH_DEBUG_RATE, "%s: " MAC_FMT " size %u switch rate %u (%u/%u) -> %u (%u/%u) after %u packets mrr %u\n",
 						dev_info,
-						ether_sprintf(an->an_node.ni_macaddr),
+						MAC_ADDR(an->an_node.ni_macaddr),
 						packet_size_bins[size_bin],
 						sn->rates[sn->current_rate[size_bin]].rate,
 						sn->stats[size_bin][sn->current_rate[size_bin]].average_tx_time,
@@ -489,9 +489,9 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 	}
 
 	KASSERT(ndx >= 0 && ndx < sn->num_rates,
-		("%s: bad ndx (%u/%u) for %s?\n",
+		("%s: bad ndx (%u/%u) for " MAC_FMT "?\n",
 		 dev_info, ndx, sn->num_rates,
-		 ether_sprintf(an->an_node.ni_macaddr)));
+		 MAC_ADDR(an->an_node.ni_macaddr)));
 
 
 	*rix = sn->rates[ndx].rix;
@@ -638,8 +638,8 @@ update_stats(struct ath_softc *sc, struct ath_node *an,
 	sn->stats[size_bin][ndx0].total_packets++;
 
 	if (ndx0 == sn->current_sample_ndx[size_bin]) {
-		DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s size %u sample rate %u tries (%u/%u) tt %u avg_tt (%u/%u) status %u\n",
-			dev_info, ether_sprintf(an->an_node.ni_macaddr),
+		DPRINTF(sc, ATH_DEBUG_RATE, "%s: " MAC_FMT " size %u sample rate %u tries (%u/%u) tt %u avg_tt (%u/%u) status %u\n",
+			dev_info, MAC_ADDR(an->an_node.ni_macaddr),
 			size, rate, short_tries, tries, tt,
 			sn->stats[size_bin][ndx0].average_tx_time,
 			sn->stats[size_bin][ndx0].perfect_tx_time,
@@ -672,8 +672,8 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		frame_size = 1500;
 
 	if (sn->num_rates <= 0) {
-		DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s %s no rates yet\n", dev_info,
-			ether_sprintf(an->an_node.ni_macaddr), __func__);
+		DPRINTF(sc, ATH_DEBUG_RATE, "%s: " MAC_FMT " %s no rates yet\n", dev_info,
+			MAC_ADDR(an->an_node.ni_macaddr), __func__);
 		return;
 	}
 
@@ -682,9 +682,9 @@ ath_rate_tx_complete(struct ath_softc *sc,
 
 	if (sc->sc_mrretry && ts->ts_status) {
 		/* this packet failed */
-		DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s size %u rate/try %u/%u %u/%u %u/%u %u/%u status %s retries (%u/%u)\n",
+		DPRINTF(sc, ATH_DEBUG_RATE, "%s: " MAC_FMT " size %u rate/try %u/%u %u/%u %u/%u %u/%u status %s retries (%u/%u)\n",
 			dev_info,
-			ether_sprintf(an->an_node.ni_macaddr),
+			MAC_ADDR(an->an_node.ni_macaddr),
 			bin_to_size(size_to_bin(frame_size)),
 			sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate0)].ieeerate,
 				MS(ds->ds_ctl2, AR_XmitDataTries0),
@@ -738,8 +738,8 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		ndx[3] = rate_to_ndx(sn, rate[3]);
 
 #if 0
-		DPRINTF(sc, "%s: %s size %u finaltsidx %u tries %u status %u rate/try %u/%u %u/%u %u/%u %u/%u\n",
-			dev_info, ether_sprintf(an->an_node.ni_macaddr),
+		DPRINTF(sc, "%s: " MAC_FMT " size %u finaltsidx %u tries %u status %u rate/try %u/%u %u/%u %u/%u %u/%u\n",
+			dev_info, MAC_ADDR(an->an_node.ni_macaddr),
 			bin_to_size(size_to_bin(frame_size)),
 			finalTSIdx,
 			long_tries,
@@ -806,8 +806,8 @@ ath_rate_tx_complete(struct ath_softc *sc,
 static void
 ath_rate_newassoc(struct ath_softc *sc, struct ath_node *an, int isnew)
 {
-	DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s %s isnew %d\n", dev_info,
-		ether_sprintf(an->an_node.ni_macaddr), __func__, isnew);
+	DPRINTF(sc, ATH_DEBUG_RATE, "%s: " MAC_FMT " %s isnew %d\n", dev_info,
+		MAC_ADDR(an->an_node.ni_macaddr), __func__, isnew);
 	if (isnew)
 		ath_rate_ctl_reset(sc, &an->an_node);
 }
@@ -852,8 +852,8 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 	sn->num_rates = ni->ni_rates.rs_nrates;
 
 	if (sn->num_rates <= 0) {
-		DPRINTF(sc, ATH_DEBUG_RATE,"%s: %s %s no rates (fixed %u) \n",
-			dev_info, __func__, ether_sprintf(ni->ni_macaddr),
+		DPRINTF(sc, ATH_DEBUG_RATE,"%s: %s " MAC_FMT " no rates (fixed %u) \n",
+			dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
 			vap->iv_fixed_rate);
 		/* there are no rates yet we're done */
 		return;
@@ -877,8 +877,8 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 
 		sn->static_rate_ndx = srate;
 		ni->ni_txrate = srate;
-		DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s %s fixed rate %u%sMbps\n",
-			dev_info, __func__, ether_sprintf(ni->ni_macaddr),
+		DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s " MAC_FMT " fixed rate %u%sMbps\n",
+			dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
 			sn->rates[srate].rate / 2,
 			(sn->rates[srate].rate % 0x1) ? ".5" : " ");
 		return;
@@ -920,8 +920,9 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 		sn->current_rate[y] = ndx;
 	}
 
-	DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s %s %u rates %u%sMbps (%uus)- %u%sMbps (%uus)\n",
-		dev_info, __func__, ether_sprintf(ni->ni_macaddr),
+	DPRINTF(sc, ATH_DEBUG_RATE, "%s: %s " MAC_FMT 
+		" %u rates %u%sMbps (%uus)- %u%sMbps (%uus)\n",
+		dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
 		sn->num_rates,
 		sn->rates[0].rate / 2, sn->rates[0].rate % 0x1 ? ".5" : "",
 		sn->stats[1][0].perfect_tx_time,
@@ -1012,7 +1013,7 @@ proc_read_nodes(struct ieee80211vap *vap, const int size, char *buf, int space)
 		}
 
 		size_bin = size_to_bin(size);
-		p += sprintf(p, "%s\n", ether_sprintf(ni->ni_macaddr));
+		p += sprintf(p, MAC_FMT "\n", MAC_ADDR(ni->ni_macaddr));
 		p += sprintf(p,
 				"rate\ttt\tperfect\tfailed\tpkts\tavg_tries\tlast_tx\n");
 		for (ndx = 0; ndx < sn->num_rates; ndx++) {

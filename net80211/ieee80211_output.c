@@ -430,8 +430,8 @@ ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type)
 	/* avoid printing too many frames */
 	if ((ieee80211_msg_debug(vap) && doprint(vap, type)) ||
 	    ieee80211_msg_dumppkts(vap)) {
-		printf("[%s] send %s on channel %u\n",
-			ether_sprintf(wh->i_addr1),
+		printf("[" MAC_FMT "] send %s on channel %u\n",
+			MAC_ADDR(wh->i_addr1),
 			ieee80211_mgt_subtype_name[
 				(type & IEEE80211_FC0_SUBTYPE_MASK) >>
 					IEEE80211_FC0_SUBTYPE_SHIFT],
@@ -479,8 +479,8 @@ ieee80211_send_nulldata(struct ieee80211_node *ni)
 	IEEE80211_NODE_STAT(ni, tx_data);
 
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_DEBUG | IEEE80211_MSG_DUMPPKTS,
-		"[%s] send null data frame on channel %u, pwr mgt %s\n",
-		ether_sprintf(ni->ni_macaddr),
+		"[" MAC_FMT "] send null data frame on channel %u, pwr mgt %s\n",
+		MAC_ADDR(ni->ni_macaddr),
 		ieee80211_chan2ieee(ic, ic->ic_curchan),
 		wh->i_fc[1] & IEEE80211_FC1_PWR_MGT ? "ena" : "dis");
 
@@ -1740,8 +1740,8 @@ ieee80211_send_probereq(struct ieee80211_node *ni,
 	IEEE80211_NODE_STAT(ni, tx_mgmt);
 
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_DEBUG | IEEE80211_MSG_DUMPPKTS,
-		"[%s] send probe req on channel %u\n",
-		ether_sprintf(wh->i_addr1),
+		"[" MAC_FMT "] send probe req on channel %u\n",
+		MAC_ADDR(wh->i_addr1),
 		ieee80211_chan2ieee(ic, ic->ic_curchan));
 
 	(void)ic->ic_mgtstart(ic, skb);

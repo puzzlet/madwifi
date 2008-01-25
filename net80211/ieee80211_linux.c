@@ -291,9 +291,9 @@ ieee80211_notify_sta_stats(struct ieee80211_node *ni)
 	union iwreq_data wreq;
 	char buf[1024];
 
-	snprintf(buf, sizeof(buf), "%s\nmac=%s\nrx_packets=%u\nrx_bytes=%llu\n"
+	snprintf(buf, sizeof(buf), "%s\nmac=" MAC_FMT "\nrx_packets=%u\nrx_bytes=%llu\n"
 			"tx_packets=%u\ntx_bytes=%llu\n", tag,
-			ether_sprintf(ni->ni_macaddr), ni->ni_stats.ns_rx_data,
+			MAC_ADDR(ni->ni_macaddr), ni->ni_stats.ns_rx_data,
 			(unsigned long long)ni->ni_stats.ns_rx_bytes,
 			ni->ni_stats.ns_tx_data,
 			(unsigned long long)ni->ni_stats.ns_tx_bytes);
@@ -332,10 +332,10 @@ ieee80211_notify_replay_failure(struct ieee80211vap *vap,
 		(unsigned long long)rsc);
 
 	/* TODO: needed parameters: count, keyid, key type, src address, TSC */
-	snprintf(buf, sizeof(buf), "%s(keyid=%d %scast addr=%s)", tag,
+	snprintf(buf, sizeof(buf), "%s(keyid=%d %scast addr=" MAC_FMT ")", tag,
 		k->wk_keyix,
 		IEEE80211_IS_MULTICAST(wh->i_addr1) ?  "broad" : "uni",
-		ether_sprintf(wh->i_addr1));
+		MAC_ADDR(wh->i_addr1));
 	memset(&wrqu, 0, sizeof(wrqu));
 	wrqu.data.length = strlen(buf);
 	wireless_send_event(dev, IWEVCUSTOM, &wrqu, buf);
@@ -356,9 +356,9 @@ ieee80211_notify_michael_failure(struct ieee80211vap *vap,
 	vap->iv_stats.is_rx_tkipmic++;
 
 	/* TODO: needed parameters: count, keyid, key type, src address, TSC */
-	snprintf(buf, sizeof(buf), "%s(keyid=%d %scast addr=%s)", tag,
+	snprintf(buf, sizeof(buf), "%s(keyid=%d %scast addr=" MAC_FMT ")", tag,
 		keyix, IEEE80211_IS_MULTICAST(wh->i_addr2) ?  "broad" : "uni",
-		ether_sprintf(wh->i_addr2));
+		MAC_ADDR(wh->i_addr2));
 	memset(&wrqu, 0, sizeof(wrqu));
 	wrqu.data.length = strlen(buf);
 	wireless_send_event(dev, IWEVCUSTOM, &wrqu, buf);
@@ -414,7 +414,7 @@ proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 		    0 != memcmp(vap->iv_myaddr, ni->ni_macaddr, IEEE80211_ADDR_LEN)) {
 			struct timespec t;
 			jiffies_to_timespec(jiffies - ni->ni_last_rx, &t);
-			p += sprintf(p, "macaddr: <%s>\n", ether_sprintf(ni->ni_macaddr));
+			p += sprintf(p, "macaddr: <" MAC_FMT ">\n", MAC_ADDR(ni->ni_macaddr));
 			p += sprintf(p, " rssi %d\n", ni->ni_rssi);
 
 			p += sprintf(p, " last_rx %ld.%06ld\n",
@@ -946,19 +946,6 @@ ieee80211_virtfs_vdetach(struct ieee80211vap *vap)
 		vap->iv_sysctls = NULL;
 	}
 }
-
-/*
- * Format an Ethernet MAC for printing.
- */
-const char*
-ether_sprintf(const u_int8_t *mac)
-{
-	static char etherbuf[18]; 	/* XXX */
-	snprintf(etherbuf, sizeof(etherbuf), "%02x:%02x:%02x:%02x:%02x:%02x",
-		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	return etherbuf;
-}
-EXPORT_SYMBOL(ether_sprintf);		/* XXX */
 
 /* Function to handle the device event notifications.
  * If the event is a NETDEV_CHANGENAME, and is for an interface

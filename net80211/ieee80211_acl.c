@@ -171,7 +171,7 @@ acl_add(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_LEN])
 	MALLOC(new, struct acl *, sizeof(struct acl), M_80211_ACL, M_NOWAIT | M_ZERO);
 	if (new == NULL) {
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_ACL,
-			"ACL: add %s failed, no memory\n", ether_sprintf(mac));
+			"ACL: add " MAC_FMT " failed, no memory\n", MAC_ADDR(mac));
 		/* XXX statistic */
 		return -ENOMEM;
 	}
@@ -183,8 +183,8 @@ acl_add(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_LEN])
 			ACL_UNLOCK_EARLY(as);
 			FREE(new, M_80211_ACL);
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_ACL,
-				"ACL: add %s failed, already present\n",
-				ether_sprintf(mac));
+				"ACL: add " MAC_FMT " failed, already present\n",
+				MAC_ADDR(mac));
 			return -EEXIST;
 		}
 	}
@@ -194,7 +194,7 @@ acl_add(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_LEN])
 	ACL_UNLOCK(as);
 
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ACL,
-		"ACL: add %s\n", ether_sprintf(mac));
+		"ACL: add " MAC_FMT "\n", MAC_ADDR(mac));
 	return 0;
 }
 
@@ -211,7 +211,7 @@ acl_remove(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_LEN])
 	ACL_UNLOCK(as);
 
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ACL,
-		"ACL: remove %s%s\n", ether_sprintf(mac),
+		"ACL: remove " MAC_FMT "%s\n", MAC_ADDR(mac),
 		acl == NULL ? ", not present" : "");
 
 	return (acl == NULL ? ENOENT : 0);

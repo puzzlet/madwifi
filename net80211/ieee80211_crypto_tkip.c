@@ -1037,8 +1037,8 @@ tkip_decrypt(struct tkip_ctx *ctx, struct ieee80211_key *key,
 			ctx->rx_phase1_done = 0;
 		}
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
-			"[%s] TKIP ICV mismatch on decrypt (keyix %d, rsc %llu)\n",
-			ether_sprintf(wh->i_addr2), key->wk_keyix,
+			"[" MAC_FMT "] TKIP ICV mismatch on decrypt (keyix %d, rsc %llu)\n",
+			MAC_ADDR(wh->i_addr2), key->wk_keyix,
 			(unsigned long long)ctx->rx_rsc);
 		vap->iv_stats.is_rx_tkipicv++;
 		return 0;

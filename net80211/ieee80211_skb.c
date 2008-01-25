@@ -200,10 +200,10 @@ static void skb_destructor(struct sk_buff* skb) {
 	/* Report any node reference leaks - caused by kernel net device queue 
 	 * dropping buffer, rather than passing it to the driver. */
 	if (SKB_CB(skb)->ni != NULL) {
-		printk(KERN_ERR "%s:%d - ERROR: non-NULL node pointer in %p, %p<%s>!  "
+		printk(KERN_ERR "%s:%d - ERROR: non-NULL node pointer in %p, %p<" MAC_FMT ">!  "
 				"Leak Detected!\n", 
 		       __func__, __LINE__, 
-		       skb, SKB_CB(skb)->ni, ether_sprintf(SKB_CB(skb)->ni->ni_macaddr));
+		       skb, SKB_CB(skb)->ni, MAC_ADDR(SKB_CB(skb)->ni->ni_macaddr));
 		dump_stack();
 	}
 	if (SKB_CB(skb)->next_destructor != NULL) {
@@ -217,20 +217,31 @@ static void get_skb_description(char *dst, int dst_size, const char* label, cons
 	dst[0] = '\0';
 	if (NULL != skb) {
 		int adj_users = atomic_read(&skb->users) + users_adjustment;
-		snprintf(dst, dst_size, 
-			 " [%s%s%p,users=%d,node=%p%s%s%s,aid=%d%s%s]",
-			 label,
-			 (label != NULL ? ": " : ""),
-			 skb,
-			 adj_users,
-			 (SKB_CB(skb)->ni ? SKB_CB(skb)->ni : NULL),
-			 (SKB_CB(skb)->ni ? "<" : ""),
-			 (SKB_CB(skb)->ni ? ether_sprintf(SKB_CB(skb)->ni->ni_macaddr) : ""),
-			 (SKB_CB(skb)->ni ? ">" : ""),
-			 (SKB_CB(skb)->ni ? SKB_CB(skb)->ni->ni_associd : -1),
-			 ((adj_users  < 0) ? " ** CORRUPTED **" : ""),
-			 ((adj_users == 0) ? " ** RELEASED **" : "")
-			 );
+		if (SKB_CB(skb)->ni != NULL) {
+			snprintf(dst, dst_size, 
+				 " [%s%s%p,users=%d,node=%p<" MAC_FMT ">,aid=%d%s%s]",
+				 label,
+				 (label != NULL ? ": " : ""),
+				 skb,
+				 adj_users,
+				 SKB_CB(skb)->ni,
+				 MAC_ADDR(SKB_CB(skb)->ni->ni_macaddr),
+				 SKB_CB(skb)->ni->ni_associd,
+				 ((adj_users  < 0) ? " ** CORRUPTED **" : ""),
+				 ((adj_users == 0) ? " ** RELEASED **" : "")
+				 );
+		}
+		else {
+			snprintf(dst, dst_size, 
+				 " [%s%s%p,users=%d,node=NULL,aid=N/A%s%s]",
+				 label,
+				 (label != NULL ? ": " : ""),
+				 skb,
+				 adj_users,
+				 ((adj_users  < 0) ? " ** CORRUPTED **" : ""),
+				 ((adj_users == 0) ? " ** RELEASED **" : "")
+				 );
+		}
 		dst[dst_size-1] = '\0';
 	}
 }
@@ -395,10 +406,10 @@ unref_skb(struct sk_buff *skb, int type,
 	}
 	else {
 		if (SKB_CB(skb)->ni != NULL) {
-			printk(KERN_ERR "%s:%d - ERROR: non-NULL node pointer in %p, %p<%s>!  "
+			printk(KERN_ERR "%s:%d - ERROR: non-NULL node pointer in %p, %p<" MAC_FMT ">!  "
 					"Driver Leak Detected!\n", 
 			       __func__, __LINE__, 
-			       skb, SKB_CB(skb)->ni, ether_sprintf(SKB_CB(skb)->ni->ni_macaddr));
+			       skb, SKB_CB(skb)->ni, MAC_ADDR(SKB_CB(skb)->ni->ni_macaddr));
 			dump_stack();
 			/* Allow the leak and let programmer fix it, but do not
 			 * report it again in the destructor. */

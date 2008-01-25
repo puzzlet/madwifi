@@ -524,9 +524,9 @@ ieee80211_crypto_setkey(struct ieee80211vap *vap, struct ieee80211_key *key,
 	KASSERT(cip != NULL, ("No cipher!"));
 
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
-		"%s: %s keyix %u flags 0x%x mac %s  tsc %llu len %u\n", __func__,
+		"%s: %s keyix %u flags 0x%x mac " MAC_FMT "  tsc %llu len %u\n", __func__,
 		cip->ic_name, key->wk_keyix, key->wk_flags,
-		ether_sprintf(macaddr), (unsigned long long)key->wk_keytsc,
+		MAC_ADDR(macaddr), (unsigned long long)key->wk_keytsc,
 		key->wk_keylen);
 
 	/*
