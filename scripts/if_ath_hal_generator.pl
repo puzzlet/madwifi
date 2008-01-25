@@ -192,6 +192,9 @@ my $header = <<EOF
  * ************************************************************** */
 
 #include "if_ath_hal_macros.h"
+#ifdef CONFIG_KALLSYMS
+#include "linux/kallsyms.h"
+#endif /* #ifdef CONFIG_KALLSYMS */
 
 #ifndef _IF_ATH_HAL_H_
 #define _IF_ATH_HAL_H_
@@ -350,6 +353,43 @@ sub generate_output() {
         }
         print OUTPUT "\n}\n";
     }
+    print OUTPUT "\n/* Example script to create a HAL function unmangling SED script: ";
+    print OUTPUT "\n";
+    print OUTPUT "\n   dmesg -c &>/dev/null && iwpriv ath0 dump_hal_map && dmesg | \\";
+    print OUTPUT "\n           sed -n -r -e \"/zz[0-9a-f]{8}/ { s~^([^+]*)[^=]*=(.*)~s/\\1\\\/\\2 (\\1)/g~; p; } \" \\";
+    print OUTPUT "\n           >hal_unmangle.sed";
+    print OUTPUT "\n";
+    print OUTPUT "\n * Example usage:";
+    print OUTPUT "\n";
+    print OUTPUT "\n           tail -f /var/log/messages | sed -f hal_unmangle.sed ";
+    print OUTPUT "\n */";
+    print OUTPUT "\nstatic inline void ath_hal_dump_map(struct ath_hal* ah) {";
+    print OUTPUT "\n#ifdef CONFIG_KALLSYMS\n";
+    for my $member_name ( keys %return_types ) {
+	my $api_name        = $member_name;
+	my $api_return_type = $return_types{$member_name};
+	my $ret_void        = ( $api_return_type =~ /void/ );
+	print OUTPUT "\n\t/* "
+	  . format_type($api_return_type)
+	  . "$api_name(";
+	my @names = @{ $parameter_names{$member_name} };
+	my @types = @{ $parameter_types{$member_name} };
+	for my $i ( 0 .. $#names ) {
+	    if ($i) {
+		print OUTPUT ", ";
+	    }
+	    print OUTPUT format_type( $types[$i] ) . $names[$i];
+	}
+	print OUTPUT ") */";
+	print OUTPUT "\n\t\t__print_symbol(\"%s=" . $member_name 
+	   . "\\n\", (unsigned long)ah->"
+	   . $member_name . ");";
+    }
+    print OUTPUT "\n#else /* #ifdef CONFIG_KALLSYMS */\n";
+    print OUTPUT "\nprintk(\"To use this feature you must enable "
+	       . "CONFIG_KALLSYMS in your kernel.\");\n";
+    print OUTPUT "\n#endif /* #ifndef CONFIG_KALLSYMS */\n";
+    print OUTPUT "\n}\n";
     print OUTPUT $footer;
 }
 

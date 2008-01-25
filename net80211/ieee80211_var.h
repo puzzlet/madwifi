@@ -441,6 +441,9 @@ struct ieee80211com {
 	unsigned int (*ic_write_register)(struct ieee80211com *, unsigned int, unsigned int);
 	unsigned int (*ic_read_register)(struct ieee80211com *, unsigned int, unsigned int*);
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
+
+	/* dump a lookup table for unobfuscating HAL function pointers */
+	unsigned int (*ic_dump_hal_map)(struct ieee80211com *);
 };
 
 #define MAX_PROC_IEEE80211_SIZE 16383

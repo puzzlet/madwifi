@@ -1544,6 +1544,18 @@ struct waplistreq {	/* XXX: not the right place for declaration? */
 	int i;
 };
 
+static int 
+ieee80211_ioctl_hal_map(struct net_device *dev, struct iw_request_info *info,
+       void *w, char *extra)
+{
+       int *params = (int*) extra;
+       struct ieee80211vap *vap = dev->priv;
+       struct ieee80211com *ic = vap->iv_ic;
+       params[0] = ic->ic_dump_hal_map(ic);
+       return 0;
+}
+
+
 static int
 waplist_cb(void *arg, const struct ieee80211_scan_entry *se)
 {
@@ -5388,6 +5400,8 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  0, IW_PRIV_TYPE_APPIEBUF, "getiebuf" },
 	{ IEEE80211_IOCTL_FILTERFRAME,
 	  IW_PRIV_TYPE_FILTER , 0, "setfilter" },
+ 	{ IEEE80211_IOCTL_HALMAP,
+ 	  0, 0, "dump_hal_map" },
 
 #ifdef ATH_REVERSE_ENGINEERING
 	/*
@@ -5476,6 +5490,7 @@ static const iw_handler ieee80211_priv_handlers[] = {
 	set_priv(IEEE80211_IOCTL_SETMLME, ieee80211_ioctl_setmlme),
 	set_priv(IEEE80211_IOCTL_SETKEY, ieee80211_ioctl_setkey),
 	set_priv(IEEE80211_IOCTL_DELKEY, ieee80211_ioctl_delkey),
+	set_priv(IEEE80211_IOCTL_HALMAP, ieee80211_ioctl_hal_map),
 	set_priv(IEEE80211_IOCTL_ADDMAC, ieee80211_ioctl_addmac),
 	set_priv(IEEE80211_IOCTL_DELMAC, ieee80211_ioctl_delmac),
 	set_priv(IEEE80211_IOCTL_WDSADDMAC, ieee80211_ioctl_wdsmac),

@@ -342,6 +342,8 @@ static void ath_set_txcont_power(struct ieee80211com *, unsigned int);
 static unsigned int ath_get_txcont_rate(struct ieee80211com *);
 static void ath_set_txcont_rate(struct ieee80211com *ic, unsigned int new_rate);
 
+static unsigned int ath_dump_hal_map(struct ieee80211com *ic);
+
 static u_int32_t ath_get_clamped_maxtxpower(struct ath_softc *sc);
 static u_int32_t ath_set_clamped_maxtxpower(struct ath_softc *sc, 
 		u_int32_t new_clamped_maxtxpower);
@@ -1049,6 +1051,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ic->ic_vap_create = ath_vap_create;
 	ic->ic_vap_delete = ath_vap_delete;
 
+	ic->ic_dump_hal_map	    = ath_dump_hal_map;
 
 	ic->ic_set_txcont           = ath_set_txcont;
 	ic->ic_get_txcont           = ath_get_txcont;
@@ -12067,6 +12070,16 @@ ath_registers_dump(struct ieee80211com *ic)
 	ath_ar5212_registers_dump(sc);
 }
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
+
+/* This is called by a private ioctl (iwpriv) to dump the HAL obfuscation table */
+static unsigned int
+ath_dump_hal_map(struct ieee80211com *ic)
+{
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc   = dev->priv;
+	ath_hal_dump_map(sc->sc_ah);
+	return 0;
+}
 
 /* Make a copy of significant registers in the Atheros chip for later
  * comparison and dump with ath_registers_dump_delta */
