@@ -631,11 +631,6 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 		if (skb_headroom(skb) < need_headroom) {
 			struct sk_buff *tmp = skb;
 			skb = skb_realloc_headroom(skb, need_headroom);
-			/* Increment reference count after copy */
-			if (NULL != skb && SKB_CB(tmp)->ni != NULL) {
-				SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
-			}
-			ieee80211_dev_kfree_skb(&tmp);
 			if (skb == NULL) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
 					"%s: cannot expand storage (head1)\n",
@@ -643,10 +638,11 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 				vap->iv_stats.is_tx_nobuf++;
 				ieee80211_dev_kfree_skb(&skb2);
 				return NULL;
-			}
+			} else
+				ieee80211_skb_copy_noderef(tmp, skb);
+			ieee80211_dev_kfree_skb(&tmp);
 			/* NB: cb[] area was copied, but not next ptr. must do that
-			 *     prior to return on success.
-			 */
+			 *     prior to return on success. */
 		}
 
 		/* second skb with header and tail adjustments possible */
@@ -668,11 +664,6 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 			struct sk_buff *tmp = skb2;
 
 			skb2 = skb_realloc_headroom(skb2, inter_headroom);
-			/* Increment reference count after copy */
-			if (NULL != skb2 && SKB_CB(tmp)->ni != NULL) {
-				SKB_CB(skb2)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
-			}
-			ieee80211_dev_kfree_skb(&tmp);
 			if (skb2 == NULL) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
 					"%s: cannot expand storage (head2)\n",
@@ -681,7 +672,9 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 				/* this shouldn't happen, but don't send first ff either */
 				ieee80211_dev_kfree_skb(&skb);
 				skb = NULL;
-			}
+			} else
+				ieee80211_skb_copy_noderef(tmp, skb);
+			ieee80211_dev_kfree_skb(&tmp);
 		}
 		if (skb) {
 			skb->next = skb2;
@@ -708,15 +701,13 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 		struct sk_buff *tmp = skb;
 		skb = skb_realloc_headroom(skb, need_headroom);
 		/* Increment reference count after copy */
-		if (NULL != skb && SKB_CB(tmp)->ni != NULL) {
-			SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
-		}
-		ieee80211_dev_kfree_skb(&tmp);
 		if (skb == NULL) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
 				"%s: cannot expand storage (head)\n", __func__);
 			vap->iv_stats.is_tx_nobuf++;
-		}
+		} else
+			ieee80211_skb_copy_noderef(tmp, skb);
+		ieee80211_dev_kfree_skb(&tmp);
 	}
 
 	return skb;

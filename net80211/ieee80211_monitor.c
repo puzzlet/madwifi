@@ -387,10 +387,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			/* XXX stat+msg */
 			continue;
 		}
-		/* We duplicate the reference after skb_copy */
-		if (SKB_CB(skb)->ni != NULL) {
-			SKB_CB(skb1)->ni = ieee80211_ref_node(SKB_CB(skb)->ni);
-		}
+		ieee80211_skb_copy_noderef(skb, skb1);
+
 		if (vap->iv_monitor_txf_len && tx) {
 			/* truncate transmit feedback packets */
 			skb_trim(skb1, vap->iv_monitor_txf_len);

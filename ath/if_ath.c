@@ -3123,8 +3123,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			requeue = 1;
 			goto hardstart_fail;
 		}
-		/* If the clone works, bump the reference count for our copy. */
-		SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(skb_orig)->ni);
+		ieee80211_skb_copy_noderef(skb_orig, skb);
 		ieee80211_dev_kfree_skb(&skb_orig);
 	} else {
 		if (SKB_CB(skb)->ni != NULL) 
@@ -6006,10 +6005,7 @@ ath_skb_removepad(struct sk_buff *skb, unsigned int copy_skb)
 				tskb = skb_copy(skb, GFP_ATOMIC);
 				if (tskb == NULL)
 					return NULL;
-				/* Reference any node from the source skb. */
-				if (SKB_CB(skb)->ni != NULL)
-					SKB_CB(tskb)->ni = ieee80211_ref_node(
-							SKB_CB(skb)->ni);
+				ieee80211_skb_copy_noderef(skb, tskb);
 			}
 			memmove(tskb->data + padbytes, tskb->data, headersize);
 			skb_pull(tskb, padbytes);
