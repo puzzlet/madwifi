@@ -3879,7 +3879,7 @@ ath_key_update_end(struct ieee80211vap *vap)
 	struct ath_softc *sc = dev->priv;
 
 	DPRINTF(sc, ATH_DEBUG_KEYCACHE, "%s:\n", __func__);
-	netif_start_queue(dev);
+	netif_wake_queue(dev);
 	if (!in_softirq())		/* NB: see above */
 		tasklet_enable(&sc->sc_rxtq);
 }
@@ -8256,7 +8256,7 @@ ath_draintxq(struct ath_softc *sc)
 				ath_tx_stopdma(sc, &sc->sc_txq[i]);
 	}
 	sc->sc_dev->trans_start = jiffies;
-	netif_start_queue(sc->sc_dev);		/* XXX move to callers */
+	netif_wake_queue(sc->sc_dev);		/* XXX move to callers */
 	for (i = 0; i < HAL_NUM_TX_QUEUES; i++)
 		if (ATH_TXQ_SETUP(sc, i))
 			ath_tx_draintxq(sc, &sc->sc_txq[i]);
@@ -8988,7 +8988,7 @@ done:
 		ath_grppoll_stop(vap);
 #endif
 bad:
-	netif_start_queue(dev);
+	netif_wake_queue(dev);
 	dev->watchdog_timeo = 5 * HZ;		/* set the timeout to normal */
 	return error;
 }
@@ -9048,7 +9048,7 @@ ath_check_dfs_clear(unsigned long data)
 			}
 		}
 		/* start the device */
-		netif_start_queue(dev);
+		netif_wake_queue(dev);
 		dev->watchdog_timeo = 5 * HZ;	/* set the timeout to normal */
 	} else {
 		/* fire the timer again */
@@ -12137,7 +12137,7 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **bf)
 		++sc->sc_reapcount;
 		if (sc->sc_reapcount > ATH_TXBUF_FREE_THRESHOLD) {
 			
-			netif_start_queue(sc->sc_dev);
+			netif_wake_queue(sc->sc_dev);
 			DPRINTF(sc, ATH_DEBUG_ANY,
 			    "%s: restarting queue.\n",
 			    __func__);
