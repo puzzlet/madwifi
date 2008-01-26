@@ -298,7 +298,6 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 	IEEE80211_ADDR_COPY(wh->i_addr3, vap->iv_bss->ni_bssid);
 
 	/* Check if we need to change channel right now */
-
 	if ((ic->ic_flags & IEEE80211_F_DOTH) &&
 	    (vap->iv_flags & IEEE80211_F_CHANSWITCH)) {
 		struct ieee80211_channel *c = 
