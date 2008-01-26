@@ -2224,15 +2224,21 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 	} else {
 		if (status & HAL_INT_SWBA) {
 			struct ieee80211vap * vap;
-			u_int64_t hw_tsf = ath_hal_gettsf64(ah);
 
 			/* Updates sc_nexttbtt */
 			vap = TAILQ_FIRST(&sc->sc_ic.ic_vaps);
 			sc->sc_nexttbtt += vap->iv_bss->ni_intval;
 
-			DPRINTF(sc, ATH_DEBUG_BEACON,
-				"ath_intr HAL_INT_SWBA at tsf %10llx nexttbtt %10llx\n",
-				hw_tsf, (u_int64_t)sc->sc_nexttbtt<<10);
+			/* Because ath_hal_gettsf64 is expensive and only used
+			 * for this one debug call, surround it with a debug
+			 * flag check. */
+			if (DFLAG_ISSET(sc, ATH_DEBUG_BEACON)) {
+				u_int64_t hw_tsf = ath_hal_gettsf64(ah);
+				DPRINTF(sc, ATH_DEBUG_BEACON,
+					"ath_intr HAL_INT_SWBA at "
+					"tsf %10llx nexttbtt %10llx\n",
+					hw_tsf, (u_int64_t)sc->sc_nexttbtt<<10);
+			}
 
 			/*
 			 * Software beacon alert--time to send a beacon.
@@ -8013,14 +8019,10 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 	unsigned int sr, lr;
 	HAL_STATUS status;
 	int uapsdq = 0;
-	u_int64_t tsf = 0; /* Only needed for monitor mode */
 
 	DPRINTF(sc, ATH_DEBUG_TX_PROC, "TX queue: %d (0x%x), link: %p\n", 
 		txq->axq_qnum, ath_hal_gettxbuf(sc->sc_ah, txq->axq_qnum),
 		txq->axq_link);
-
-	if (sc->sc_nmonvaps > 0)
-		tsf = ath_hal_gettsf64(ah);
 
 	if (txq == sc->sc_uapsdq) {
 		DPRINTF(sc, ATH_DEBUG_UAPSD, "Reaping U-APSD txq\n");
@@ -8398,13 +8400,11 @@ ath_stoprecv(struct ath_softc *sc)
 	((struct ath_desc *)((caddr_t)(_sc)->sc_rxdma.dd_desc + \
 		((_pa) - (_sc)->sc_rxdma.dd_desc_paddr)))
 	struct ath_hal *ah = sc->sc_ah;
-	u_int64_t tsf;
 
 	ath_hal_stoppcurecv(ah);	/* disable PCU */
 	ath_hal_setrxfilter(ah, 0);	/* clear recv filter */
 	ath_hal_stopdmarecv(ah);	/* disable DMA engine */
 	mdelay(3);			/* 3 ms is long enough for 1 frame */
-	tsf = ath_hal_gettsf64(ah);
 #ifdef AR_DEBUG
 	if (sc->sc_debug & (ATH_DEBUG_RESET | ATH_DEBUG_FATAL)) {
 		struct ath_buf *bf;
@@ -8415,7 +8415,7 @@ ath_stoprecv(struct ath_softc *sc)
 			struct ath_desc *ds = bf->bf_desc;
 			struct ath_rx_status *rs = &bf->bf_dsstatus.ds_rxstat;
 			HAL_STATUS status = ath_hal_rxprocdesc(ah, ds,
-				bf->bf_daddr, PA2DESC(sc, ds->ds_link), tsf, rs);
+				bf->bf_daddr, PA2DESC(sc, ds->ds_link), bf->bf_tsf, rs);
 			if (status == HAL_OK || (sc->sc_debug & ATH_DEBUG_FATAL))
 				ath_printrxbuf(bf, status == HAL_OK);
 		}
