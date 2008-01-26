@@ -66,11 +66,11 @@
 
 #if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
 #define	ATH_HAL_LOCK_ASSERT(_sc) \
-	KASSERT(spin_is_locked(&(_sc)->sc_hal_lock), ("hal not locked!"))
+	KASSERT(spin_is_locked(&(_sc)->sc_hal_lock), ("HAL not locked!"))
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_HAL_LOCK_CHECK(_sc) do { \
 	if (spin_is_locked(&(_sc)->sc_hal_lock)) \
-		printk("%s:%d - about to block on hal lock!\n", __func__, __LINE__); \
+		IPRINTF(_sc, "About to block on HAL lock! [%s:%d]\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_HAL_LOCK_CHECK(_sc)

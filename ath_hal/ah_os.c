@@ -141,7 +141,7 @@ ath_hal_ether_sprintf(const u_int8_t *mac)
 void __ahdecl
 ath_hal_assert_failed(const char* filename, int lineno, const char *msg)
 {
-	printk("Atheros HAL assertion failure: %s: line %u: %s\n",
+	printk(KERN_ERR "Atheros HAL assertion failure: %s: line %u: %s\n",
 		filename, lineno, msg);
 	panic("ath_hal_assert");
 }
@@ -182,13 +182,13 @@ ath_hal_setlogging(int enable)
 				sizeof (struct athregrec), ath_hal_alq_qsize);
 		ath_hal_alq_lost = 0;
 		ath_hal_alq_emitdev = 1;
-		printk("ath_hal: logging to %s %s\n", ath_hal_logfile,
+		printk(KERN_INFO "ath_hal: logging to %s %s\n", ath_hal_logfile,
 			error == 0 ? "enabled" : "could not be setup");
 	} else {
 		if (ath_hal_alq)
 			alq_close(ath_hal_alq);
 		ath_hal_alq = NULL;
-		printk("ath_hal: logging disabled\n");
+		printk(KERN_INFO "ath_hal: logging disabled\n");
 		error = 0;
 	}
 	return error;

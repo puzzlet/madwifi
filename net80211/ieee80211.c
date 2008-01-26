@@ -69,6 +69,7 @@ static int ieee80211com_media_change(struct net_device *);
 static struct net_device_stats *ieee80211_getstats(struct net_device *);
 static int ieee80211_change_mtu(struct net_device *, int);
 static void ieee80211_set_multicast_list(struct net_device *);
+static void ieee80211_expire_dfs_channel_non_occupancy_timer(unsigned long);
 
 MALLOC_DEFINE(M_80211_VAP, "80211vap", "802.11 vap state");
 
@@ -294,6 +295,8 @@ ieee80211_ifattach(struct ieee80211com *ic)
 	/* Initialize candidate channels to all available */
 	memcpy(ic->ic_chan_active, ic->ic_chan_avail,
 		sizeof(ic->ic_chan_avail));
+	/* update Supported Channels information element */
+	ieee80211_build_sc_ie(ic);
 	/* Validate ic->ic_curmode */
 	if ((ic->ic_modecaps & (1 << ic->ic_curmode)) == 0)
 		ic->ic_curmode = IEEE80211_MODE_AUTO;
@@ -330,6 +333,10 @@ ieee80211_ifattach(struct ieee80211com *ic)
 	ic->ic_txpowlimit = IEEE80211_TXPOWER_MIN;
 	ic->ic_newtxpowlimit = IEEE80211_TXPOWER_MAX;
 
+	init_timer(&ic->ic_dfs_non_occupancy_timer);
+	ic->ic_dfs_non_occupancy_timer.function = ieee80211_expire_dfs_channel_non_occupancy_timer;
+	ic->ic_dfs_non_occupancy_timer.data = (unsigned long) ic;
+
 	ieee80211_crypto_attach(ic);
 	ieee80211_node_attach(ic);
 	ieee80211_power_attach(ic);
@@ -355,6 +362,7 @@ ieee80211_ifdetach(struct ieee80211com *ic)
 		ic->ic_vap_delete(vap);
 	rtnl_unlock();
 
+	del_timer(&ic->ic_dfs_non_occupancy_timer);
 	ieee80211_scan_detach(ic);
 	ieee80211_proto_detach(ic);
 	ieee80211_crypto_detach(ic);
@@ -487,6 +495,7 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 	vap->iv_monitor_phy_errors = 0;
 
 	IEEE80211_ADDR_COPY(vap->iv_myaddr, ic->ic_myaddr);
+	IEEE80211_ADDR_COPY(vap->iv_bssid, ic->ic_myaddr);
 	/* NB: Defer setting dev_addr so driver can override */
 
 	ieee80211_crypto_vattach(vap);
@@ -773,79 +782,263 @@ ieee80211_media_setup(struct ieee80211com *ic,
 #undef ADD
 }
 
+/*
+ * Perform the dfs action (channel switch) using scan cache or a randomly
+ * chosen channel. The choice of the fallback random channel is done in
+ * ieee80211_scan_dfs_action, when there are no scan cache results.
+ *
+ * This was moved out of ieee80211_mark_dfs, because the same functionality is
+ * used also in ieee80211_ioctl_chanswitch.
+ */
+void
+ieee80211_dfs_action(struct ieee80211com *ic) {
+	struct ieee80211vap *vap;
+
+	/* Get an AP mode VAP */
+	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
+		if (vap->iv_state == IEEE80211_S_RUN) {
+			break;
+		}
+	}
+
+	if (vap == NULL) {
+		/*
+		 * No running VAP was found, check
+		 * if any one is scanning.
+		 */
+
+		TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
+			if (vap->iv_state == IEEE80211_S_SCAN) {
+				break;
+			}
+		}
+
+		/*
+		 * No running/scanning VAP was found, so they're all in
+		 * INIT state, no channel change needed
+		 */
+		if (vap==NULL)
+			return;
+		/* Is it really Scanning */
+		/* XXX: Race condition? */
+		if (ic->ic_flags & IEEE80211_F_SCAN)
+			return;
+		/* It is not scanning, but waiting for ath driver to move the vap to RUN */
+	}
+	/* Check the scan results using only cached results */
+	if (!(ieee80211_check_scan(vap, IEEE80211_SCAN_NOSSID | IEEE80211_SCAN_KEEPMODE | IEEE80211_SCAN_USECACHE, 0,
+				   vap->iv_des_nssid, vap->iv_des_ssid,
+				   ieee80211_scan_dfs_action))) {
+		/* No channel was found, so call the scan action with no result */
+		ieee80211_scan_dfs_action(vap, NULL);
+	}
+}
+
+void
+ieee80211_expire_channel_non_occupancy_restrictions(struct ieee80211com *ic)
+{
+	struct ieee80211_channel* c = NULL;
+	struct net_device *dev = ic->ic_dev;
+	struct timeval tv_now;
+	int i;
+
+	do_gettimeofday(&tv_now);
+	for (i = 0; i < ic->ic_nchans; i++) {
+		c = &ic->ic_channels[i];
+		if (c->ic_flags & IEEE80211_CHAN_RADAR) {
+			if (timeval_compare(&ic->ic_chan_non_occupy[i],
+					    &tv_now) < 0) {
+				if_printf(dev,
+					  "Returning channel %3d (%4d MHz) radar avoidance marker expired.  Channel now available again. -- Time: %10ld.%06ld\n",
+					  c->ic_ieee, c->ic_freq, tv_now.tv_sec,
+					  tv_now.tv_usec);
+				c->ic_flags &= ~IEEE80211_CHAN_RADAR;
+			} else {
+				if_printf(dev,
+					  "Channel %3d (%4d MHz) is still marked for radar.  Channel will become usable in %u seconds at Time: %10ld.%06ld\n",
+					  c->ic_ieee, c->ic_freq,
+					  ic->ic_chan_non_occupy[i].tv_sec - tv_now.tv_sec,
+					  ic->ic_chan_non_occupy[i].tv_sec,
+					  ic->ic_chan_non_occupy[i].tv_usec);
+			}
+		}
+	}
+}
+EXPORT_SYMBOL(ieee80211_expire_channel_non_occupancy_restrictions);
+
+/* Update the Non-Occupancy Period timer with the first Non-Occupancy Period
+ * that will expire */
+static void
+ieee80211_update_dfs_channel_non_occupancy_timer(struct ieee80211com *ic)
+{
+	struct ieee80211_channel * chan;
+	struct timeval tv_now, tv_next;
+	int i;
+	unsigned long jiffies_tmp;
+
+	do_gettimeofday(&tv_now);
+	jiffies_tmp = jiffies;
+
+	tv_next.tv_sec = 0;
+	tv_next.tv_usec = 0;
+	for (i=0; i<ic->ic_nchans; i++) {
+		chan = &ic->ic_channels[i];
+		if (chan->ic_flags & IEEE80211_CHAN_RADAR) {
+			if ((tv_next.tv_sec == 0) &&
+			    (tv_next.tv_usec == 0)) {
+				tv_next = ic->ic_chan_non_occupy[i];
+			}
+			if (timeval_compare(&ic->ic_chan_non_occupy[i],
+					    &tv_next) < 0) {
+				tv_next = ic->ic_chan_non_occupy[i];
+			}
+		}
+	}
+
+	if ((tv_next.tv_sec == 0) &&
+	    (tv_next.tv_usec == 0)) {
+		del_timer(&ic->ic_dfs_non_occupancy_timer);
+	} else {
+		mod_timer(&ic->ic_dfs_non_occupancy_timer,
+			  jiffies_tmp + (tv_next.tv_sec - tv_now.tv_sec + 1) * HZ);
+	}
+}
+
+/* Periodically expire radar avoidance marks. */
+static void
+ieee80211_expire_dfs_channel_non_occupancy_timer(unsigned long data)
+{
+	struct ieee80211com *ic = (struct ieee80211com *) data;
+	struct ieee80211vap *vap;
+
+	printk(KERN_INFO "%s: %s: expiring Non-Occupancy Period\n", DEV_NAME(ic->ic_dev), __func__);
+
+	if (ic->ic_flags_ext & IEEE80211_FEXT_MARKDFS) {
+		/* Make sure there are no channels that have just become available */
+		ieee80211_expire_channel_non_occupancy_restrictions(ic);
+		/* Go through and clear any interference flag we have, if we
+		 * just got it cleared up for us */
+		TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
+		  /* We need to check for the special value
+		     IEEE80211_CHAN_ANYC before using vap->iv_des_chan
+		     since it will cause a kernel panic */
+			if ((vap->iv_state == IEEE80211_S_RUN) &&
+			    ((vap->iv_opmode == IEEE80211_M_HOSTAP) ||
+			     (vap->iv_opmode == IEEE80211_M_IBSS)) &&
+			    /* Operating on channel other than desired. */
+			    (vap->iv_des_chan != IEEE80211_CHAN_ANYC) &&
+			    (vap->iv_des_chan->ic_freq > 0) &&
+			    (vap->iv_des_chan->ic_freq != ic->ic_bsschan->ic_freq)) {
+				struct ieee80211_channel *des_chan =
+					ieee80211_find_channel(ic, vap->iv_des_chan->ic_freq,
+							       vap->iv_des_chan->ic_flags);
+				/* Can we switch to it? */
+				if (NULL == des_chan) {
+					IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+							  "%s: Desired channel not found: %u/%x\n",
+							  __func__,
+							  vap->iv_des_chan->ic_freq,
+							  vap->iv_des_chan->ic_flags);
+				} else if (0 == (des_chan->ic_flags & IEEE80211_CHAN_RADAR)) {
+					IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+							  "%s: Desired channel found and available. Switching to %u/%x\n",
+							  __func__,
+							  vap->iv_des_chan->ic_freq,
+							  vap->iv_des_chan->ic_flags);
+					ic->ic_chanchange_chan = des_chan->ic_ieee;
+					ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
+					ic->ic_flags |= IEEE80211_F_CHANSWITCH;
+				} else {
+					if (ieee80211_msg_is_reported(vap, IEEE80211_MSG_DOTH)) {
+						/* Find the desired channel in ic_channels, so
+						 * we can find the index into ic_chan_non_occupy */
+						int i_des_chan = -1, i = 0;
+						for (i=0; i<ic->ic_nchans; i++) {
+							if (des_chan == &ic->ic_channels[i]) {
+								i_des_chan = i;
+								break;
+							}
+						}
+						IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+								  "%s: Desired channel found"
+								  " and not available until Time: %10ld.%06ld\n",
+								  __func__,
+								  ic->ic_chan_non_occupy[i_des_chan].tv_sec,
+								  ic->ic_chan_non_occupy[i_des_chan].tv_usec);
+					}
+				}
+			}
+		}
+	}
+
+	/* update the timer */
+	ieee80211_update_dfs_channel_non_occupancy_timer(ic);
+}
+
+/* This function is called whenever a radar is detected on channel ichan */
+
 void
 ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 {
 	struct ieee80211_channel *c=NULL;
 	struct net_device *dev = ic->ic_dev;
-	struct ieee80211vap *vap;
+	struct timeval tv_now;
+	unsigned int avoidance_time = ic->ic_get_dfs_non_occupancy_period(ic);
 	int i;
 
-	if_printf(dev, "Radar found on channel %d (%d MHz)\n",
-		ichan->ic_ieee, ichan->ic_freq);
-	if (ic->ic_opmode == IEEE80211_M_HOSTAP) {
+	do_gettimeofday(&tv_now);
+	if_printf(dev, "Radar found on channel %3d (%4d MHz) -- Time: %ld.%06ld\n",
+		  ichan->ic_ieee, ichan->ic_freq, tv_now.tv_sec, tv_now.tv_usec);
+	if (IEEE80211_IS_MODE_DFS_MASTER(ic->ic_opmode)) {
 		/* Mark the channel in the ic_chan list */
 		if (ic->ic_flags_ext & IEEE80211_FEXT_MARKDFS) {
+			if_printf(dev, "Marking channel %3d (%4d MHz) in ic_chan list -- Time: %ld.%06ld\n",
+				  ichan->ic_ieee, ichan->ic_freq,
+				  tv_now.tv_sec, tv_now.tv_usec);
 			for (i = 0; i < ic->ic_nchans; i++) {
 				c = &ic->ic_channels[i];
-				if (c->ic_freq != ichan->ic_freq)
-					continue;
-				c->ic_flags |= IEEE80211_CHAN_RADAR;
+				if (c->ic_freq == ichan->ic_freq) {
+					c->ic_flags |= IEEE80211_CHAN_RADAR;
+					ic->ic_chan_non_occupy[i].tv_sec = tv_now.tv_sec + avoidance_time;
+					ic->ic_chan_non_occupy[i].tv_usec = tv_now.tv_usec;
+
+					if_printf(dev, "Channel %3d (%4d MHz) will become usable in %u seconds.  Suspending use of the channel until: %ld.%06ld\n",
+						  ichan->ic_ieee, ichan->ic_freq,
+						  avoidance_time,
+						  ic->ic_chan_non_occupy[i].tv_sec,
+						  ic->ic_chan_non_occupy[i].tv_usec);
+				}
 			}
+
+			/* recompute the next time a Non-Occupancy Period
+			 * expires */
+			ieee80211_update_dfs_channel_non_occupancy_timer(ic);
 
 			c = ieee80211_find_channel(ic, ichan->ic_freq, ichan->ic_flags);
 			if (c == NULL) {
-				if_printf(dev,"%s: Couldn't find matching channel for dfs mark (%d, 0x%x)\n",
+				if_printf(dev, "%s: Couldn't find matching channel for dfs chanchange (%d, 0x%x)\n",
 					  __func__, ichan->ic_freq, ichan->ic_flags);
 				return;
 			}
 			if  (ic->ic_curchan->ic_freq == c->ic_freq) {
-				/* Get an AP mode VAP */
-				vap = TAILQ_FIRST(&ic->ic_vaps);
-				while ((vap != NULL) && (vap->iv_state != IEEE80211_S_RUN) &&
-				       (vap->iv_ic != ic)) {
-					vap = TAILQ_NEXT(vap, iv_next);
-				}
-
-				if (vap == NULL) {
-					/*
-					 * No running VAP was found, check
-					 * if any one is scanning.
-					 */
-					vap = TAILQ_FIRST(&ic->ic_vaps);
-					while ((vap != NULL) && (vap->iv_state != IEEE80211_S_SCAN) &&
-					       (vap->iv_ic != ic)) {
-						vap = TAILQ_NEXT(vap, iv_next);
-					}
-					/*
-					 * No running/scanning VAP was found, so they're all in
-					 * INIT state, no channel change needed
-					 */
-					if (!vap)
-						return;
-					/* Is it really Scanning */
-					/* XXX: Race condition? */
-					if (ic->ic_flags & IEEE80211_F_SCAN)
-						return;
-					/* It is not scanning, but waiting for ath driver to move the vap to RUN */
-				}
-
-				/* Check the scan results using only cached results */
-				if (!(ieee80211_check_scan(vap, IEEE80211_SCAN_USECACHE | IEEE80211_SCAN_NOSSID | IEEE80211_SCAN_KEEPMODE, 0,
-							   vap->iv_des_nssid, vap->iv_des_ssid,
-							   ieee80211_scan_dfs_action))) {
-					/* No channel was found, so call the scan action with no result */
-					ieee80211_scan_dfs_action(vap, NULL);
-				}
+				if_printf(dev, "%s: Invoking ieee80211_dfs_action (%d, 0x%x)\n", __func__, ichan->ic_freq, ichan->ic_flags);
+				/* The current channel has been marked. We need to move away from it. */
+				ieee80211_dfs_action(ic);
 			}
+			else
+				if_printf(dev,
+					  "Channel frequency doesn't match expectation! ichan=%3d (%4d MHz) ic_curchan=%3d (%4d MHz).  Not invoking ieee80211_dfs_action.\n",
+					  ichan->ic_ieee, ichan->ic_freq,
+					  ic->ic_curchan->ic_ieee, ic->ic_curchan->ic_freq);
 		} else {
 			/* Change to a radar free 11a channel for dfstesttime seconds */
 			ic->ic_chanchange_chan = IEEE80211_RADAR_TEST_MUTE_CHAN;
 			ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
-			/* A timer is setup in the radar task if markdfs is not set and
-			 * we are in hostap mode.
-			 */
+			if_printf(dev,
+				  "Mute test - markdfs is off, we are in hostap mode, found radar on channel %3d (%4d MHz) ic->ic_curchan=%3d (%4d MHz).  Not invoking ieee80211_dfs_action.\n",
+				  ichan->ic_ieee, ichan->ic_freq,
+				  ic->ic_curchan->ic_ieee, ic->ic_curchan->ic_freq);
 		}
 	} else {
 		/* Are we in STA mode? If so, send an action msg to AP saying we found a radar? */
@@ -860,7 +1053,7 @@ ieee80211_dfs_test_return(struct ieee80211com *ic, u_int8_t ieeeChan)
 
 	/* Return to the original channel we were on before the test mute */
 	if_printf(dev, "Returning to channel %d\n", ieeeChan);
-	printk("Returning to chan %d\n", ieeeChan);
+	printk(KERN_DEBUG "Returning to chan %d\n", ieeeChan);
 	ic->ic_chanchange_chan = ieeeChan;
 	ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 	ic->ic_flags |= IEEE80211_F_CHANSWITCH;
@@ -884,11 +1077,11 @@ ieee80211_announce(struct ieee80211com *ic)
 			mword = ieee80211_rate2media(ic, rate, mode);
 			if (mword == 0)
 				continue;
-			printf("%s%d%sMbps", (i != 0 ? " " : ""),
+			printk("%s%d%sMbps", (i != 0 ? " " : ""),
 			    (rate & IEEE80211_RATE_VAL) / 2,
 			    ((rate & 0x1) != 0 ? ".5" : ""));
 		}
-		printf("\n");
+		printk("\n");
 	}
 	if_printf(dev, "H/W encryption support:");
 	if (ic->ic_caps & IEEE80211_C_WEP)
@@ -912,7 +1105,7 @@ ieee80211_announce_channels(struct ieee80211com *ic)
 	char type;
 	int i;
 
-	printf("Chan  Freq  RegPwr  MinPwr  MaxPwr\n");
+	printk(KERN_INFO "Chan  Freq  RegPwr  MinPwr  MaxPwr\n");
 	for (i = 0; i < ic->ic_nchans; i++) {
 		c = &ic->ic_channels[i];
 		if (IEEE80211_IS_CHAN_ST(c))
@@ -929,7 +1122,7 @@ ieee80211_announce_channels(struct ieee80211com *ic)
 			type = 'b';
 		else
 			type = 'f';
-		printf("%4d  %4d%c %6d  %6d  %6d\n",
+		printk(KERN_INFO "%4d  %4d%c %6d  %6d  %6d\n",
 			c->ic_ieee, c->ic_freq, type,
 			c->ic_maxregpower,
 			c->ic_minpower, c->ic_maxpower
@@ -1264,7 +1457,7 @@ ieee80211_chan2mode(const struct ieee80211_channel *chan)
 		return IEEE80211_MODE_FH;
 
 	/* NB: Should not get here */
-	printk("%s: cannot map channel to mode; freq %u flags 0x%x\n",
+	printk(KERN_ERR "%s: cannot map channel to mode; freq %u flags 0x%x\n",
 		__func__, chan->ic_freq, chan->ic_flags);
 	return IEEE80211_MODE_11B;
 }
@@ -1470,17 +1663,14 @@ ieee80211_set_multicast_list(struct net_device *dev)
 void
 ieee80211_build_countryie(struct ieee80211com *ic)
 {
-	int i, j, chanflags, found;
+	int i, found;
 	struct net_device *dev = ic->ic_dev;
 	struct ieee80211_channel *c;
-	u_int8_t chanlist[IEEE80211_CHAN_MAX + 1];
-	u_int8_t chancnt = 0;
 	u_int8_t *cur_runlen, *cur_chan, *cur_pow, prevchan;
 
 	/* Fill in country IE. */
 	memset(&ic->ic_country_ie, 0, sizeof(ic->ic_country_ie));
 	ic->ic_country_ie.country_id = IEEE80211_ELEMID_COUNTRY;
-	ic->ic_country_ie.country_len = 0; /* init needed by following code */
 
 	/* Initialize country IE */
 	found = 0;
@@ -1536,34 +1726,23 @@ ieee80211_build_countryie(struct ieee80211com *ic)
 			ic->ic_country_ie.country_len += 3;
 		}
 	} else {
-		if ((ic->ic_curmode == IEEE80211_MODE_11A) ||
-		    (ic->ic_curmode == IEEE80211_MODE_TURBO_A))
-			chanflags = IEEE80211_CHAN_5GHZ;
-		else
-			chanflags = IEEE80211_CHAN_2GHZ;
+		u_int16_t curmode_noturbo = ic->ic_curmode;
+		/* advertise only non-turbo channels */
+		/* XXX: shouldn't turbo channels be included as well? */
+		switch (curmode_noturbo) {
+		case IEEE80211_MODE_TURBO_A:
+			curmode_noturbo = IEEE80211_MODE_11A;
+			break;
+		case IEEE80211_MODE_TURBO_G:
+			curmode_noturbo = IEEE80211_MODE_11G;
+			break;
+		}
 
-		memset(&chanlist[0], 0, sizeof(chanlist));
-		/* XXX: Not right, due to duplicate entries */
 		for (i = 0; i < ic->ic_nchans; i++) {
 			c = &ic->ic_channels[i];
 
 			/* Does channel belong to current operation mode */
-			if (!(c->ic_flags & chanflags))
-				continue;
-
-			/* Skip previously reported channels */
-			for (j = 0; j < chancnt; j++)
-				if (c->ic_ieee == chanlist[j])
-					break;
-
-			if (j != chancnt) /* found a match */
-				continue;
-
-			chanlist[chancnt] = c->ic_ieee;
-			chancnt++;
-
-			/* Skip turbo channels */
-			if (IEEE80211_IS_CHAN_TURBO(c))
+			if (ieee80211_chan2mode(c) != curmode_noturbo)
 				continue;
 
 			/* Skip half/quarter rate channels */
@@ -1578,7 +1757,8 @@ ieee80211_build_countryie(struct ieee80211com *ic)
 				prevchan = c->ic_ieee;
 				ic->ic_country_ie.country_len += 3;
 			} else if (*cur_pow == c->ic_maxregpower &&
-			    c->ic_ieee == prevchan + 1) {
+					c->ic_ieee == prevchan +
+					(IEEE80211_IS_CHAN_5GHZ(c) ? 4 : 1)) {
 				(*cur_runlen)++;
 				prevchan = c->ic_ieee;
 			} else {
@@ -1597,13 +1777,58 @@ ieee80211_build_countryie(struct ieee80211com *ic)
 	/* Pad */
 	if (ic->ic_country_ie.country_len & 1)
 		ic->ic_country_ie.country_len++;
+}
 
-#if 0
-	ic->ic_country_ie.country_len=8;
-	ic->ic_country_ie.country_triplet[0] = 10;
-	ic->ic_country_ie.country_triplet[1] = 11;
-	ic->ic_country_ie.country_triplet[2] = 12;
-#endif
+void
+ieee80211_build_sc_ie(struct ieee80211com *ic)
+{
+	struct ieee80211_ie_sc *ie = &ic->ic_sc_ie;
+	int i, j;
+	struct ieee80211_channel *c;
+	u_int8_t prevchan;
+
+	/*
+	 * Fill in Supported Channels IE.
+	 */
+	memset(ie, 0, sizeof(*ie));
+	ie->sc_id = IEEE80211_ELEMID_SUPPCHAN;
+
+	prevchan = 0;
+
+	j = 0;
+	for (i = 0; i < ic->ic_nchans; i++) {
+		c = &ic->ic_channels[i];
+
+		/* Skip disabled channels */
+		if (isclr(ic->ic_chan_active, c->ic_ieee))
+			continue;
+
+		/* XXX Skip turbo channels */
+		if (IEEE80211_IS_CHAN_TURBO(c))
+			continue;
+
+		/* Skip half/quarter rate channels */
+		if (IEEE80211_IS_CHAN_HALF(c) ||
+				IEEE80211_IS_CHAN_QUARTER(c))
+			continue;
+
+		/* Skip duplicate frequencies (separate b/g channels) */
+		if (c->ic_ieee == prevchan)
+			continue;
+
+		if (ie->sc_subband[j].sc_number == 0) {
+			ie->sc_subband[j].sc_first = c->ic_ieee;
+		} else if (c->ic_ieee != prevchan +
+				/* XXX: see 802.11d-2001-4-05-03-interp,
+				 * but what about .11j, turbo, etc.? */
+				(IEEE80211_IS_CHAN_5GHZ(c) ? 4 : 1)) {
+			j++;
+			ie->sc_subband[j].sc_first = c->ic_ieee;
+		}
+		ie->sc_subband[j].sc_number++;
+		prevchan = c->ic_ieee;
+	}
+	ie->sc_len = (j+1) * 2;
 }
 
 int ath_debug_global = 0;

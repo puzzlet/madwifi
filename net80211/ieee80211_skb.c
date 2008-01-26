@@ -127,9 +127,9 @@ static void skb_print_message(
 	va_start(args, message);
 	vsnprintf(expanded_message, sizeof(expanded_message), message, args);
 #ifdef IEEE80211_DEBUG_REFCNT
-	printk("%s: %s%s:%d -> %s:%d %s\n",
+	printk(KERN_DEBUG "%s: %s%s:%d -> %s:%d %s\n",
 #else
-	printk("%s: %s%s:%d %s\n",
+	printk(KERN_DEBUG "%s: %s%s:%d %s\n",
 #endif
 		((skb != NULL) ? DEV_NAME(skb->dev) : "none"),
 		skb_count, 

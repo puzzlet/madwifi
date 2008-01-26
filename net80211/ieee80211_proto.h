@@ -63,14 +63,15 @@ void ieee80211_proto_vdetach(struct ieee80211vap *);
 
 struct ieee80211_node;
 struct ieee80211_channel *ieee80211_doth_findchan(struct ieee80211vap *, u_int8_t);
-int ieee80211_input(struct ieee80211_node *, struct sk_buff *, int, u_int64_t);
+int ieee80211_input(struct ieee80211vap *, struct ieee80211_node *, struct sk_buff *, int, u_int64_t);
 int ieee80211_input_all(struct ieee80211com *, struct sk_buff *, int, u_int64_t);
 int ieee80211_setup_rates(struct ieee80211_node *, const u_int8_t *,
 	const u_int8_t *, int);
 void ieee80211_saveie(u_int8_t **, const u_int8_t *);
 void ieee80211_saveath(struct ieee80211_node *, u_int8_t *);
-void ieee80211_recv_mgmt(struct ieee80211_node *, struct sk_buff *,
-	int, int, u_int64_t);
+void ieee80211_recv_mgmt(struct ieee80211vap *, struct ieee80211_node *,
+	struct sk_buff *, int, int, u_int64_t);
+void ieee80211_sta_pwrsave(struct ieee80211vap *, int);
 int ieee80211_hardstart(struct sk_buff *, struct net_device *);
 void ieee80211_parent_queue_xmit(struct sk_buff *);
 int ieee80211_send_nulldata(struct ieee80211_node *);

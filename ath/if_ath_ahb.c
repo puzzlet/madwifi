@@ -214,7 +214,7 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 
 	dev = alloc_netdev(sizeof(struct ath_ahb_softc), "wifi%d", ether_setup);
 	if (dev == NULL) {
-		printk(KERN_ERR "ath_dev_probe: no memory for device state\n");
+		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;
 	}
 	sc = dev->priv;
@@ -251,15 +251,15 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 	sc->aps_sc.sc_bdev = NULL;
 
 	if (request_irq(dev->irq, ath_intr, IRQF_SHARED, dev->name, dev)) {
-		printk(KERN_WARNING "%s: request_irq failed\n", dev->name);
+		printk(KERN_WARNING "%s: %s: request_irq failed\n", dev_info, dev->name);
 		goto bad3;
 	}
 
 	if (ath_attach(devid, dev, config) != 0)
 		goto bad4;
 	athname = ath_hal_probe(ATHEROS_VENDOR_ID, devid);
-	printk(KERN_INFO "%s: %s: mem=0x%lx, irq=%d\n",
-		dev->name, athname ? athname : "Atheros ???", dev->mem_start, dev->irq);
+	printk(KERN_INFO "%s: %s: %s: mem=0x%lx, irq=%d\n",
+		dev_info, dev->name, athname ? athname : "Atheros ???", dev->mem_start, dev->irq);
 	num_activesc++;
 	/* Ready to process interrupts */
 

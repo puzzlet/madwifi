@@ -377,6 +377,38 @@ struct ieee80211_ie_country {
 } __packed;
 
 /*
+ * Power Constraint information element.
+ */
+struct ieee80211_ie_pwrcnstr {
+	u_int8_t pc_id;			/* IEEE80211_ELEMID_PWRCNSTR */
+	u_int8_t pc_len;		/* == 2 */
+	u_int8_t pc_lpc;		/* Local Power Constraint [dB] */
+} __packed;
+
+/*
+ * Power Capability information element.
+ */
+struct ieee80211_ie_pwrcap {
+	u_int8_t pc_id;			/* IEEE80211_ELEMID_PWRCAP */
+	u_int8_t pc_len;		/* == 2 */
+	int8_t pc_mintxpow;		/* Minimum Transmit Power Capability [dBm] */
+	int8_t pc_maxtxpow;		/* Maximum Transmit Power Capability [dBm] */
+} __packed;
+
+/*
+ * Supported Channels information element.
+ */
+#define IEEE80211_SUPPCHAN_MAX_PAIRS (127)
+struct ieee80211_ie_sc {
+	u_int8_t sc_id;			/* IEEE80211_ELEMID_SUPPCHAN */
+	u_int8_t sc_len;		/* == 2 * number of sc_subband elements */
+	struct {
+		u_int8_t sc_first;	/* First Channel Number */
+		u_int8_t sc_number;	/* Number of Channels */
+	} __packed sc_subband[IEEE80211_SUPPCHAN_MAX_PAIRS];
+} __packed;
+
+/*
  * Channel Switch Announcement information element.
  */
 struct ieee80211_ie_csa {

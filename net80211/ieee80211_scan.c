@@ -273,7 +273,7 @@ ieee80211_scan_dump_channels(const struct ieee80211_scan_state *ss)
 	for (i = ss->ss_next; i < ss->ss_last; i++) {
 		const struct ieee80211_channel *c = ss->ss_chans[i];
 
-		printf("%s%u%c", sep, ieee80211_chan2ieee(ic, c),
+		printk("%s%u%c", sep, ieee80211_chan2ieee(ic, c),
 			channel_type(c));
 		sep = ", ";
 	}
@@ -351,7 +351,7 @@ copy_ssid(struct ieee80211vap *vap, struct ieee80211_scan_state *ss,
 	int nssid, const struct ieee80211_scan_ssid ssids[])
 {
 	if (nssid > IEEE80211_SCAN_MAX_SSID) {
-		/* XXX printf */
+		/* XXX printk */
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
 			"%s: too many ssid %d, ignoring all of them\n",
 			__func__, nssid);
@@ -799,28 +799,28 @@ dump_probe_beacon(u_int8_t subtype, int isnew,
 	const struct ieee80211_scanparams *sp)
 {
 
-	printf("[" MAC_FMT "] %s%s on chan %u (bss chan %u) ",
+	printk("[" MAC_FMT "] %s%s on chan %u (bss chan %u) ",
 		MAC_ADDR(mac), isnew ? "new " : "",
 		ieee80211_mgt_subtype_name[subtype >> IEEE80211_FC0_SUBTYPE_SHIFT],
 		sp->chan, sp->bchan);
 	ieee80211_print_essid(sp->ssid + 2, sp->ssid[1]);
-	printf("\n");
+	printk("\n");
 
 	if (isnew) {
-		printf("[" MAC_FMT "] caps 0x%x bintval %u erp 0x%x",
+		printk("[" MAC_FMT "] caps 0x%x bintval %u erp 0x%x",
 			MAC_ADDR(mac), sp->capinfo, sp->bintval, sp->erp);
 		if (sp->country != NULL) {
 #ifdef __FreeBSD__
-			printf(" country info %*D",
+			printk(" country info %*D",
 				sp->country[1], sp->country + 2, " ");
 #else
 			int i;
-			printf(" country info");
+			printk(" country info");
 			for (i = 0; i < sp->country[1]; i++)
-				printf(" %02x", sp->country[i + 2]);
+				printk(" %02x", sp->country[i + 2]);
 #endif
 		}
-		printf("\n");
+		printk("\n");
 	}
 }
 #endif /* IEEE80211_DEBUG */
@@ -967,59 +967,136 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 			  const struct ieee80211_scan_entry *se)
 {
 	struct ieee80211com *ic = vap->iv_ic;
-	struct net_device *dev = ic->ic_dev;
+	struct ieee80211_channel *new_channel = NULL;
 
-	if (vap->iv_opmode != IEEE80211_M_HOSTAP)
+	if (!IEEE80211_IS_MODE_DFS_MASTER(vap->iv_opmode))
 		return 0;
 	if (se != NULL) {
+		new_channel = se->se_chan;
+		if (new_channel != NULL) {
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+					  "%s: new channel found in scan cache\n",
+					  __func__);
+		}
+	} else {
+		/* No channel was found via scan module, means no good scanlist
+		 * was found */
+		int chanStart, i, count;
+		u_int32_t curChanFlags;
+
+		if ((ic->ic_curchan != NULL) &&
+		    (ic->ic_curchan != IEEE80211_CHAN_ANYC)) {
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+					  "%s: ic_curchan is %3d (%4d MHz)\n",
+					  __func__, ic->ic_curchan->ic_ieee,
+					  ic->ic_curchan->ic_freq);
+		}
+
+		if ((ic->ic_bsschan != NULL) &&
+		    (ic->ic_bsschan != IEEE80211_CHAN_ANYC)) {
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+					  "%s: ic_bsschan is %3d (%4d MHz)\n",
+					  __func__, ic->ic_bsschan->ic_ieee,
+					  ic->ic_bsschan->ic_freq);
+		}
+
+		/* According to FCC/ETSI rules on uniform spreading, we shall
+		 * select a channel out of the list of usable channels so that
+		 * the probability of selecting a given channel shall be the
+		 * same for all channels (reference: ETSI 301 893 v1.3.1
+		 * $4.6.2.5.1 */
+
+		/* First, we count the usable channels */
+
+		count = 0;
+		curChanFlags = (ic->ic_bsschan->ic_flags) & ~(IEEE80211_CHAN_RADAR);
+		for (i=0; i<ic->ic_nchans; i++) {
+			if ((ic->ic_channels[i].ic_ieee != ic->ic_bsschan->ic_ieee) &&
+			    (ic->ic_channels[i].ic_flags == curChanFlags)) {
+				IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+						  "%s: usable channel %3d (%4d MHz)\n",
+						  __func__, ic->ic_channels[i].ic_ieee,
+						  ic->ic_channels[i].ic_freq);
+				count ++;
+			}
+		}
+
+		if (count != 0) {
+
+			/* Next, we pickup a random usable channel */
+			chanStart = jiffies % count;
+
+			count = 0;
+			for (i=0; i<ic->ic_nchans; i++) {
+				if ((ic->ic_channels[i].ic_ieee != ic->ic_bsschan->ic_ieee) &&
+				    (ic->ic_channels[i].ic_flags == curChanFlags)) {
+					if (count++ == chanStart) {
+						new_channel = &ic->ic_channels[i];
+						break;
+					}
+				}
+			}
+		}
+
+		if (new_channel != NULL) {
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+					  "%s: new random channel found %3d (%4d MHz)\n",
+					  __func__, new_channel->ic_ieee, new_channel->ic_freq);
+		}
+	}
+	if(!new_channel) {
+		/* Search for the first channel with no radar detected */
+		int n = 0;
+		for(n = 0; n < ic->ic_nchans; n++) {
+			if(0 == (ic->ic_channels[n].ic_flags & IEEE80211_CHAN_RADAR)) {
+				new_channel = &ic->ic_channels[n];
+				break;
+			}
+		}
+		if (new_channel != NULL) {
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+					  "%s: new non-radar channel found\n",
+					  __func__);
+		}
+	}
+	if (new_channel != NULL) {
 		/* A suitable scan entry was found, so change channels */
-		if_printf(dev,"Changing to channel %d (%d MHz)\n",
-			  se->se_chan->ic_ieee,
-			  se->se_chan->ic_freq);
 		if (vap->iv_state == IEEE80211_S_RUN) {
-			ic->ic_chanchange_chan = se->se_chan->ic_ieee;
+
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+			  "%s: CSA switching to channel %3d (%4d MHz)\n",
+					  __func__,
+					  new_channel->ic_ieee,
+					  new_channel->ic_freq);
+
+			ic->ic_chanchange_chan = new_channel->ic_ieee;
 			ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 		} else {
+
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+			  "%s: directly switching to channel %3d (%4d MHz)\n",
+					  __func__,
+					  new_channel->ic_ieee,
+					  new_channel->ic_freq);
+
 			/* 
 			 * vap is not in run state yet. so
 			 * change the channel here.
 			 */
-			change_channel(ic,se->se_chan);
-			ic->ic_bsschan = se->se_chan;
+			change_channel(ic, new_channel);
+			ic->ic_bsschan = new_channel;
 			if (vap->iv_bss)
-				vap->iv_bss->ni_chan = se->se_chan;
+				vap->iv_bss->ni_chan = new_channel;
 		}
 	} else {
-		/* No channel wa found via scan module, means no good scanlist
-		   was found */
-		int chanStart, n = 0;
-		u_int32_t curChanFlags;
-
-		/* Only pick a random channel if we're in RUN state.  In scan
-		 * state, we don't need to pick a channel
-		 */
-		if (vap->iv_state == IEEE80211_S_RUN) {
-			/* Pick a random channel */
-			chanStart = jiffies % ic->ic_nchans;
-			curChanFlags = (ic->ic_curchan->ic_flags) & ~(IEEE80211_CHAN_RADAR);
-			while (ic->ic_channels[chanStart].ic_flags != curChanFlags) {
-				if (++n >= ic->ic_nchans)
-					break;
-				chanStart++;
-				if (chanStart == ic->ic_nchans)
-					chanStart = 0;
-			}
-			if (n < ic->ic_nchans) {
-				if_printf(dev,"Changing to channel %d (%d MHz)\n",
-					  ic->ic_channels[chanStart].ic_ieee,
-					  ic->ic_channels[chanStart].ic_freq);
-				ic->ic_chanchange_chan = ic->ic_channels[chanStart].ic_ieee;
-				ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
-				ic->ic_flags |= IEEE80211_F_CHANSWITCH;
-			}
-		}
+		/* A suitable scan entry was not found */
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: new channel not found\n",
+				  __func__);
+		return 0;
 	}
+
 	return 1;
 }
 EXPORT_SYMBOL(ieee80211_scan_dfs_action);

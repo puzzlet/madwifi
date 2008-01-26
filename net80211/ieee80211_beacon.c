@@ -132,18 +132,14 @@ ieee80211_beacon_init(struct ieee80211_node *ni, struct ieee80211_beacon_offsets
 
 	/* country */
 	if ((ic->ic_flags & IEEE80211_F_DOTH) ||
-	    (ic->ic_flags_ext & IEEE80211_FEXT_COUNTRYIE)) {
+	    (ic->ic_flags_ext & IEEE80211_FEXT_COUNTRYIE))
 		frm = ieee80211_add_country(frm, ic);
-	}
 
 	/* power constraint */
-	if (ic->ic_flags & IEEE80211_F_DOTH) {
-		*frm++ = IEEE80211_ELEMID_PWRCNSTR;
-		*frm++ = 1;
-		*frm++ = IEEE80211_PWRCONSTRAINT_VAL(ic);
-	}
+	if (ic->ic_flags & IEEE80211_F_DOTH)
+		frm = ieee80211_add_pwrcnstr(frm, ic);
 
-	/* XXX: channel switch announcement ? */
+	/* channel switch announcement */
 	bo->bo_chanswitch = frm;
 
 	/* ERP */
@@ -269,7 +265,7 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 	wh->i_dur = 0;
 	IEEE80211_ADDR_COPY(wh->i_addr1, ic->ic_dev->broadcast);
 	IEEE80211_ADDR_COPY(wh->i_addr2, vap->iv_myaddr);
-	IEEE80211_ADDR_COPY(wh->i_addr3,  vap->iv_bss->ni_bssid);
+	IEEE80211_ADDR_COPY(wh->i_addr3, vap->iv_bssid);
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
 			  "%s: beacon bssid:" MAC_FMT "\n",
 			  __func__, MAC_ADDR(wh->i_addr3));
@@ -288,14 +284,10 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
-	struct ieee80211_frame * wh = (struct ieee80211_frame *) skb->data;
 	int len_changed = 0;
 	u_int16_t capinfo;
 
 	IEEE80211_LOCK_IRQ(ic);
-
-	/* After an IBSS merge, bssid might have been updated */
-	IEEE80211_ADDR_COPY(wh->i_addr3, vap->iv_bss->ni_bssid);
 
 	/* Check if we need to change channel right now */
 	if ((ic->ic_flags & IEEE80211_F_DOTH) &&
@@ -306,7 +298,9 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 		if (!vap->iv_chanchange_count && !c) {
 			vap->iv_flags &= ~IEEE80211_F_CHANSWITCH;
 			ic->ic_flags &= ~IEEE80211_F_CHANSWITCH;
-		} else if (vap->iv_chanchange_count == ic->ic_chanchange_tbtt) {
+		} else if (vap->iv_chanchange_count &&
+			   ((!ic->ic_chanchange_tbtt) ||
+			    (vap->iv_chanchange_count == ic->ic_chanchange_tbtt))) {
 			u_int8_t *frm;
 
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
@@ -481,43 +475,58 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 		if (mcast && (tie->tim_count == 0))
 			tie->tim_bitctl |= BITCTL_BUFD_MCAST;
 		else
-			tie->tim_bitctl &= BITCTL_BUFD_UCAST_AID_MASK;
+			tie->tim_bitctl &= ~BITCTL_BUFD_MCAST;
+	}
+
+	/* Whenever we want to switch to a new channel, we need to follow the
+	 * following steps:
+	 *
+	 * - iv_chanchange_count= number of beacon intervals elapsed (0)
+	 * - ic_chanchange_tbtt = number of beacon intervals before switching
+	 * - ic_chanchange_chan = IEEE channel number after switching
+	 * - ic_flags |= IEEE80211_F_CHANSWITCH
+	 */
+
+	if (IEEE80211_IS_MODE_BEACON(vap->iv_opmode)) {
 
 		if ((ic->ic_flags & IEEE80211_F_DOTH) &&
 		    (ic->ic_flags & IEEE80211_F_CHANSWITCH)) {
+			struct ieee80211_ie_csa *csa_ie =
+				(struct ieee80211_ie_csa *)bo->bo_chanswitch;
 
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH, "%s: Sending 802.11h chanswitch IE: %d/%d\n", __func__, ic->ic_chanchange_chan, ic->ic_chanchange_tbtt);
 			if (!vap->iv_chanchange_count) {
 				vap->iv_flags |= IEEE80211_F_CHANSWITCH;
 
 				/* copy out trailer to open up a slot */
-				memmove(bo->bo_chanswitch + IEEE80211_CHANSWITCHANN_BYTES,
+				memmove(bo->bo_chanswitch + sizeof(*csa_ie),
 					bo->bo_chanswitch, bo->bo_chanswitch_trailerlen);
 
 				/* add ie in opened slot */
-				bo->bo_chanswitch[0] = IEEE80211_ELEMID_CHANSWITCHANN;
-				bo->bo_chanswitch[1] = 3; /* fixed length */
-				bo->bo_chanswitch[2] = 1; /* stas get off for now */
-				bo->bo_chanswitch[3] = ic->ic_chanchange_chan;
-				bo->bo_chanswitch[4] = ic->ic_chanchange_tbtt;
+				csa_ie->csa_id = IEEE80211_ELEMID_CHANSWITCHANN;
+				csa_ie->csa_len = sizeof(*csa_ie) - 2;	/* fixed length */
+				csa_ie->csa_mode = 1;			/* STA shall transmit no further frames */
+				csa_ie->csa_chan = ic->ic_chanchange_chan;
+				csa_ie->csa_count = ic->ic_chanchange_tbtt;
 
 				/* update the trailer lens */
-				bo->bo_chanswitch_trailerlen += IEEE80211_CHANSWITCHANN_BYTES;
-				bo->bo_tim_trailerlen += IEEE80211_CHANSWITCHANN_BYTES;
-				bo->bo_wme += IEEE80211_CHANSWITCHANN_BYTES;
-				bo->bo_erp += IEEE80211_CHANSWITCHANN_BYTES;
-				bo->bo_ath_caps += IEEE80211_CHANSWITCHANN_BYTES;
-				bo->bo_xr += IEEE80211_CHANSWITCHANN_BYTES;
+				bo->bo_chanswitch_trailerlen += sizeof(*csa_ie);
+				bo->bo_tim_trailerlen += sizeof(*csa_ie);
+				bo->bo_wme += sizeof(*csa_ie);
+				bo->bo_erp += sizeof(*csa_ie);
+				bo->bo_ath_caps += sizeof(*csa_ie);
+				bo->bo_xr += sizeof(*csa_ie);
 
 				/* indicate new beacon length so other layers may manage memory */
-				skb_put(skb, IEEE80211_CHANSWITCHANN_BYTES);
+				skb_put(skb, sizeof(*csa_ie));
 				len_changed = 1;
-			} else
-				bo->bo_chanswitch[4]--;
+			} else if(csa_ie->csa_count)
+				csa_ie->csa_count--;
 			
 			vap->iv_chanchange_count++;
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-				"%s: CHANSWITCH IE, change in %d\n",
-				__func__, bo->bo_chanswitch[4]);
+				"%s: CHANSWITCH IE, change in %d TBTT\n",
+				__func__, csa_ie->csa_count);
 		}
 #ifdef ATH_SUPERG_XR
 		if (vap->iv_flags & IEEE80211_F_XRUPDATE) {

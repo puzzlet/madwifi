@@ -1340,7 +1340,7 @@ static inline void ath_hal_dump_map(struct ath_hal *ah)
 #else				/* #ifdef CONFIG_KALLSYMS */
 
 	printk
-	    ("To use this feature you must enable CONFIG_KALLSYMS in your kernel.");
+	    (KERN_ERR "To use this feature you must enable CONFIG_KALLSYMS in your kernel.");
 
 #endif				/* #ifndef CONFIG_KALLSYMS */
 

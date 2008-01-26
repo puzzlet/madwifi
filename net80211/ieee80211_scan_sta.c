@@ -564,9 +564,9 @@ sta_start(struct ieee80211_scan_state *ss, struct ieee80211vap *vap)
 
 #ifdef IEEE80211_DEBUG
 	if (ieee80211_msg_scan(vap)) {
-		printf("%s: scan set ", vap->iv_dev->name);
+		printk("%s: scan set ", vap->iv_dev->name);
 		ieee80211_scan_dump_channels(ss);
-		printf(" dwell min %ld max %ld\n",
+		printk(" dwell min %ld max %ld\n",
 			ss->ss_mindwell, ss->ss_maxdwell);
 	}
 #endif /* IEEE80211_DEBUG */
@@ -790,26 +790,26 @@ match_bss(struct ieee80211vap *vap,
 		fail |= 0x80;
 #ifdef IEEE80211_DEBUG
 	if (ieee80211_msg_is_reported(vap, IEEE80211_MSG_SCAN | IEEE80211_MSG_ROAM)) {
-		printf(" %03x", fail);
-		printf(" %c " MAC_FMT,
+		printk(" %03x", fail);
+		printk(" %c " MAC_FMT,
 			fail & 0x40 ? '=' : fail & 0x80 ? '^' : fail ? '-' : '+',
 			MAC_ADDR(se->se_macaddr));
-		printf(" " MAC_FMT "%c", MAC_ADDR(se->se_bssid),
+		printk(" " MAC_FMT "%c", MAC_ADDR(se->se_bssid),
 			fail & 0x20 ? '!' : ' ');
-		printf(" %3d%c", ieee80211_chan2ieee(ic, se->se_chan),
+		printk(" %3d%c", ieee80211_chan2ieee(ic, se->se_chan),
 			fail & 0x01 ? '!' : ' ');
-		printf(" %+4d", se->se_rssi);
-		printf(" %2dM%c", (rate & IEEE80211_RATE_VAL) / 2,
+		printk(" %+4d", se->se_rssi);
+		printk(" %2dM%c", (rate & IEEE80211_RATE_VAL) / 2,
 			fail & 0x08 ? '!' : ' ');
-		printf(" %4s%c",
+		printk(" %4s%c",
 			(se->se_capinfo & IEEE80211_CAPINFO_ESS) ? "ess" :
 			(se->se_capinfo & IEEE80211_CAPINFO_IBSS) ? "ibss" : "????",
 			fail & 0x02 ? '!' : ' ');
-		printf(" %3s%c ",
+		printk(" %3s%c ",
 			(se->se_capinfo & IEEE80211_CAPINFO_PRIVACY) ? "wep" : "no",
 			fail & 0x04 ? '!' : ' ');
 		ieee80211_print_essid(se->se_ssid + 2, se->se_ssid[1]);
-		printf("%s\n", fail & 0x10 ? "!" : "");
+		printk("%s\n", fail & 0x10 ? "!" : "");
 	}
 #endif
 	return fail;
@@ -1229,9 +1229,9 @@ adhoc_start(struct ieee80211_scan_state *ss, struct ieee80211vap *vap)
 
 #ifdef IEEE80211_DEBUG
 	if (ieee80211_msg_scan(vap)) {
-		printf("%s: scan set ", vap->iv_dev->name);
+		printk("%s: scan set ", vap->iv_dev->name);
 		ieee80211_scan_dump_channels(ss);
-		printf(" dwell min %ld max %ld\n",
+		printk(" dwell min %ld max %ld\n",
 			ss->ss_mindwell, ss->ss_maxdwell);
 	}
 #endif /* IEEE80211_DEBUG */

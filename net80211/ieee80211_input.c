@@ -194,11 +194,11 @@ iwspy_event(struct ieee80211vap *vap, struct ieee80211_node *ni, u_int rssi)
  * Context: softIRQ (tasklet)
  */
 int
-ieee80211_input(struct ieee80211_node *ni,
+ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	struct sk_buff *skb, int rssi, u_int64_t rtsf)
 {
 #define	HAS_SEQ(type)	((type & 0x4) == 0)
-	struct ieee80211vap *vap = ni->ni_vap;
+	struct ieee80211_node * ni = ni_or_null;
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *dev = vap->iv_dev;
 	struct ieee80211_frame *wh;
@@ -213,6 +213,13 @@ ieee80211_input(struct ieee80211_node *ni,
 	u_int8_t *bssid;
 	u_int16_t rxseq;
 
+	/* initialize ni as in the previous API */
+	if (ni_or_null == NULL) {
+               /* This function does not 'own' vap->iv_bss, so we cannot
+                * guarantee its existence during the following call, hence
+                * briefly grab our own reference. */
+		ni = ieee80211_ref_node(vap->iv_bss);
+	}
 	KASSERT(ni != NULL, ("null node"));
 	ni->ni_inact = ni->ni_inact_reload;
 
@@ -275,7 +282,7 @@ ieee80211_input(struct ieee80211_node *ni,
 		switch (vap->iv_opmode) {
 		case IEEE80211_M_STA:
 			bssid = wh->i_addr2;
-			if (!IEEE80211_ADDR_EQ(bssid, ni->ni_bssid)) {
+			if (!IEEE80211_ADDR_EQ(bssid, vap->iv_bssid)) {
 				/* not interested in */
 				IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
 					bssid, NULL, "%s", "not to bss");
@@ -342,7 +349,7 @@ ieee80211_input(struct ieee80211_node *ni,
 			 * Validate the bssid.
 			 */
 #ifdef ATH_SUPERG_XR
-			if (!IEEE80211_ADDR_EQ(bssid, vap->iv_bss->ni_bssid) &&
+			if (!IEEE80211_ADDR_EQ(bssid, vap->iv_bssid) &&
 			    !IEEE80211_ADDR_EQ(bssid, dev->broadcast)) {
 				/*
 				 * allow MGT frames to vap->iv_xrvap.
@@ -350,7 +357,7 @@ ieee80211_input(struct ieee80211_node *ni,
 				 * without station dis associating from previous vap.
 				 */
 				if (!(vap->iv_xrvap &&
-				    IEEE80211_ADDR_EQ(bssid, vap->iv_xrvap->iv_bss->ni_bssid) &&
+				    IEEE80211_ADDR_EQ(bssid, vap->iv_xrvap->iv_bssid) &&
 				    type == IEEE80211_FC0_TYPE_MGT &&
 				    ni != vap->iv_bss)) {
 					/* not interested in */
@@ -361,7 +368,7 @@ ieee80211_input(struct ieee80211_node *ni,
 				}
 			}
 #else
-			if (!IEEE80211_ADDR_EQ(bssid, vap->iv_bss->ni_bssid) &&
+			if (!IEEE80211_ADDR_EQ(bssid, vap->iv_bssid) &&
 			    !IEEE80211_ADDR_EQ(bssid, dev->broadcast)) {
 				/* not interested in */
 				IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
@@ -382,7 +389,7 @@ ieee80211_input(struct ieee80211_node *ni,
 				goto out;
 			}
 			bssid = wh->i_addr1;
-			if (!IEEE80211_ADDR_EQ(bssid, vap->iv_bss->ni_bssid) &&
+			if (!IEEE80211_ADDR_EQ(bssid, vap->iv_bssid) &&
 			    !IEEE80211_ADDR_EQ(bssid, dev->broadcast)) {
 				/* not interested in */
 				IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
@@ -769,6 +776,8 @@ ieee80211_input(struct ieee80211_node *ni,
 #else /* !ATH_SUPERG_FF */
 		ieee80211_deliver_data(ni, skb);
 #endif
+		if (ni_or_null == NULL)
+			ieee80211_unref_node(&ni);
 		return IEEE80211_FC0_TYPE_DATA;
 
 	case IEEE80211_FC0_TYPE_MGT:
@@ -832,7 +841,7 @@ ieee80211_input(struct ieee80211_node *ni,
 			wh = (struct ieee80211_frame *)skb->data;
 			wh->i_fc[1] &= ~IEEE80211_FC1_PROT;
 		}
-		ic->ic_recv_mgmt(ni, skb, subtype, rssi, rtsf);
+		ic->ic_recv_mgmt(vap, ni_or_null, skb, subtype, rssi, rtsf);
 		goto out;
 
 	case IEEE80211_FC0_TYPE_CTL:
@@ -854,6 +863,8 @@ err:
 out:
 	if (skb != NULL)
 		ieee80211_dev_kfree_skb(&skb);
+	if (ni_or_null == NULL)
+		ieee80211_unref_node(&ni);
 	return type;
 #undef HAS_SEQ
 }
@@ -940,7 +951,6 @@ ieee80211_input_all(struct ieee80211com *ic,
 
 	/* XXX locking */
 	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
-		struct ieee80211_node *ni;
 		struct sk_buff *skb1;
 
 		if (TAILQ_NEXT(vap, iv_next) != NULL) {
@@ -954,12 +964,7 @@ ieee80211_input_all(struct ieee80211com *ic,
 			skb1 = skb;
 			skb = NULL;
 		}
-		/* This function does not 'own' vap->iv_bss, so we cannot 
-		 * guarantee its existence during the following call, hence
-		 * briefly grab our own reference. */
-		ni = ieee80211_ref_node(vap->iv_bss);
-		type = ieee80211_input(ni, skb1, rssi, rtsf);
-		ieee80211_unref_node(&ni);
+		type = ieee80211_input(vap, NULL, skb1, rssi, rtsf);
 	}
 	if (skb != NULL)		/* no vaps, reclaim skb */
 		ieee80211_dev_kfree_skb(&skb);
@@ -1131,9 +1136,9 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 		struct sk_buff *skb1 = NULL;
 
 		if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
-			/* Create a SKB for the BSS to send out. */
 			skb1 = skb_copy(skb, GFP_ATOMIC);
-			SKB_CB(skb1)->ni = ieee80211_ref_node(vap->iv_bss); 
+			/* We duplicate the reference after skb_copy */
+			ieee80211_skb_copy_noderef(skb, skb1);
 		}
 		else {
 			/*
@@ -1706,10 +1711,10 @@ static void
 ieee80211_ssid_mismatch(struct ieee80211vap *vap, const char *tag,
 	u_int8_t mac[IEEE80211_ADDR_LEN], u_int8_t *ssid)
 {
-	printf("[" MAC_FMT "] discard %s frame, ssid mismatch: ",
+	printk(KERN_ERR "[" MAC_FMT "] discard %s frame, ssid mismatch: ",
 		MAC_ADDR(mac), tag);
 	ieee80211_print_essid(ssid + 2, ssid[1]);
-	printf("\n");
+	printk(KERN_ERR "\n");
 }
 
 #define	IEEE80211_VERIFY_SSID(_ni, _ssid) do {				\
@@ -2340,6 +2345,339 @@ ieee80211_saveath(struct ieee80211_node *ni, u_int8_t *ie)
 	}
 }
 
+/*
+ * Structure to be passed through ieee80211_iterate_nodes() to count_nodes()
+ */
+struct count_nodes_arg {
+	const int k;
+	const int *subset;
+	int count;
+	struct ieee80211_node *new;
+};
+
+/*
+ * Count nodes which don't support at least one of arg->subset
+ * Context: channel_combination()
+ */
+static void
+count_nodes(void *_arg, struct ieee80211_node *ni)
+{
+	struct count_nodes_arg *arg = (struct count_nodes_arg *)_arg;
+	int i;
+
+	if (ni->ni_suppchans == NULL)
+		return;
+
+	if (ni == arg->new)
+		return;
+
+	for (i = 0; i < arg->k; i++)
+		if (isclr(ni->ni_suppchans, arg->subset[i])) {
+			arg->count++;
+			return;
+		}
+}
+
+/*
+ * Structure to be passed through combinations() to channel_combination()
+ */
+struct channel_combination_arg {
+	struct ieee80211com *ic;
+	struct ieee80211_node *new;
+	int *best;
+	int benefit;
+};
+
+#ifdef IEEE80211_DEBUG
+/*
+ * sprintf() set[] array consisting of k integers
+ */
+static const char*
+ints_sprintf(const int k, const int set[])
+{
+	static char buf[915]; 	/* 0-255: 10*2 + 90*3 + 156*4 + '\0' */
+	char *ptr = buf;
+	int i;
+	for (i = 0; i < k; i++)
+		ptr += snprintf(ptr, buf + sizeof(buf) - ptr, "%d ", set[i]);
+	return buf;
+}
+#endif
+/*
+ * Action done for each combination of channels that are not supported by currently joining station.
+ * Context: combinations()
+ */
+static void
+channel_combination(const int k, const int subset[], void *_arg)
+{
+	struct channel_combination_arg *arg = (struct channel_combination_arg *)_arg;
+	struct ieee80211com *ic = arg->ic;
+	struct count_nodes_arg cn_arg = { k, subset, 0, arg->new };
+	int permil, allowed;
+	int sta_assoc = ic->ic_sta_assoc;	/* make > 0 check consistent with / operation */
+
+	ieee80211_iterate_nodes(&arg->ic->ic_sta, &count_nodes, (void*)&cn_arg);
+
+	/* The following two sanity checks can theoretically fail due to lack
+	 * of locking, but since it is not fatal, we will just print a debug
+	 * msg and neglect it */
+	if (cn_arg.count == 0) {
+		IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ANY, arg->new, "%s",
+				"ic_chan_nodes incosistency (incorrect uncommon channel count)");
+		return;
+	}
+	if (sta_assoc == 0) {
+		IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ANY, arg->new, "%s",
+				"no STAs associated, so there should be no \"uncommon\" channels");
+		return;
+	}
+
+	permil = 1000 * cn_arg.count / sta_assoc;
+	allowed = ic->ic_sc_slcg * k;
+	/* clamp it to provide more sensible output */
+	if (allowed > 1000)
+		allowed = 1000;
+
+	IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, arg->new,
+			"Making channels %savailable would require kicking out %d stations,",
+			ints_sprintf(k, subset), cn_arg.count);
+	IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, arg->new,
+			"what is %d permils of all associated STAs (slcg permits < %d).", permil, allowed);
+
+	if (permil > allowed)
+		return;
+	if (allowed - permil > arg->benefit) {
+		memcpy(arg->best, subset, k * sizeof(*subset));
+		arg->benefit = allowed - permil;
+	}
+}
+
+/*
+ * Enumerate all combinations of k-element subset of n-element set via a callback function
+ */
+static void
+combinations(int n, int set[], int k, void (*callback)(const int, const int [], void *), void *arg)
+{
+	int subset[k], pos[k], i;
+	for (i = 0; i < k; i++)
+		pos[i] = 0;
+	i = 0;
+forward:
+	if (i > 0) {
+		while (set[pos[i]] < subset[i - 1] && pos[i] < n)
+			pos[i]++;
+		if (pos[i] == n)
+			goto backward;
+	}
+	subset[i] = set[pos[i]];
+	set[pos[i]] = set[n - 1];
+	n--;
+
+	i++;
+	if (i == k) {
+		callback(k, subset, arg);
+	} else {
+		pos[i] = 0;
+		goto forward;
+	}
+backward:
+	i--;
+	if (i < 0)
+		return;
+	set[pos[i]] = subset[i];
+	n++;
+
+	pos[i]++;
+	if (pos[i] == n)
+		goto backward;
+	goto forward;
+}
+
+static __inline int
+find_worse_nodes(struct ieee80211com *ic, struct ieee80211_node *new)
+{
+	int i, tmp1, tmp2;
+	u_int16_t n_common, n_uncommon;
+	u_int16_t cn_total = ic->ic_cn_total;
+	u_int16_t to_gain;
+
+	if (cn_total == 0)
+		/* should not happen */
+		return 1;
+
+	n_common = n_uncommon = 0;
+
+	CHANNEL_FOREACH(i, ic, tmp1, tmp2) {
+		if (isset(new->ni_suppchans_new, i)) {
+			if (ic->ic_chan_nodes[i] == ic->ic_cn_total) {
+				n_common++;
+			} else {
+				n_uncommon++;
+			}
+		}
+	}
+
+	to_gain = ic->ic_sc_mincom - n_common + 1;
+	IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
+			"By accepting STA we would need to gain at least %d common channels.", to_gain);
+	IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
+			"%d channels supported by the joining STA are not commonly supported by others.", n_uncommon);
+
+	if (to_gain > n_uncommon) {
+		IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
+				"%s", "Even disassociating all the nodes will not be enough.");
+		return 0;
+	}
+
+	{
+		int uncommon[n_uncommon];
+		int best[to_gain];
+		struct channel_combination_arg arg = { ic, new, best, -1 };
+		int j = 0;
+
+		CHANNEL_FOREACH(i, ic, tmp1, tmp2)
+			if (isset(new->ni_suppchans_new, i) && ic->ic_chan_nodes[i] != ic->ic_cn_total) {
+				if (j == n_uncommon)
+					/* silent assert */
+					break;
+				uncommon[j++] = i;
+			}
+
+		combinations(n_uncommon, uncommon, to_gain, &channel_combination, &arg);
+		if (arg.benefit < 0) {
+			IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
+					"%s", "No combination of channels allows a beneficial trade-off.");
+			return 0;
+		}
+		IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
+				"Nodes which don't support channels %swill be forced to leave.",
+				ints_sprintf(to_gain, best));
+
+		if (new->ni_needed_chans != NULL)
+			FREE(new->ni_needed_chans, M_DEVBUF);
+		MALLOC(new->ni_needed_chans, void*, to_gain * sizeof(*new->ni_needed_chans), M_DEVBUF, M_NOWAIT);
+		if (new->ni_needed_chans == NULL) {
+			IEEE80211_NOTE(new->ni_vap,
+					IEEE80211_MSG_DEBUG | IEEE80211_MSG_DOTH, new,
+					"%s", "needed_chans allocation failed");
+			return 0;
+		}
+
+		/* store the list of channels to remove nodes which don't support them */
+		for (i = 0; i < to_gain; i++)
+			new->ni_needed_chans[i] = best[i];
+		new->ni_n_needed_chans = to_gain;
+		return 1;
+	}
+}
+
+static int
+ieee80211_parse_sc_ie(struct ieee80211_node *ni, u_int8_t *frm,
+	const struct ieee80211_frame *wh)
+{
+	struct ieee80211_ie_sc *sc_ie = (struct ieee80211_ie_sc *)frm;
+	struct ieee80211com *ic = ni->ni_ic;
+#ifdef IEEE80211_DEBUG
+	struct ieee80211vap *vap = ni->ni_vap;
+	int reassoc = (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK) ==
+		IEEE80211_FC0_SUBTYPE_REASSOC_REQ;
+#endif
+	int i, tmp1, tmp2;
+	int count;
+
+	if (sc_ie == NULL) {
+		if (ni->ni_ic->ic_sc_algorithm == IEEE80211_SC_STRICT) {
+			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+					"deny %s request, no supported channels ie",
+					reassoc ? "reassoc" : "assoc");
+			return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
+		}
+		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+				"%s request: no supported channels ie",
+				reassoc ? "reassoc" : "assoc");
+		return IEEE80211_STATUS_SUCCESS;
+	}
+	if (sc_ie->sc_len % 2 != 0) {
+		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+				"deny %s request, malformed supported channels ie (len)",
+				reassoc ? "reassoc" : "assoc");
+		/* XXX: deauth with IEEE80211_REASON_IE_INVALID? */
+		return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
+	}
+	if (ni->ni_suppchans_new == NULL) {
+		MALLOC(ni->ni_suppchans_new, void*, IEEE80211_CHAN_BYTES,
+				M_DEVBUF, M_NOWAIT);
+		if (ni->ni_suppchans_new == NULL) {
+			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+					"deny %s request, couldn't allocate memory for sc ie!",
+					reassoc ? "reassoc" : "assoc");
+			return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
+		}
+	}
+	memset(ni->ni_suppchans_new, 0, IEEE80211_CHAN_BYTES);
+	for (i = 0; i < (sc_ie->sc_len / 2); i++) {
+		u_int8_t chan = sc_ie->sc_subband[i].sc_first;
+		/* XXX: see 802.11d-2001-4-05-03-interp,
+		 * but what about .11j, turbo, etc.? */
+		u_int8_t step = (chan <= 14 ? 1 : 4);
+		u_int16_t last = chan + step * (sc_ie->sc_subband[i].sc_number - 1);
+
+		/* check for subband under- (sc_number == 0) or overflow */
+		if ((last < chan) || (chan <= 14 && last > 14) || (chan > 14 && last > 200)) {
+			/* XXX: deauth with IEEE80211_REASON_IE_INVALID? */
+			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+					"deny %s request, malformed supported channels ie "
+					"(subbands, %d, %d)", reassoc ? "reassoc" : "assoc", chan, last);
+			return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
+		}
+
+		for (; chan <= last; chan += step)
+			setbit(ni->ni_suppchans_new, chan);
+	}
+	/* forbid STAs that claim they don't support the channel they are
+	 * currently operating at */
+	if (isclr(ni->ni_suppchans_new, ic->ic_bsschan->ic_ieee)) {
+		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+				"deny %s request, sc ie does not contain bss channel"
+				"(subbands)", reassoc ? "reassoc" : "assoc");
+		return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
+	}
+
+	if (ic->ic_sc_algorithm != IEEE80211_SC_TIGHT &&
+			ic->ic_sc_algorithm != IEEE80211_SC_STRICT)
+		goto success;
+
+	/* count number of channels that will be common to all STAs after the
+	 * new one joins */
+	count = 0;
+	CHANNEL_FOREACH(i, ic, tmp1, tmp2)
+		if (isset(ni->ni_suppchans_new, i) && ic->ic_chan_nodes[i] == ic->ic_cn_total)
+			count++;
+
+	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+			"%s request: %d common channels, %d required",
+			reassoc ? "reassoc" : "assoc", count, ic->ic_sc_mincom);
+	if (count < ic->ic_sc_mincom) {
+		/* common channel count decreases below the required minimum */
+		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+				"%s request: not enough common channels available, tight/strict algorithm engaged",
+				reassoc ? "reassoc" : "assoc");
+
+		if (!find_worse_nodes(ic, ni)) {
+			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
+					"deny %s request, tight/strict criterium not met",
+					reassoc ? "reassoc" : "assoc");
+			return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
+		}
+	}
+
+success:
+	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_DOTH|IEEE80211_MSG_ASSOC|IEEE80211_MSG_ELEMID, wh->i_addr2,
+			"%s", "supported channels ie parsing successful");
+	return IEEE80211_STATUS_SUCCESS;
+}
+
+
 struct ieee80211_channel *
 ieee80211_doth_findchan(struct ieee80211vap *vap, u_int8_t chan)
 {
@@ -2674,19 +3012,23 @@ startbgscan(struct ieee80211vap *vap)
  * Context: SoftIRQ
  */
 void
-ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
+ieee80211_recv_mgmt(struct ieee80211vap *vap,
+	struct ieee80211_node *ni_or_null, struct sk_buff *skb,
 	int subtype, int rssi, u_int64_t rtsf)
 {
 #define	ISPROBE(_st)	((_st) == IEEE80211_FC0_SUBTYPE_PROBE_RESP)
 #define	ISREASSOC(_st)	((_st) == IEEE80211_FC0_SUBTYPE_REASSOC_RESP)
-	struct ieee80211vap *vap = ni->ni_vap;
+	struct ieee80211_node * ni = ni_or_null;
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ieee80211_frame *wh;
 	u_int8_t *frm, *efrm;
-	u_int8_t *ssid, *rates, *xrates, *wpa, *rsn, *wme, *ath;
+	u_int8_t *ssid, *rates, *xrates, *suppchan, *wpa, *rsn, *wme, *ath;
 	u_int8_t rate;
 	int reassoc, resp, allocbs = 0;
 	u_int8_t qosinfo;
+
+	if (ni_or_null == NULL)
+		ni = vap->iv_bss;
 
 	wh = (struct ieee80211_frame *) skb->data;
 	frm = (u_int8_t *)&wh[1];
@@ -2694,8 +3036,8 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
 		"%s: vap:%p[" MAC_FMT "] ni:%p[" MAC_FMT "]\n",
-		__func__, vap, MAC_ADDR(vap->iv_bss->ni_bssid),
-		ni, MAC_ADDR(ni->ni_macaddr));
+		__func__, vap, MAC_ADDR(vap->iv_bssid),
+		ni_or_null, MAC_ADDR(wh->i_addr2));
 
 	/* forward management frame to application */
 	if (vap->iv_opmode != IEEE80211_M_MONITOR)
@@ -2885,7 +3227,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		 */
 		if (vap->iv_opmode == IEEE80211_M_STA &&
 		    ni->ni_associd != 0 &&
-		    IEEE80211_ADDR_EQ(wh->i_addr2, ni->ni_bssid)) {
+		    IEEE80211_ADDR_EQ(wh->i_addr2, vap->iv_bssid)) {
 			/* record tsf of last beacon */
 			memcpy(ni->ni_tstamp.data, scan.tstamp,
 				sizeof(ni->ni_tstamp));
@@ -3025,7 +3367,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		}
 		if ((vap->iv_opmode == IEEE80211_M_IBSS) && 
 				(scan.capinfo & IEEE80211_CAPINFO_IBSS)) {
-			if (ni == vap->iv_bss) {
+			if (ni_or_null == NULL) {
 				/* Create a new entry in the neighbor table. */
 				ni = ieee80211_add_neighbor(vap, wh, &scan);
 			} else {
@@ -3189,7 +3531,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		seq    = le16toh(*(__le16 *)(frm + 2));
 		status = le16toh(*(__le16 *)(frm + 4));
 #ifdef ATH_SUPERG_XR
-		if (!IEEE80211_ADDR_EQ(wh->i_addr3, vap->iv_bss->ni_bssid)) {
+		if (!IEEE80211_ADDR_EQ(wh->i_addr3, vap->iv_bssid)) {
 			/*
 			 * node roaming between XR and normal vaps. 
 			 * this can only happen in AP mode. disaccociate from
@@ -3289,7 +3631,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		 *	[tlv] Atheros Advanced Capabilities
 		 */
 		IEEE80211_VERIFY_LENGTH(efrm - frm, (reassoc ? 10 : 4));
-		if (!IEEE80211_ADDR_EQ(wh->i_addr3, vap->iv_bss->ni_bssid)) {
+		if (!IEEE80211_ADDR_EQ(wh->i_addr3, vap->iv_bssid)) {
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_ANY,
 				wh, ieee80211_mgt_subtype_name[subtype >>
 					IEEE80211_FC0_SUBTYPE_SHIFT],
@@ -3303,7 +3645,7 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 		frm += 2;
 		if (reassoc)
 			frm += 6;	/* ignore current AP info */
-		ssid = rates = xrates = wpa = rsn = wme = ath = NULL;
+		ssid = rates = xrates = suppchan = wpa = rsn = wme = ath = NULL;
 		while (frm < efrm) {
 			IEEE80211_VERIFY_LENGTH(efrm - frm, frm[1]);
 			switch (*frm) {
@@ -3361,6 +3703,23 @@ ieee80211_recv_mgmt(struct ieee80211_node *ni, struct sk_buff *skb,
 				IEEE80211_REASON_ASSOC_NOT_AUTHED);
 			vap->iv_stats.is_rx_assoc_notauth++;
 			return;
+		}
+
+		if (ni->ni_needed_chans != NULL) {
+			FREE(ni->ni_needed_chans, M_DEVBUF);
+			ni->ni_needed_chans = NULL;
+		}
+
+		if (ic->ic_flags & IEEE80211_F_DOTH) {
+			u_int8_t status;
+			status = ieee80211_parse_sc_ie(ni, suppchan, wh);
+			if (status != IEEE80211_STATUS_SUCCESS) {
+				/* ieee80211_parse_sc_ie already printed dbg msg */
+				IEEE80211_SEND_MGMT(ni, resp, status);
+				ieee80211_node_leave(ni); /* XXX */
+				vap->iv_stats.is_rx_assoc_badscie++; /* XXX */
+				return;
+			}
 		}
 
 		/* Assert right associstion security credentials */
@@ -3877,7 +4236,7 @@ ieee80211_note(struct ieee80211vap *vap, const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	printk("%s/%s[" MAC_FMT "]: %s",
+	printk(KERN_DEBUG "%s/%s[" MAC_FMT "]: %s",
 	       vap->iv_ic->ic_dev->name, vap->iv_dev->name,
 	       MAC_ADDR(vap->iv_myaddr),
 	       buf);	/* NB: no \n */
@@ -3894,7 +4253,7 @@ ieee80211_note_frame(struct ieee80211vap *vap, const struct ieee80211_frame *wh,
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[" MAC_FMT "]: " MAC_FMT " %s\n",
+	printk(KERN_DEBUG "%s/%s[" MAC_FMT "]: " MAC_FMT " %s\n",
 		vap->iv_ic->ic_dev->name, vap->iv_dev->name,
 	        MAC_ADDR(vap->iv_myaddr),
 		MAC_ADDR(ieee80211_getbssid(vap, wh)), buf);
@@ -3911,7 +4270,7 @@ ieee80211_note_mac(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADDR_L
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[" MAC_FMT "]: " MAC_FMT " %s\n",
+	printk(KERN_DEBUG "%s/%s[" MAC_FMT "]: " MAC_FMT " %s\n",
 	       vap->iv_ic->ic_dev->name, vap->iv_dev->name,
 	       MAC_ADDR(vap->iv_myaddr),
 	       MAC_ADDR(mac), buf);
@@ -3928,7 +4287,7 @@ ieee80211_discard_frame(struct ieee80211vap *vap, const struct ieee80211_frame *
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[" MAC_FMT "]: " MAC_FMT " discard %s%sframe, %s\n",
+	printk(KERN_DEBUG "%s/%s[" MAC_FMT "]: " MAC_FMT " discard %s%sframe, %s\n",
 	       vap->iv_ic->ic_dev->name, vap->iv_dev->name,
 	       MAC_ADDR(vap->iv_myaddr),
 	       MAC_ADDR(wh->i_addr2),
@@ -3947,7 +4306,7 @@ ieee80211_discard_ie(struct ieee80211vap *vap, const struct ieee80211_frame *wh,
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[" MAC_FMT "]: "
+	printk(KERN_DEBUG "%s/%s[" MAC_FMT "]: "
 	       MAC_FMT " discard %s%sinformation element, %s\n",
 		vap->iv_ic->ic_dev->name, vap->iv_dev->name,
 		MAC_ADDR(vap->iv_myaddr),
@@ -3967,7 +4326,7 @@ ieee80211_discard_mac(struct ieee80211vap *vap, const u_int8_t mac[IEEE80211_ADD
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printk("%s/%s[" MAC_FMT "]: " MAC_FMT " discard %s%sframe, %s\n",
+	printk(KERN_DEBUG "%s/%s[" MAC_FMT "]: " MAC_FMT " discard %s%sframe, %s\n",
 	       vap->iv_ic->ic_dev->name,
 	       vap->iv_dev->name,
 	       MAC_ADDR(vap->iv_myaddr),

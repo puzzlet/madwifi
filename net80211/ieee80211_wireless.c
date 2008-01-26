@@ -531,7 +531,7 @@ ieee80211_ioctl_giwap(struct net_device *dev, struct iw_request_info *info,
 	else {
 		if (vap->iv_state == IEEE80211_S_RUN)
 			if (vap->iv_opmode != IEEE80211_M_WDS)
-				IEEE80211_ADDR_COPY(&ap_addr->sa_data, vap->iv_bss->ni_bssid);
+				IEEE80211_ADDR_COPY(&ap_addr->sa_data, vap->iv_bssid);
 			else
 				IEEE80211_ADDR_COPY(&ap_addr->sa_data, vap->wds_mac);
 		else
@@ -1429,6 +1429,54 @@ ieee80211_get_txcont(struct net_device *dev, struct iw_request_info *info, void 
 }
 
 static int
+ieee80211_get_dfs_channel_availability_check_time  (struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	params[0] = ic->ic_get_dfs_channel_availability_check_time(ic);
+	return 0;
+}
+
+static int
+ieee80211_get_dfs_non_occupancy_period  (struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	params[0] = ic->ic_get_dfs_non_occupancy_period(ic);
+	return 0;
+}
+static int
+ieee80211_set_dfs_channel_availability_check_time  (struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	ic->ic_set_dfs_channel_availability_check_time(ic, params[1]);
+	return 0;
+}
+static int
+ieee80211_set_dfs_non_occupancy_period  (struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	ic->ic_set_dfs_non_occupancy_period(ic, params[1]);
+	return 0;
+}
+
+static int
+ieee80211_get_dfs_testmode(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	params[0] = ic->ic_get_dfs_testmode(ic);
+	return 0;
+}
+
+static int
 ieee80211_get_txcont_rate(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
@@ -1445,6 +1493,16 @@ ieee80211_set_txcont(struct net_device *dev, struct iw_request_info *info, void 
 	struct ieee80211vap *vap = dev->priv;
 	struct ieee80211com *ic = vap->iv_ic;
 	ic->ic_set_txcont(ic, params[1]);
+	return 0;
+}
+
+static int
+ieee80211_set_dfs_testmode(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	ic->ic_set_dfs_testmode(ic, params[1]);
 	return 0;
 }
 
@@ -1475,6 +1533,31 @@ ieee80211_get_txcont_power(struct net_device *dev, struct iw_request_info *info,
 	struct ieee80211vap *vap = dev->priv;
 	struct ieee80211com *ic = vap->iv_ic;
 	params[0] = ic->ic_get_txcont_power(ic);
+	return 0;
+}
+
+static int 
+ieee80211_ioctl_hal_map(struct net_device *dev, struct iw_request_info *info,
+       void *w, char *extra)
+{
+       int *params = (int*) extra;
+       struct ieee80211vap *vap = dev->priv;
+       struct ieee80211com *ic = vap->iv_ic;
+       params[0] = ic->ic_dump_hal_map(ic);
+       return 0;
+}
+
+
+static int
+ieee80211_ioctl_radar(struct net_device *dev, struct iw_request_info *info,
+	void *w, char *extra)
+{
+	int *params = (int*) extra;
+	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211com *ic = vap->iv_ic;
+	if (!(ic->ic_flags & IEEE80211_F_DOTH))
+		return 0;
+	params[0] = ic->ic_test_radar(ic);
 	return 0;
 }
 
@@ -1543,18 +1626,6 @@ struct waplistreq {	/* XXX: not the right place for declaration? */
 	struct iw_quality qual[IW_MAX_AP];
 	int i;
 };
-
-static int 
-ieee80211_ioctl_hal_map(struct net_device *dev, struct iw_request_info *info,
-       void *w, char *extra)
-{
-       int *params = (int*) extra;
-       struct ieee80211vap *vap = dev->priv;
-       struct ieee80211com *ic = vap->iv_ic;
-       params[0] = ic->ic_dump_hal_map(ic);
-       return 0;
-}
-
 
 static int
 waplist_cb(void *arg, const struct ieee80211_scan_entry *se)
@@ -2519,6 +2590,21 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 	case IEEE80211_PARAM_GENREASSOC:
 		IEEE80211_SEND_MGMT(vap->iv_bss, IEEE80211_FC0_SUBTYPE_REASSOC_REQ, 0);
 		break;
+	case IEEE80211_PARAM_DOTH_ALGORITHM:
+		ic->ic_sc_algorithm = value;
+		break;
+	case IEEE80211_PARAM_DOTH_MINCOM:
+		ic->ic_sc_mincom = value;
+		break;
+	case IEEE80211_PARAM_DOTH_SLCG:
+		ic->ic_sc_slcg = value;
+		break;
+	case IEEE80211_PARAM_DOTH_SLDG:
+		ic->ic_sc_sldg = value;
+		break;
+	case IEEE80211_PARAM_DFS_TESTMODE:
+		ieee80211_set_dfs_testmode(dev, info, w, extra);
+		break;
 	case IEEE80211_PARAM_TXCONT:
 		ieee80211_set_txcont(dev, info, w, extra);
 		break;
@@ -2527,6 +2613,12 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		break;
 	case IEEE80211_PARAM_TXCONT_POWER:
 		ieee80211_set_txcont_power(dev, info, w, extra);
+		break;
+	case IEEE80211_PARAM_DFS_CHANCHECKTIME:
+		ieee80211_set_dfs_channel_availability_check_time(dev, info, w, extra);
+		break;
+	case IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD:
+		ieee80211_set_dfs_non_occupancy_period(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_COMPRESSION:
 		retv = ieee80211_setathcap(vap, IEEE80211_ATHC_COMP, value);
@@ -2932,6 +3024,21 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 	case IEEE80211_PARAM_PWRTARGET:
 		param[0] = ic->ic_curchanmaxpwr;
 		break;
+	case IEEE80211_PARAM_DOTH_ALGORITHM:
+		param[0] = ic->ic_sc_algorithm;
+		break;
+	case IEEE80211_PARAM_DOTH_MINCOM:
+		param[0] = ic->ic_sc_mincom;
+		break;
+	case IEEE80211_PARAM_DOTH_SLCG:
+		param[0] = ic->ic_sc_slcg;
+		break;
+	case IEEE80211_PARAM_DOTH_SLDG:
+		param[0] = ic->ic_sc_sldg;
+		break;
+	case IEEE80211_PARAM_DFS_TESTMODE:
+		ieee80211_get_dfs_testmode(dev, info, w, extra);
+		break;
 	case IEEE80211_PARAM_TXCONT:
 		ieee80211_get_txcont(dev, info, w, extra);
 		break;
@@ -2940,6 +3047,12 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		break;
 	case IEEE80211_PARAM_TXCONT_POWER:
 		ieee80211_get_txcont_power(dev, info, w, extra);
+		break;
+	case IEEE80211_PARAM_DFS_CHANCHECKTIME:
+		ieee80211_get_dfs_channel_availability_check_time(dev, info, w, extra);
+		break;
+	case IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD:
+		ieee80211_get_dfs_non_occupancy_period(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_PUREG:
 		param[0] = (vap->iv_flags & IEEE80211_F_PUREG) != 0;
@@ -3295,7 +3408,8 @@ ieee80211_ioctl_setkey(struct net_device *dev, struct iw_request_info *info,
 			return -EINVAL;
 		if (vap->iv_opmode == IEEE80211_M_STA) {
 			ni = ieee80211_ref_node(vap->iv_bss);
-			if (!IEEE80211_ADDR_EQ(ik->ik_macaddr, ni->ni_bssid)) {
+			/* XXX: Untested use of iv_bssid. */
+			if (!IEEE80211_ADDR_EQ(ik->ik_macaddr, vap->iv_bssid)) {
 				ieee80211_unref_node(&ni);
 				return -EADDRNOTAVAIL;
 			}
@@ -3752,6 +3866,8 @@ ieee80211_ioctl_setchanlist(struct net_device *dev,
 		ic->ic_bsschan = IEEE80211_CHAN_ANYC;	/* invalidate */
 
 	memcpy(ic->ic_chan_active, chanlist, sizeof(ic->ic_chan_active));
+	/* update Supported Channels information element */
+	ieee80211_build_sc_ie(ic);
 	if (IS_UP_AUTO(vap))
 		ieee80211_new_state(vap, IEEE80211_S_SCAN, 0);
 
@@ -5090,6 +5206,10 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	{ IEEE80211_IOCTL_GETWMMPARAMS,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 3,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,   "getwmmparams" },
+	{ IEEE80211_IOCTL_RADAR,
+	  0, 0, "doth_radar" },
+	{ IEEE80211_IOCTL_HALMAP,
+	  0, 0, "dump_hal_map" },
 	/*
 	 * These depends on sub-ioctl support which added in version 12.
 	 */
@@ -5259,6 +5379,22 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_doth_pwrtgt" },
 	{ IEEE80211_PARAM_GENREASSOC,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "doth_reassoc" },
+	{ IEEE80211_PARAM_DOTH_ALGORITHM,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "doth_algo" },
+	{ IEEE80211_PARAM_DOTH_ALGORITHM,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_doth_algo" },
+	{ IEEE80211_PARAM_DOTH_MINCOM,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "doth_mincom" },
+	{ IEEE80211_PARAM_DOTH_MINCOM,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_doth_mincom" },
+	{ IEEE80211_PARAM_DOTH_SLCG,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "doth_slcg" },
+	{ IEEE80211_PARAM_DOTH_SLCG,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_doth_slcg" },
+	{ IEEE80211_PARAM_DOTH_SLDG,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "doth_sldg" },
+	{ IEEE80211_PARAM_DOTH_SLDG,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_doth_sldg" },
 	/* continuous transmission (for regulatory agency testing) */
 	{ IEEE80211_PARAM_TXCONT,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "txcont" },
@@ -5272,6 +5408,18 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "txcontpower" },
 	{ IEEE80211_PARAM_TXCONT_POWER,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_txcontpower" },
+	{ IEEE80211_PARAM_DFS_TESTMODE,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dfstestmode" },
+	{ IEEE80211_PARAM_DFS_TESTMODE,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_dfstestmode" },
+	{ IEEE80211_PARAM_DFS_CHANCHECKTIME,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dfschecktime" },
+	{ IEEE80211_PARAM_DFS_CHANCHECKTIME,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_dfschecktim" },
+	{ IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dfsnonocclmt" },
+	{ IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_dfsnonocclmt" },
 	{ IEEE80211_PARAM_COMPRESSION,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "compression" },
 	{ IEEE80211_PARAM_COMPRESSION, 0,
@@ -5400,8 +5548,6 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  0, IW_PRIV_TYPE_APPIEBUF, "getiebuf" },
 	{ IEEE80211_IOCTL_FILTERFRAME,
 	  IW_PRIV_TYPE_FILTER , 0, "setfilter" },
- 	{ IEEE80211_IOCTL_HALMAP,
- 	  0, 0, "dump_hal_map" },
 
 #ifdef ATH_REVERSE_ENGINEERING
 	/*
@@ -5481,6 +5627,7 @@ static const iw_handler ieee80211_priv_handlers[] = {
 	set_priv(IEEE80211_IOCTL_SETCHANLIST, ieee80211_ioctl_setchanlist),
 	set_priv(IEEE80211_IOCTL_GETCHANLIST, ieee80211_ioctl_getchanlist),
 	set_priv(IEEE80211_IOCTL_CHANSWITCH, ieee80211_ioctl_chanswitch),
+	set_priv(IEEE80211_IOCTL_RADAR, ieee80211_ioctl_radar),
 	set_priv(IEEE80211_IOCTL_GET_APPIEBUF, ieee80211_ioctl_getappiebuf),
 	set_priv(IEEE80211_IOCTL_SET_APPIEBUF, ieee80211_ioctl_setappiebuf),
 	set_priv(IEEE80211_IOCTL_FILTERFRAME, ieee80211_ioctl_setfilter),

@@ -119,10 +119,10 @@ ifmedia_add(struct ifmedia *ifm, int mword, int data, void *aux)
 #ifdef IFMEDIA_DEBUG
 	if (ifmedia_debug) {
 		if (ifm == NULL) {
-			printk("ifmedia_add: null ifm\n");
+			printk(KERN_ERR "ifmedia_add: null ifm\n");
 			return;
 		}
-		printk("Adding entry for ");
+		printk(KERN_INFO "Adding entry for ");
 		ifmedia_printword(mword);
 	}
 #endif
@@ -166,7 +166,7 @@ ifmedia_set(struct ifmedia *ifm, int target)
 	match = ifmedia_match(ifm, target, ifm->ifm_mask);
 
 	if (match == NULL) {
-		printk("ifmedia_set: no match for 0x%x/0x%x\n",
+		printk(KERN_ERR "ifmedia_set: no match for 0x%x/0x%x\n",
 			target, ~ifm->ifm_mask);
 		panic("ifmedia_set");
 	}
@@ -174,9 +174,9 @@ ifmedia_set(struct ifmedia *ifm, int target)
 
 #ifdef IFMEDIA_DEBUG
 	if (ifmedia_debug) {
-		printk("ifmedia_set: target ");
+		printk(KERN_INFO "ifmedia_set: target ");
 		ifmedia_printword(target);
-		printk("ifmedia_set: setting to ");
+		printk(KERN_INFO "ifmedia_set: setting to ");
 		ifmedia_printword(ifm->ifm_cur->ifm_media);
 	}
 #endif

@@ -81,6 +81,15 @@ struct ath_pci_softc {
 };
 
 /*
+ * Module glue.
+ */
+#include "release.h"
+static char *version = RELEASE_VERSION;
+static char *dev_info = "ath_pci";
+
+#include <linux/ethtool.h>
+
+/*
  * User a static table of PCI IDs for now.  While this is the
  * "new way" to do things, we may want to switch back to having
  * the HAL check them by defining a probe method.
@@ -130,7 +139,7 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	/* XXX 32-bit addressing only */
 	if (pci_set_dma_mask(pdev, 0xffffffff)) {
-		printk(KERN_ERR "ath_pci: 32-bit DMA not available\n");
+		printk(KERN_ERR "%s: 32-bit DMA not available\n", dev_info);
 		goto bad;
 	}
 
@@ -171,19 +180,19 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	phymem = pci_resource_start(pdev, 0);
 	if (!request_mem_region(phymem, pci_resource_len(pdev, 0), "ath")) {
-		printk(KERN_ERR "ath_pci: cannot reserve PCI memory region\n");
+		printk(KERN_ERR "%s: cannot reserve PCI memory region\n", dev_info);
 		goto bad;
 	}
 
 	mem = ioremap(phymem, pci_resource_len(pdev, 0));
 	if (!mem) {
-		printk(KERN_ERR "ath_pci: cannot remap PCI memory region\n") ;
+		printk(KERN_ERR "%s: cannot remap PCI memory region\n", dev_info);
 		goto bad1;
 	}
 
 	dev = alloc_netdev(sizeof(struct ath_pci_softc), "wifi%d", ether_setup);
 	if (dev == NULL) {
-		printk(KERN_ERR "ath_pci: no memory for device state\n");
+		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;
 	}
 	sc = dev->priv;
@@ -239,8 +248,8 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto bad4;
 
 	athname = ath_hal_probe(id->vendor, vdevice);
-	printk(KERN_INFO "%s: %s: mem=0x%lx, irq=%d\n",
-		dev->name, athname ? athname : "Atheros ???", phymem, dev->irq);
+	printk(KERN_INFO "%s: %s: %s: mem=0x%lx, irq=%d\n",
+		dev_info, dev->name, athname ? athname : "Atheros ???", phymem, dev->irq);
 
 	/* ready to process interrupts */
 	sc->aps_sc.sc_invalid = 0;
@@ -335,15 +344,6 @@ static struct pci_driver ath_pci_drv_id = {
 	/* Linux 2.4.6 has save_state and enable_wake that are not used here */
 };
 
-/*
- * Module glue.
- */
-#include "release.h"
-static char *version = RELEASE_VERSION;
-static char *dev_info = "ath_pci";
-
-#include <linux/ethtool.h>
-
 int
 ath_ioctl_ethtool(struct ath_softc *sc, int cmd, void __user *addr)
 {
@@ -379,7 +379,7 @@ init_ath_pci(void)
 	printk(KERN_INFO "%s: %s\n", dev_info, version);
 
 	if (pci_register_driver(&ath_pci_drv_id) < 0) {
-		printk("ath_pci: No devices found, driver not installed.\n");
+		printk(KERN_ERR "%s: No devices found, driver not installed.\n", dev_info);
 		return (-ENODEV);
 	}
 	ath_sysctl_register();

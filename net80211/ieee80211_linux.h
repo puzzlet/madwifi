@@ -469,7 +469,7 @@ ieee80211_malloc(size_t size, int flags)
 /*
  * This unlikely to be popular but it dramatically reduces diffs.
  */
-#define printf(...) printk(__VA_ARGS__)
+#define printk(...) printk(KERN_DEBUG __VA_ARGS__)
 struct ieee80211com;
 extern void if_printf(struct net_device *, const char *, ...);
 

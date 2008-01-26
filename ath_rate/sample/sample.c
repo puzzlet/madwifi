@@ -76,7 +76,7 @@ enum {
 };
 #define	DPRINTF(sc, m, fmt, ...) do {				\
 	if (sc->sc_debug & (m))					\
-		printf(fmt, __VA_ARGS__);			\
+		printk(fmt, __VA_ARGS__);			\
 } while (0)
 #else
 #define	DPRINTF(sc, m, fmt, ...) do {				\

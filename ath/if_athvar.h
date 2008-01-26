@@ -397,7 +397,7 @@ struct ath_node {
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_NODE_UAPSD_LOCK_CHECK(_an) do { \
 	if (spin_is_locked(&(_an)->an_uapsd_lock)) \
-		printk("%s:%d - about to block on uapsd lock!\n", __func__, __LINE__); \
+		printk(KERN_DEBUG "%s:%d - about to block on uapsd lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_NODE_UAPSD_LOCK_CHECK(_an)
@@ -520,7 +520,8 @@ struct ath_vap {
 	struct ieee80211_beacon_offsets av_boff;/* dynamic update state */
 	int av_bslot;			/* beacon slot index */
 	struct ath_txq av_mcastq;	/* multicast transmit queue */
-	u_int8_t	av_dfswait_run;
+	atomic_t av_beacon_alloc;       /* set to 1 when the next beacon needs
+					   to be recomputed */
 };
 #define	ATH_VAP(_v)	((struct ath_vap *)(_v))
 
@@ -557,7 +558,7 @@ struct ath_vap {
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_TXQ_LOCK_CHECK(_tq) do { \
 	if (spin_is_locked(&(_tq)->axq_lock)) \
-		printk("%s:%d - about to block on txq lock!\n", __func__, __LINE__); \
+		printk(KERN_DEBUG "%s:%d - about to block on txq lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_TXQ_LOCK_CHECK(_tq)
@@ -594,6 +595,17 @@ struct ath_vap {
 
 #define	BSTUCK_THRESH	10	/* # of stuck beacons before resetting NB: this is a guess*/
 
+struct ath_rp {
+	struct list_head list;
+	u_int64_t rp_tsf;
+	u_int8_t  rp_rssi;
+	u_int8_t  rp_width;
+
+	int       rp_index;
+	int       rp_allocated;
+	int       rp_analyzed;
+};
+
 struct ath_softc {
 	struct ieee80211com sc_ic;		/* NB: must be first */
 	struct net_device *sc_dev;
@@ -604,7 +616,8 @@ struct ath_softc {
 	int devid;
 	int sc_debug;
 	int sc_default_ieee80211_debug;		/* default debug flags for new VAPs */
-	void (*sc_recv_mgmt)(struct ieee80211_node *, struct sk_buff *, int, int, u_int64_t);
+	void (*sc_recv_mgmt)(struct ieee80211vap *, struct ieee80211_node *,
+		struct sk_buff *, int, int, u_int64_t);
 #ifdef IEEE80211_DEBUG_REFCNT
 	void (*sc_node_cleanup_debug)(struct ieee80211_node *, const char* func, int line);
 	void (*sc_node_free_debug)(struct ieee80211_node *, const char* func, int line);
@@ -701,7 +714,6 @@ struct ath_softc {
 	u_int8_t sc_txrate;			/* current tx rate for LED */
 	u_int16_t sc_ledoff;			/* off time for current blink */
 	struct timer_list sc_ledtimer;		/* led off timer */
-	struct timer_list sc_dfswaittimer;	/* DFS wait timer */
 
 	struct ATH_TQ_STRUCT sc_fataltq;	/* fatal error intr tasklet */
 
@@ -776,9 +788,32 @@ struct ath_softc {
 	u_int32_t sc_dturbo_bw_turbo;		/* bandwidth threshold */
 #endif
 	u_int sc_slottimeconf;			/* manual override for slottime */
-	u_int64_t sc_tsf;			/* TSF at last rx interrupt */
 
+	struct timer_list sc_dfs_excl_timer;	/* mark expiration timer task */
+	struct timer_list sc_dfs_cac_timer;	/* dfs wait timer */
+	u_int32_t sc_dfs_cac_period;		/* DFS wait time before accessing a
+					         * channel (in seconds). FCC 
+						 * requires 60s. */
+	u_int32_t sc_dfs_excl_period;		/* DFS channel non-occupancy limit
+						 * after radar is detected (in seconds).
+						 * FCC requires 30m. */
+	u_int64_t sc_rp_lasttsf;		/* TSF at last detected radar pulse */
+
+	
+	
+	struct ath_rp *sc_rp;			/* radar pulse circular array */
+	struct list_head sc_rp_list;
+	int sc_rp_num;
+	int sc_rp_min;
+	HAL_BOOL (*sc_rp_analyse)(struct ath_softc *sc);
+	struct ATH_TQ_STRUCT sc_rp_tq;
+	
+	int sc_rp_ignored;			/* if set, we ignored all 
+						 * received pulses */
+	int sc_radar_ignored;			/* if set, we ignored all 
+						 * detected radars */
 	u_int32_t sc_nexttbtt;
+	u_int64_t sc_last_tsf;
 };
 
 typedef void (*ath_callback) (struct ath_softc *);
@@ -804,7 +839,7 @@ typedef void (*ath_callback) (struct ath_softc *);
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_TXBUF_LOCK_CHECK(_sc) do { \
 	if (spin_is_locked(&(_sc)->sc_txbuflock)) \
-		printk("%s:%d - about to block on txbuf lock!\n", __func__, __LINE__); \
+		printk(KERN_DEBUG "%s:%d - about to block on txbuf lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_TXBUF_LOCK_CHECK(_sc)
@@ -835,7 +870,7 @@ typedef void (*ath_callback) (struct ath_softc *);
 #if (defined(ATH_DEBUG_SPINLOCKS))
 #define	ATH_RXBUF_LOCK_CHECK(_sc) do { \
 	if (spin_is_locked(&(_sc)->sc_rxbuflock)) \
-		printk("%s:%d - about to block on rxbuf lock!\n", __func__, __LINE__); \
+		printk(KERN_DEBUG "%s:%d - about to block on rxbuf lock!\n", __func__, __LINE__); \
 } while(0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ATH_RXBUF_LOCK_CHECK(_sc)
@@ -865,7 +900,24 @@ void bus_read_cachesize(struct ath_softc *, u_int8_t *);
 void ath_sysctl_register(void);
 void ath_sysctl_unregister(void);
 int ar_device(int devid);
-#define DEV_NAME(_d) ((NULL == _d || NULL == _d->name || 0 == strncmp(_d->name, "wifi%d", 6)) ? "MadWifi" : _d->name)
 
+#define DEV_NAME(_d) \
+	 ((NULL == _d || NULL == _d->name || 0 == strncmp(_d->name, "wifi%d", 6)) ? \
+	  "MadWifi" : \
+	  _d->name)
+#define VAP_DEV_NAME(_v) \
+	 ((NULL == _v) ? \
+	  "MadWifi" : \
+	  DEV_NAME(_v->iv_dev))
+#define SC_DEV_NAME(_sc) \
+	 ((NULL == _sc) ? \
+	  "MadWifi" : \
+	  DEV_NAME(_sc->sc_dev))
+#define VAP_IC_DEV_NAME(_v) \
+	 ((NULL == _v || NULL == _v->iv_ic) ? \
+	  "MadWifi" : \
+	  DEV_NAME(_v->iv_ic->ic_dev))
+
+void ath_radar_detected(struct ath_softc *sc, const char* message);
 
 #endif /* _DEV_ATH_ATHVAR_H */

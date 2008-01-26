@@ -46,6 +46,7 @@
 #include <linux/netdevice.h>
 #include <linux/init.h>
 #include <linux/delay.h>
+#include <linux/sort.h>
 
 #include "if_media.h"
 
@@ -443,9 +444,9 @@ ap_start(struct ieee80211_scan_state *ss, struct ieee80211vap *vap)
 
 #ifdef IEEE80211_DEBUG
 	if (ieee80211_msg_scan(vap)) {
-		printf("%s: scan set ", vap->iv_dev->name);
+		printk("%s: scan set ", vap->iv_dev->name);
 		ieee80211_scan_dump_channels(ss);
-		printf(" dwell min %ld max %ld\n",
+		printk(" dwell min %ld max %ld\n",
 			ss->ss_mindwell, ss->ss_maxdwell);
 	}
 #endif /* IEEE80211_DEBUG */
@@ -576,7 +577,249 @@ found:
 	return 1;
 }
 
-/* Pick a quiet channel to use for ap operation. */
+struct pc_params {
+	struct ieee80211vap *vap;
+	struct ieee80211_scan_state *ss;
+	int flags;
+};
+
+struct channel {
+	struct ieee80211_channel *chan;
+	int orig;
+	struct pc_params *params;
+};
+
+/* This function must be invoked with locks acquired */
+static int
+pc_cmp_radar(struct ieee80211_channel *a, struct ieee80211_channel *b)
+{
+	/* a is better than b (return < 0) when b is marked while a is not */
+	return !!IEEE80211_IS_CHAN_RADAR(a) - !!IEEE80211_IS_CHAN_RADAR(b);
+}
+
+/* This function must be invoked with locks acquired */
+static int
+pc_cmp_keepmode(struct pc_params *params, struct ieee80211_channel *a,
+		struct ieee80211_channel *b)
+{
+	struct ieee80211com *ic = params->vap->iv_ic;
+	struct ieee80211_channel *cur = ic->ic_bsschan;
+
+	if (!(params->flags & IEEE80211_SCAN_KEEPMODE))
+		return 0;
+
+	/* a is better than b (return < 0) when (a, cur) have the same mode 
+	 * and (b, cur) do not. */
+	return
+		!!IEEE80211_ARE_CHANS_SAME_MODE(b, cur) -
+		!!IEEE80211_ARE_CHANS_SAME_MODE(a, cur);
+}
+
+/* This function must be invoked with locks acquired */
+static int
+pc_cmp_sc(struct ieee80211com *ic, struct ieee80211_channel *a,
+		struct ieee80211_channel *b)
+{
+	/* a is better than b (return < 0) when a has more chan nodes than b */
+	return
+		ic->ic_chan_nodes[b->ic_ieee] -
+		ic->ic_chan_nodes[a->ic_ieee];
+}
+
+/* This function must be invoked with locks acquired */
+static int
+pc_cmp_rssi(struct ap_state *as, struct ieee80211_channel *a,
+		struct ieee80211_channel *b)
+{
+	/* a is better than b (return < 0) when a has rssi less than b */
+	return
+		as->as_maxrssi[a->ic_ieee] -
+		as->as_maxrssi[b->ic_ieee];
+}
+
+/* This function must be invoked with locks acquired */
+static int
+pc_cmp_samechan(struct ieee80211com *ic, struct ieee80211_channel *a,
+		struct ieee80211_channel *b)
+{
+	struct ieee80211_channel *ic_bsschan = ic->ic_bsschan;
+	if (ic_bsschan == IEEE80211_CHAN_ANYC)
+		return 0;
+	/* a is better than b (return < 0) when a is current (and b is not) */
+	return (b == ic_bsschan) - (a == ic_bsschan);
+}
+
+/* This function must be invoked with locks acquired */
+static int
+pc_cmp_orig(struct channel *a, struct channel *b)
+{
+	return a->orig - b->orig;
+}
+
+/* This function must be invoked with locks acquired */
+static int
+pc_cmp(const void *_a, const void *_b)
+{
+	struct ieee80211_channel *a = ((struct channel *)_a)->chan;
+	struct ieee80211_channel *b = ((struct channel *)_b)->chan;
+	struct pc_params *params = ((struct channel *)_a)->params;
+	struct ieee80211com *ic = params->vap->iv_ic;
+	int res;
+
+#define EVALUATE_CRITERION(name, ...) do {			\
+	if ((res = pc_cmp_##name(__VA_ARGS__)) != 0) 		\
+		return res;					\
+} while (0)
+
+	EVALUATE_CRITERION(radar, a, b);
+	EVALUATE_CRITERION(keepmode, params, a, b);
+	EVALUATE_CRITERION(sc, ic, a, b);
+	/* XXX: rssi useless? pick_channel evaluates it anyway */
+	EVALUATE_CRITERION(rssi, params->ss->ss_priv, a, b);
+	EVALUATE_CRITERION(samechan, ic, a, b);
+	EVALUATE_CRITERION(orig, (struct channel *)_a, (struct channel *)_b);
+
+#undef EVALUATE_CRITERION
+	return res;
+}
+
+/* This function must be invoked with locks acquired */
+static void
+pc_swap(void *a, void *b, int n)
+{
+	struct ieee80211_channel *t = ((struct channel *)a)->chan;
+	int i;
+
+	((struct channel *)a)->chan = ((struct channel *)b)->chan;
+	((struct channel *)b)->chan = t;
+
+	i = ((struct channel *)a)->orig;
+	((struct channel *)a)->orig = ((struct channel *)b)->orig;
+	((struct channel *)b)->orig = i;
+
+	/* (struct channel *)x->params doesn't have to be swapped, because it 
+	 * is the same across all channels */
+}
+
+/* Pick a quiet channel to use for ap operation.
+ * Must be invoked while we hold the locks. */
+static struct ieee80211_channel *
+pick_channel(struct ieee80211_scan_state *ss, struct ieee80211vap *vap, 
+		u_int32_t flags)
+{
+	struct ieee80211com *ic = vap->iv_ic;
+	unsigned int i, best_rssi;
+	int ss_last = ss->ss_last;
+	struct ieee80211_channel *best;
+	struct ap_state *as = ss->ss_priv;
+	struct channel chans[ss_last]; /* actually ss_last-1 is required */
+	struct channel *c = NULL;
+	struct pc_params params = { vap, ss, flags };
+	int benefit = 0;
+	int sta_assoc = 0;
+
+	for (i = 0; i < ss_last; i++) {
+		chans[i].chan = ss->ss_chans[i];
+		chans[i].orig = i;
+		chans[i].params = &params;
+	}
+
+	sort(chans, ss_last, sizeof(*chans), pc_cmp, pc_swap);
+
+	for (i = 0; i < ss_last; i++) {
+		int chan = ieee80211_chan2ieee(ic, chans[i].chan);
+
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN, "%s: channel %u, "
+				"rssi %d, radar %d, cn %d, km %d\n",
+				__func__, chan, as->as_maxrssi[chan], 
+				IEEE80211_IS_CHAN_RADAR(chans[i].chan),
+				ic->ic_chan_nodes[chans[i].chan->ic_ieee],
+				!!IEEE80211_ARE_CHANS_SAME_MODE(chans[i].chan, 
+					ic->ic_bsschan));
+	}
+
+	best = NULL;
+	best_rssi = 0xff; /* If signal is bigger than 0xff, we'd be melting. */
+
+	for (i = 0; i < ss_last; i++) {
+		c = &chans[i];
+		benefit = best_rssi - as->as_maxrssi[c->chan->ic_ieee];
+		sta_assoc = ic->ic_sta_assoc;
+
+		/* Don't switch... */
+		if (benefit <= 0)
+			continue;
+
+		/* Verify channel is not marked for non-occupancy */
+		if (IEEE80211_IS_CHAN_RADAR(c->chan))
+			continue;
+
+		/* Do not select 802.11a ST if mode is specified and is not 
+		 * 802.11a ST */
+		if (as->as_required_mode &&
+		    IEEE80211_IS_CHAN_STURBO(c->chan) &&
+		    (as->as_vap_desired_mode != IEEE80211_MODE_TURBO_STATIC_A))
+			continue;
+
+		/* Verify mode matches any fixed mode specified */
+		if((c->chan->ic_flags & as->as_required_mode) != 
+				as->as_required_mode)
+			continue;
+
+		if ((ic->ic_bsschan != NULL) &&
+			(ic->ic_bsschan != IEEE80211_CHAN_ANYC)) {
+
+			/* Make sure the channels are the same mode */
+			if ((flags & IEEE80211_SCAN_KEEPMODE) &&
+				!IEEE80211_ARE_CHANS_SAME_MODE(c->chan,
+					ic->ic_bsschan))
+				/* break the loop as the subsequent chans won't be 
+				 * better */
+				break;
+
+			if (!IEEE80211_ARE_CHANS_SAME_MODE(c->chan,
+				ic->ic_bsschan))
+				/* break the loop as the subsequent chans won't be 
+				 * better */
+				break;
+		}
+
+		if (sta_assoc != 0) {
+			int sl = ic->ic_cn_total - 
+				ic->ic_chan_nodes[c->chan->ic_ieee]; /* count */
+			if (ic->ic_sc_algorithm == IEEE80211_SC_LOOSE) {
+				int sl_max = ic->ic_sc_sldg * benefit;
+				sl = 1000 * sl / sta_assoc; /* permil */
+				IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
+						"%s: chan %d, dB gained: %d, "
+						"STAs lost: %d permil (max %d)\n",
+						__func__, c->chan->ic_ieee, 
+						benefit, sl, sl_max);
+				if (sl > sl_max)
+					continue;
+			} else if (((ic->ic_sc_algorithm == 
+						 IEEE80211_SC_TIGHT) ||
+					(ic->ic_sc_algorithm == 
+						 IEEE80211_SC_STRICT)) && 
+					(sl > 0)) {
+				/* Break the loop as the subsequent chans 
+				 * won't be better. */
+				break;
+			}
+		}
+		best = c->chan;
+		best_rssi = as->as_maxrssi[best->ic_ieee];
+	}
+
+	if (best != NULL) {
+		i = best->ic_ieee;
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
+				"%s: best: channel %u rssi %d\n",
+				__func__, i, as->as_maxrssi[i]);
+	}
+	return best;
+}
+
 static int
 ap_end(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 		int (*action)(struct ieee80211vap *, 
@@ -584,9 +827,9 @@ ap_end(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 		u_int32_t flags)
 {
 	struct ap_state *as = ss->ss_priv;
+	struct ieee80211_channel *bestchan = NULL;
 	struct ieee80211com *ic = NULL;
 	int res = 1;
-	int i, chan, bestchan, bestchanix;
 
 	SCAN_AP_LOCK_IRQ(as);
 
@@ -594,53 +837,8 @@ ap_end(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 		("wrong opmode %u", vap->iv_opmode));
 
 	ic = vap->iv_ic;
-	/* XXX select channel more intelligently, e.g. channel spread, power */
-	bestchan = -1;
-	bestchanix = 0;		/* NB: silence compiler */
-	/* NB: use scan list order to preserve channel preference */
-	for (i = 0; i < ss->ss_last; i++) {
-		/*
-		 * If the channel is unoccupied the max rssi
-		 * should be zero; just take it.  Otherwise
-		 * track the channel with the lowest rssi and
-		 * use that when all channels appear occupied.
-		 */
-		/*
-		 * Check for channel interference, and if found,
-		 * skip the channel.  We assume that all channels
-		 * will be checked so atleast one can be found
-		 * suitable and will change.  IF this changes,
-		 * then we must know when we "have to" change
-		 * channels for radar and move off.
-		 */
-
-		if (ss->ss_chans[i]->ic_flags & IEEE80211_CHAN_RADAR)
-			continue;
-		if (flags & IEEE80211_SCAN_KEEPMODE) {
-			if (ic->ic_curchan != NULL) {
-				if ((ss->ss_chans[i]->ic_flags & IEEE80211_CHAN_ALLTURBO) != (ic->ic_curchan->ic_flags & IEEE80211_CHAN_ALLTURBO))
-					continue;
-			}
-		}
-
-		chan = ieee80211_chan2ieee(ic, ss->ss_chans[i]);
-
-		IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
-			"%s: channel %u rssi %d bestchan %d bestchan rssi %d\n",
-			__func__, chan, as->as_maxrssi[chan],
-			bestchan, bestchan != -1 ? as->as_maxrssi[bestchan] : 0);
-
-		if (as->as_maxrssi[chan] == 0) {
-			bestchan = chan;
-			bestchanix = i;
-			/* XXX use other considerations */
-			break;
-		}
-		if (bestchan == -1 ||
-		    as->as_maxrssi[chan] < as->as_maxrssi[bestchan])
-			bestchan = chan;
-	}
-	if (bestchan == -1) {
+	bestchan = pick_channel(ss, vap, flags);
+	if (bestchan == NULL) {
 		if (ss->ss_last > 0) {
 			/* no suitable channel, should not happen */
 			printk(KERN_ERR "%s: %s: no suitable channel! "
@@ -649,23 +847,22 @@ ap_end(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 		}
 		res = 1; /* Do NOT restart scan */
 	} else {
-		struct ieee80211_channel *c;
 		struct ieee80211_scan_entry se;
 		/* XXX: notify all VAPs? */
 		/* if this is a dynamic turbo frequency , start with normal 
 		 * mode first */
-		c = ss->ss_chans[bestchanix];
-		if (IEEE80211_IS_CHAN_TURBO(c) && 
-				!IEEE80211_IS_CHAN_STURBO(c)) {
-			if ((c = ieee80211_find_channel(ic, c->ic_freq,
-				c->ic_flags & ~IEEE80211_CHAN_TURBO)) == NULL) {
+		if (IEEE80211_IS_CHAN_TURBO(bestchan) && 
+				!IEEE80211_IS_CHAN_STURBO(bestchan)) {
+			if ((bestchan = ieee80211_find_channel(ic, 
+					bestchan->ic_freq, bestchan->ic_flags &
+					~IEEE80211_CHAN_TURBO)) == NULL) {
 				/* should never happen ?? */
 				SCAN_AP_UNLOCK_IRQ_EARLY(as);
 				return 0;
 			}
 		}
 		memset(&se, 0, sizeof(se));
-		se.se_chan = c;
+		se.se_chan = bestchan;
 
 		as->as_action = ss->ss_ops->scan_default;
 		if (action)

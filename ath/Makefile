@@ -54,10 +54,13 @@ BUSNAME=pci
 COPTS+= -DATH_PCI
 endif
 
+# These flags select which radar signatures DFS will match
+COPTS	+= -DDFS_DOMAIN_ETSI -DDFS_DOMAIN_FCC
+
 include $(TOP)/Makefile.inc
 
 obj-m		+= ath_$(BUSNAME).o
-ath_$(BUSNAME)-objs	:= if_ath.o if_ath_$(BUSNAME).o
+ath_$(BUSNAME)-objs	:= if_ath.o if_ath_radar.o if_ath_$(BUSNAME).o
 
 INCS += -I$(TOP) -I$(ATH_HAL) -I$(HAL) -I$(WLAN)
 

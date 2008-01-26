@@ -299,14 +299,14 @@ ieee80211_print_essid(const u_int8_t *essid, int len)
 			break;
 	}
 	if (i == len) {
-		printf("\"");
+		printk("\"");
 		for (i = 0, p = essid; i < len; i++, p++)
-			printf("%c", *p);
-		printf("\"");
+			printk("%c", *p);
+		printk("\"");
 	} else {
-		printf("0x");
+		printk("0x");
 		for (i = 0, p = essid; i < len; i++, p++)
-			printf("%02x", *p);
+			printk("%02x", *p);
 	}
 }
 EXPORT_SYMBOL(ieee80211_print_essid);
@@ -321,71 +321,71 @@ ieee80211_dump_pkt(struct ieee80211com *ic,
 	wh = (const struct ieee80211_frame *)buf;
 	switch (wh->i_fc[1] & IEEE80211_FC1_DIR_MASK) {
 	case IEEE80211_FC1_DIR_NODS:
-		printf("NODS " MAC_FMT, MAC_ADDR(wh->i_addr2));
-		printf("->" MAC_FMT, MAC_ADDR(wh->i_addr1));
-		printf("(" MAC_FMT ")", MAC_ADDR(wh->i_addr3));
+		printk("NODS " MAC_FMT, MAC_ADDR(wh->i_addr2));
+		printk("->" MAC_FMT, MAC_ADDR(wh->i_addr1));
+		printk("(" MAC_FMT ")", MAC_ADDR(wh->i_addr3));
 		break;
 	case IEEE80211_FC1_DIR_TODS:
-		printf("TODS " MAC_FMT, MAC_ADDR(wh->i_addr2));
-		printf("->" MAC_FMT, MAC_ADDR(wh->i_addr3));
-		printf("(" MAC_FMT ")", MAC_ADDR(wh->i_addr1));
+		printk("TODS " MAC_FMT, MAC_ADDR(wh->i_addr2));
+		printk("->" MAC_FMT, MAC_ADDR(wh->i_addr3));
+		printk("(" MAC_FMT ")", MAC_ADDR(wh->i_addr1));
 		break;
 	case IEEE80211_FC1_DIR_FROMDS:
-		printf("FRDS " MAC_FMT, MAC_ADDR(wh->i_addr3));
-		printf("->" MAC_FMT, MAC_ADDR(wh->i_addr1));
-		printf("(" MAC_FMT ")", MAC_ADDR(wh->i_addr2));
+		printk("FRDS " MAC_FMT, MAC_ADDR(wh->i_addr3));
+		printk("->" MAC_FMT, MAC_ADDR(wh->i_addr1));
+		printk("(" MAC_FMT ")", MAC_ADDR(wh->i_addr2));
 		break;
 	case IEEE80211_FC1_DIR_DSTODS:
-		printf("DSDS " MAC_FMT, MAC_ADDR((u_int8_t *)&wh[1]));
-		printf("->" MAC_FMT, MAC_ADDR(wh->i_addr3));
-		printf("(" MAC_FMT, MAC_ADDR(wh->i_addr2));
-		printf("->" MAC_FMT ")", MAC_ADDR(wh->i_addr1));
+		printk("DSDS " MAC_FMT, MAC_ADDR((u_int8_t *)&wh[1]));
+		printk("->" MAC_FMT, MAC_ADDR(wh->i_addr3));
+		printk("(" MAC_FMT, MAC_ADDR(wh->i_addr2));
+		printk("->" MAC_FMT ")", MAC_ADDR(wh->i_addr1));
 		break;
 	}
 	switch (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) {
 	case IEEE80211_FC0_TYPE_DATA:
-		printf(" data");
+		printk(" data");
 		break;
 	case IEEE80211_FC0_TYPE_MGT:
-		printf(" %s", ieee80211_mgt_subtype_name[
+		printk(" %s", ieee80211_mgt_subtype_name[
 			(wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK)
 			>> IEEE80211_FC0_SUBTYPE_SHIFT]);
 		break;
 	default:
-		printf(" type#%d", wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK);
+		printk(" type#%d", wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK);
 		break;
 	}
 	if (IEEE80211_QOS_HAS_SEQ(wh)) {
 		const struct ieee80211_qosframe *qwh =
 			(const struct ieee80211_qosframe *)buf;
-		printf(" QoS [TID %u%s]", qwh->i_qos[0] & IEEE80211_QOS_TID,
+		printk(" QoS [TID %u%s]", qwh->i_qos[0] & IEEE80211_QOS_TID,
 			qwh->i_qos[0] & IEEE80211_QOS_ACKPOLICY ? " ACM" : "");
 	}
 	if (wh->i_fc[1] & IEEE80211_FC1_PROT) {
 		int off;
 
 		off = ieee80211_anyhdrspace(ic, wh);
-		printf(" WEP [IV %.02x %.02x %.02x",
+		printk(" WEP [IV %.02x %.02x %.02x",
 			buf[off+0], buf[off+1], buf[off+2]);
 		if (buf[off+IEEE80211_WEP_IVLEN] & IEEE80211_WEP_EXTIV)
-			printf(" %.02x %.02x %.02x",
+			printk(" %.02x %.02x %.02x",
 				buf[off+4], buf[off+5], buf[off+6]);
-		printf(" KID %u]", buf[off+IEEE80211_WEP_IVLEN] >> 6);
+		printk(" KID %u]", buf[off+IEEE80211_WEP_IVLEN] >> 6);
 	}
 	if (rate >= 0)
-		printf(" %dM", rate / 2);
+		printk(" %dM", rate / 2);
 	if (rssi >= 0)
-		printf(" +%d", rssi);
-	printf("\n");
+		printk(" +%d", rssi);
+	printk("\n");
 	if (len > 0) {
 		for (i = 0; i < len; i++) {
 			if ((i % 8) == 0)
-				printf(" ");
+				printk(" ");
 			if ((i % 16) == 0)
-				printf("\n");
-			printf("%02x ", buf[i]);
+				printk("\n");
+			printk("%02x ", buf[i]);
 		}
-		printf("\n\n");
+		printk("\n\n");
 	}
 }
 EXPORT_SYMBOL(ieee80211_dump_pkt);
@@ -1575,10 +1575,10 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 				ieee80211_note(vap, "%s with " MAC_FMT " ssid ",
 					(vap->iv_opmode == IEEE80211_M_STA ?
 					"associated" : "synchronized "),
-					MAC_ADDR(ni->ni_bssid));
+					MAC_ADDR(vap->iv_bssid));
 				ieee80211_print_essid(vap->iv_bss->ni_essid,
 					ni->ni_esslen);
-				printf(" channel %d start %uMb\n",
+				printk(" channel %d start %uMb\n",
 					ieee80211_chan2ieee(ic, ic->ic_curchan),
 					IEEE80211_RATE2MBS(ni->ni_rates.rs_rates[ni->ni_txrate]));
 			}

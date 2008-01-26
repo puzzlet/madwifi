@@ -413,7 +413,7 @@ ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type)
 		skb_push(skb, sizeof(struct ieee80211_frame));
 	ieee80211_send_setup(vap, ni, wh,
 		IEEE80211_FC0_TYPE_MGT | type,
-		vap->iv_myaddr, ni->ni_macaddr, vap->iv_bss->ni_bssid);
+		vap->iv_myaddr, ni->ni_macaddr, vap->iv_bssid);
 	/* XXX power management */
 
 	if ((SKB_CB(skb)->flags & M_LINK0) != 0 && ni->ni_challenge != NULL) {
@@ -430,7 +430,7 @@ ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type)
 	/* avoid printing too many frames */
 	if ((ieee80211_msg_debug(vap) && doprint(vap, type)) ||
 	    ieee80211_msg_dumppkts(vap)) {
-		printf("[" MAC_FMT "] send %s on channel %u\n",
+		printk(KERN_DEBUG "[" MAC_FMT "] send %s on channel %u\n",
 			MAC_ADDR(wh->i_addr1),
 			ieee80211_mgt_subtype_name[
 				(type & IEEE80211_FC0_SUBTYPE_MASK) >>
@@ -469,7 +469,7 @@ ieee80211_send_nulldata(struct ieee80211_node *ni)
 		skb_push(skb, sizeof(struct ieee80211_frame));
 	ieee80211_send_setup(vap, ni, wh,
 		IEEE80211_FC0_TYPE_DATA | IEEE80211_FC0_SUBTYPE_NODATA,
-		vap->iv_myaddr, ni->ni_macaddr, vap->iv_bss->ni_bssid);
+		vap->iv_myaddr, ni->ni_macaddr, vap->iv_bssid);
 	/* NB: power management bit is never sent by an AP */
 	if ((IEEE80211_VAP_IS_SLEEPING(ni->ni_vap)) &&
 	    vap->iv_opmode != IEEE80211_M_HOSTAP &&
@@ -524,7 +524,7 @@ ieee80211_send_qosnulldata(struct ieee80211_node *ni, int ac)
 		IEEE80211_FC0_TYPE_DATA,
 		vap->iv_myaddr, /* SA */
 		ni->ni_macaddr, /* DA */
-		vap->iv_bss->ni_bssid);
+		vap->iv_bssid);
 
 	qwh->i_fc[0] = IEEE80211_FC0_VERSION_0 | IEEE80211_FC0_TYPE_DATA |
 		IEEE80211_FC0_SUBTYPE_QOS_NULL;
@@ -631,6 +631,11 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 		if (skb_headroom(skb) < need_headroom) {
 			struct sk_buff *tmp = skb;
 			skb = skb_realloc_headroom(skb, need_headroom);
+			/* Increment reference count after copy */
+			if (NULL != skb && SKB_CB(tmp)->ni != NULL) {
+				SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
+			}
+			ieee80211_dev_kfree_skb(&tmp);
 			if (skb == NULL) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
 					"%s: cannot expand storage (head1)\n",
@@ -638,11 +643,10 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 				vap->iv_stats.is_tx_nobuf++;
 				ieee80211_dev_kfree_skb(&skb2);
 				return NULL;
-			} else
-				ieee80211_skb_copy_noderef(tmp, skb);
-			ieee80211_dev_kfree_skb(&tmp);
+			}
 			/* NB: cb[] area was copied, but not next ptr. must do that
-			 *     prior to return on success. */
+			 *     prior to return on success.
+			 */
 		}
 
 		/* second skb with header and tail adjustments possible */
@@ -664,6 +668,11 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 			struct sk_buff *tmp = skb2;
 
 			skb2 = skb_realloc_headroom(skb2, inter_headroom);
+			/* Increment reference count after copy */
+			if (NULL != skb2 && SKB_CB(tmp)->ni != NULL) {
+				SKB_CB(skb2)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
+			}
+			ieee80211_dev_kfree_skb(&tmp);
 			if (skb2 == NULL) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
 					"%s: cannot expand storage (head2)\n",
@@ -672,9 +681,7 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 				/* this shouldn't happen, but don't send first ff either */
 				ieee80211_dev_kfree_skb(&skb);
 				skb = NULL;
-			} else
-				ieee80211_skb_copy_noderef(tmp, skb);
-			ieee80211_dev_kfree_skb(&tmp);
+			}
 		}
 		if (skb) {
 			skb->next = skb2;
@@ -701,13 +708,15 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 		struct sk_buff *tmp = skb;
 		skb = skb_realloc_headroom(skb, need_headroom);
 		/* Increment reference count after copy */
+		if (NULL != skb && SKB_CB(tmp)->ni != NULL) {
+			SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(tmp)->ni);
+		}
+		ieee80211_dev_kfree_skb(&tmp);
 		if (skb == NULL) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
 				"%s: cannot expand storage (head)\n", __func__);
 			vap->iv_stats.is_tx_nobuf++;
-		} else
-			ieee80211_skb_copy_noderef(tmp, skb);
-		ieee80211_dev_kfree_skb(&tmp);
+		}
 	}
 
 	return skb;
@@ -864,7 +873,7 @@ ieee80211_encap(struct ieee80211_node *ni, struct sk_buff *skb, int *framecnt)
 					ieee80211_add_wds_addr(nt, ni, eh.ether_shost, 0);
 			}
 		} else
-			ismulticast = IEEE80211_IS_MULTICAST(ni->ni_bssid);
+			ismulticast = IEEE80211_IS_MULTICAST(vap->iv_bssid);
 		break;
 	default:
 		break;
@@ -998,21 +1007,21 @@ ieee80211_encap(struct ieee80211_node *ni, struct sk_buff *skb, int *framecnt)
 			IEEE80211_ADDR_COPY(wh->i_addr1, eh.ether_dhost);
 			IEEE80211_ADDR_COPY(wh->i_addr2, eh.ether_shost);
 			/*
-			 * NB: always use the bssid from iv_bss as the
+			 * NB: always use the bssid from iv_bssid as the
 			 *     neighbor's may be stale after an ibss merge
 			 */
-			IEEE80211_ADDR_COPY(wh->i_addr3, vap->iv_bss->ni_bssid);
+			IEEE80211_ADDR_COPY(wh->i_addr3, vap->iv_bssid);
 			break;
 		case IEEE80211_M_STA:
 			wh->i_fc[1] = IEEE80211_FC1_DIR_TODS;
-			IEEE80211_ADDR_COPY(wh->i_addr1, ni->ni_bssid);
+			IEEE80211_ADDR_COPY(wh->i_addr1, vap->iv_bssid);
 			IEEE80211_ADDR_COPY(wh->i_addr2, eh.ether_shost);
 			IEEE80211_ADDR_COPY(wh->i_addr3, eh.ether_dhost);
 			break;
 		case IEEE80211_M_HOSTAP:
 			wh->i_fc[1] = IEEE80211_FC1_DIR_FROMDS;
 			IEEE80211_ADDR_COPY(wh->i_addr1, eh.ether_dhost);
-			IEEE80211_ADDR_COPY(wh->i_addr2, ni->ni_bssid);
+			IEEE80211_ADDR_COPY(wh->i_addr2, vap->iv_bssid);
 			IEEE80211_ADDR_COPY(wh->i_addr3, eh.ether_shost);
 			if (M_PWR_SAV_GET(skb)) {
 				if (IEEE80211_NODE_SAVEQ_QLEN(ni)) {
@@ -1292,6 +1301,49 @@ ieee80211_add_country(u_int8_t *frm, struct ieee80211com *ic)
 	memcpy(frm, (u_int8_t *)&ic->ic_country_ie,
 		ic->ic_country_ie.country_len + 2);
 	frm +=  ic->ic_country_ie.country_len + 2;
+	return frm;
+}
+
+/*
+ * Add Power Constraint information element
+ */
+u_int8_t *
+ieee80211_add_pwrcnstr(u_int8_t *frm, struct ieee80211com *ic)
+{
+	struct ieee80211_ie_pwrcnstr *ie =
+		(struct ieee80211_ie_pwrcnstr *)frm;
+	ie->pc_id = IEEE80211_ELEMID_PWRCNSTR;
+	ie->pc_len = 1;
+	ie->pc_lpc = IEEE80211_PWRCONSTRAINT_VAL(ic);
+	frm += sizeof(*ie);
+	return frm;
+}
+
+/*
+ * Add Power Capability information element
+ */
+static u_int8_t *
+ieee80211_add_pwrcap(u_int8_t *frm, struct ieee80211com *ic)
+{
+	struct ieee80211_ie_pwrcap *ie =
+		(struct ieee80211_ie_pwrcap *)frm;
+	ie->pc_id = IEEE80211_ELEMID_PWRCAP;
+	ie->pc_len = 2;
+	ie->pc_mintxpow = ic->ic_bsschan->ic_minpower;
+	ie->pc_maxtxpow = ic->ic_bsschan->ic_maxpower;
+	frm += sizeof(*ie);
+	return frm;
+}
+
+/*
+ * Add Supported Channels information element
+ */
+static u_int8_t *
+ieee80211_add_suppchan(u_int8_t *frm, struct ieee80211com *ic)
+{
+	memcpy(frm, (u_int8_t *)&ic->ic_sc_ie,
+			ic->ic_sc_ie.sc_len + 2);
+	frm += ic->ic_sc_ie.sc_len + 2;
 	return frm;
 }
 
@@ -1608,18 +1660,18 @@ ieee80211_add_xr_param(u_int8_t *frm, struct ieee80211vap *vap)
 
 	/* copy the BSSIDs */
 	if (vap->iv_flags & IEEE80211_F_XR) {
-		IEEE80211_ADDR_COPY(frm, vap->iv_xrvap->iv_bss->ni_bssid); 	/* Base BSSID */
+		IEEE80211_ADDR_COPY(frm, vap->iv_xrvap->iv_bssid); 	/* Base BSSID */
 		frm += IEEE80211_ADDR_LEN;
-		IEEE80211_ADDR_COPY(frm, vap->iv_bss->ni_bssid);		/* XR BSSID */
+		IEEE80211_ADDR_COPY(frm, vap->iv_bssid);		/* XR BSSID */
 		frm += IEEE80211_ADDR_LEN;
 		*(__le16 *)frm = htole16(vap->iv_bss->ni_intval); 		/* XR beacon interval */
 		frm += 2;
 		*frm++ = vap->iv_xrvap->iv_ath_cap;				/* Base mode capability */
 		*frm++ = vap->iv_ath_cap; 					/* XR mode capability */
 	} else {
-		IEEE80211_ADDR_COPY(frm, vap->iv_bss->ni_bssid);
+		IEEE80211_ADDR_COPY(frm, vap->iv_bssid);
 		frm += IEEE80211_ADDR_LEN;
-		IEEE80211_ADDR_COPY(frm, vap->iv_xrvap->iv_bss->ni_bssid);
+		IEEE80211_ADDR_COPY(frm, vap->iv_xrvap->iv_bssid);
 		frm += IEEE80211_ADDR_LEN;
 		*(__le16 *)frm = htole16(vap->iv_bss->ni_intval);
 		frm += 2;
@@ -1630,40 +1682,6 @@ ieee80211_add_xr_param(u_int8_t *frm, struct ieee80211vap *vap)
 	return frm;
 }
 #endif
-/*
- * Add 802.11h information elements to a frame.
- */
-static u_int8_t *
-ieee80211_add_doth(u_int8_t *frm, struct ieee80211com *ic)
-{
-	/* XXX ie structures */
-	/*
-	 * Power Capability IE
-	 */
-	*frm++ = IEEE80211_ELEMID_PWRCAP;
-	*frm++ = 2;
-	*frm++ = ic->ic_bsschan->ic_minpower;
-	*frm++ = ic->ic_bsschan->ic_maxpower;
-
-#ifdef WRONG
-	/*
-	 * Supported Channels IE
-	 */
-	*frm++ = IEEE80211_ELEMID_SUPPCHAN;
-
-	/* XXX
-	 * THIS IS WRONG! check 802.11h chapter 7.3.2.19
-	 * we should send channel_number/number_of_channels pairs
-	 * for each subband, not a bitmap
-	 */
-	*frm++ = IEEE80211_SUPPCHAN_LEN;
-	memcpy(frm, ic->ic_chan_avail, IEEE80211_SUPPCHAN_LEN);
-	return frm + IEEE80211_SUPPCHAN_LEN;
-#endif
-
-	return frm;
-}
-
 /*
  * Send a probe request frame with the specified ssid
  * and any optional information element data.
@@ -1865,11 +1883,8 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 			frm = ieee80211_add_country(frm, ic);
 
 		/* power constraint */
-		if (ic->ic_flags & IEEE80211_F_DOTH) {
-			*frm++ = IEEE80211_ELEMID_PWRCNSTR;
-			*frm++ = 1;
-			*frm++ = IEEE80211_PWRCONSTRAINT_VAL(ic);
-		}
+		if (ic->ic_flags & IEEE80211_F_DOTH)
+			frm = ieee80211_add_pwrcnstr(frm, ic);
 
 		/* ERP */
 		if (IEEE80211_IS_CHAN_ANYG(ic->ic_curchan))
@@ -1996,7 +2011,7 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 			IEEE80211_ADDR_LEN +
 			2 + IEEE80211_NWID_LEN +
 			2 + IEEE80211_RATE_SIZE +
-			4 + (2 + IEEE80211_SUPPCHAN_LEN) +
+			4 + (2 + ic->ic_sc_ie.sc_len) +
 			2 + (IEEE80211_RATE_MAXSIZE - IEEE80211_RATE_SIZE) +
 			sizeof(struct ieee80211_ie_wme) +
 			sizeof(struct ieee80211_ie_athAdvCap) +
@@ -2032,7 +2047,7 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 
 		/* Current AP address */
 		if (type == IEEE80211_FC0_SUBTYPE_REASSOC_REQ) {
-			IEEE80211_ADDR_COPY(frm, vap->iv_bss->ni_bssid);
+			IEEE80211_ADDR_COPY(frm, vap->iv_bssid);
 			frm += IEEE80211_ADDR_LEN;
 		}
 		/* ssid */
@@ -2040,8 +2055,10 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 		/* supported rates */
 		frm = ieee80211_add_rates(frm, &ni->ni_rates);
 		/* power capability/supported channels */
-		if (ic->ic_flags & IEEE80211_F_DOTH)
-			frm = ieee80211_add_doth(frm, ic);
+		if (ic->ic_flags & IEEE80211_F_DOTH) {
+			frm = ieee80211_add_pwrcap(frm, ic);
+			frm = ieee80211_add_suppchan(frm, ic);
+		}
 		/* ext. supp. rates */
 		frm = ieee80211_add_xrates(frm, &ni->ni_rates);
 
@@ -2204,7 +2221,7 @@ ieee80211_send_pspoll(struct ieee80211_node *ni)
 	wh = (struct ieee80211_ctlframe_addr2 *) skb_put(skb, sizeof(struct ieee80211_ctlframe_addr2));
 
 	wh->i_aidordur = htole16(0xc000 | IEEE80211_NODE_AID(ni));
-	IEEE80211_ADDR_COPY(wh->i_addr1, ni->ni_bssid);
+	IEEE80211_ADDR_COPY(wh->i_addr1, vap->iv_bssid);
 	IEEE80211_ADDR_COPY(wh->i_addr2, vap->iv_myaddr);
 	wh->i_fc[0] = 0;
 	wh->i_fc[1] = 0;
@@ -2228,7 +2245,6 @@ ieee80211_getcfframe(struct ieee80211vap *vap, int type)
 	u_int8_t *frm;
 	struct sk_buff *skb;
 	struct ieee80211_frame *wh;
-	struct ieee80211_node *ni = vap->iv_bss;
 	struct ieee80211com *ic = vap->iv_ic;
 
 
@@ -2248,7 +2264,7 @@ ieee80211_getcfframe(struct ieee80211vap *vap, int type)
 	}
 	IEEE80211_ADDR_COPY(wh->i_addr1, ic->ic_dev->broadcast);
 	IEEE80211_ADDR_COPY(wh->i_addr2, vap->iv_myaddr);
-	IEEE80211_ADDR_COPY(wh->i_addr3, ni->ni_bssid);
+	IEEE80211_ADDR_COPY(wh->i_addr3, vap->iv_bssid);
 	return skb;
 }
 EXPORT_SYMBOL(ieee80211_getcfframe);

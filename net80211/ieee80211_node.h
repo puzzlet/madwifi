@@ -129,6 +129,10 @@ struct ieee80211_node {
 	u_int8_t *ni_rsn_ie;			/* captured RSN ie */
 	u_int8_t *ni_wme_ie;			/* captured WME ie */
 	u_int8_t *ni_ath_ie;			/* captured Atheros ie */
+	u_int8_t *ni_suppchans;			/* supported channels */
+	u_int8_t *ni_suppchans_new;		/* supported channels of ongoing association */
+	u_int8_t *ni_needed_chans;		/* nodes which don't support these will be removed */
+	u_int8_t ni_n_needed_chans;		/* size of ni_needed_chans list */
 	u_int16_t ni_txseqs[17];		/* tx seq per-tid */
 	u_int16_t ni_rxseqs[17];		/* rx seq previous per-tid*/
 	u_int32_t ni_rxfragstamp;		/* time stamp of last rx frag */

@@ -91,7 +91,7 @@ ieee80211_power_latevattach(struct ieee80211vap *vap)
 		MALLOC(vap->iv_tim_bitmap, u_int8_t *, vap->iv_tim_len,
 			M_DEVBUF, M_NOWAIT | M_ZERO);
 		if (vap->iv_tim_bitmap == NULL) {
-			printf("%s: no memory for TIM bitmap!\n", __func__);
+			printk(KERN_ERR "%s: no memory for TIM bitmap!\n", __func__);
 			/* XXX good enough to keep from crashing? */
 			vap->iv_tim_len = 0;
 		}
