@@ -1005,64 +1005,69 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 		 * the probability of selecting a given channel shall be the
 		 * same for all channels (reference: ETSI 301 893 v1.3.1
 		 * $4.6.2.5.1 */
-
 		/* First, we count the usable channels */
-
 		count = 0;
-		curChanFlags = (ic->ic_bsschan->ic_flags) & ~(IEEE80211_CHAN_RADAR);
-		for (i=0; i<ic->ic_nchans; i++) {
-			if ((ic->ic_channels[i].ic_ieee != ic->ic_bsschan->ic_ieee) &&
+		curChanFlags = (ic->ic_bsschan->ic_flags) & 
+			~(IEEE80211_CHAN_RADAR);
+		for (i = 0; i < ic->ic_nchans; i++) {
+			if ((ic->ic_channels[i].ic_ieee != 
+						ic->ic_bsschan->ic_ieee) &&
 			    (ic->ic_channels[i].ic_flags == curChanFlags)) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-						  "%s: usable channel %3d (%4d MHz)\n",
-						  __func__, ic->ic_channels[i].ic_ieee,
-						  ic->ic_channels[i].ic_freq);
+						"%s: usable channel %3d "
+						"(%4d MHz)\n",
+						__func__, 
+						ic->ic_channels[i].ic_ieee,
+						ic->ic_channels[i].ic_freq);
 				count ++;
 			}
 		}
 
 		if (count != 0) {
-
 			/* Next, we pickup a random usable channel */
 			chanStart = jiffies % count;
 
 			count = 0;
-			for (i=0; i<ic->ic_nchans; i++) {
-				if ((ic->ic_channels[i].ic_ieee != ic->ic_bsschan->ic_ieee) &&
-				    (ic->ic_channels[i].ic_flags == curChanFlags)) {
+			for (i = 0; i < ic->ic_nchans; i++) {
+				if ((ic->ic_channels[i].ic_ieee != 
+				     ic->ic_bsschan->ic_ieee) &&
+				    (ic->ic_channels[i].ic_flags == 
+				     curChanFlags)) {
 					if (count++ == chanStart) {
-						new_channel = &ic->ic_channels[i];
+						new_channel = 
+							&ic->ic_channels[i];
 						break;
 					}
 				}
 			}
 		}
 
-		if (new_channel != NULL) {
+		if (new_channel != NULL)
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					  "%s: new random channel found %3d (%4d MHz)\n",
-					  __func__, new_channel->ic_ieee, new_channel->ic_freq);
-		}
+					"%s: new random channel found %3d "
+					"(%4d MHz)\n", __func__, 
+					new_channel->ic_ieee, 
+					new_channel->ic_freq);
 	}
-	if(!new_channel) {
+
+	if (!new_channel) {
 		/* Search for the first channel with no radar detected */
 		int n = 0;
 		for(n = 0; n < ic->ic_nchans; n++) {
-			if(0 == (ic->ic_channels[n].ic_flags & IEEE80211_CHAN_RADAR)) {
+			if (0 == (ic->ic_channels[n].ic_flags & 
+						IEEE80211_CHAN_RADAR)) {
 				new_channel = &ic->ic_channels[n];
 				break;
 			}
 		}
-		if (new_channel != NULL) {
+		if (new_channel != NULL)
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					  "%s: new non-radar channel found\n",
-					  __func__);
-		}
+					"%s: new non-radar channel found\n",
+					__func__);
 	}
 	if (new_channel != NULL) {
 		/* A suitable scan entry was found, so change channels */
 		if (vap->iv_state == IEEE80211_S_RUN) {
-
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 			  "%s: CSA switching to channel %3d (%4d MHz)\n",
 					  __func__,
@@ -1070,20 +1075,19 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 					  new_channel->ic_freq);
 
 			ic->ic_chanchange_chan = new_channel->ic_ieee;
-			ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
+			ic->ic_chanchange_tbtt = 
+				IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 		} else {
 
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-			  "%s: directly switching to channel %3d (%4d MHz)\n",
-					  __func__,
-					  new_channel->ic_ieee,
-					  new_channel->ic_freq);
+					"%s: directly switching to channel "
+					"%3d (%4d MHz)\n", __func__,
+					new_channel->ic_ieee,
+					new_channel->ic_freq);
 
-			/* 
-			 * vap is not in run state yet. so
-			 * change the channel here.
-			 */
+			/* VAP is not in run state yet. so
+			 * change the channel here. */
 			change_channel(ic, new_channel);
 			ic->ic_bsschan = new_channel;
 			if (vap->iv_bss)
@@ -1092,8 +1096,7 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 	} else {
 		/* A suitable scan entry was not found */
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-				  "%s: new channel not found\n",
-				  __func__);
+				  "%s: new channel not found\n", __func__);
 		return 0;
 	}
 

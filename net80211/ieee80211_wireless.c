@@ -1419,7 +1419,8 @@ done:
 }
 
 static int
-ieee80211_get_txcont(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_get_txcont(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1429,7 +1430,8 @@ ieee80211_get_txcont(struct net_device *dev, struct iw_request_info *info, void 
 }
 
 static int
-ieee80211_get_dfs_channel_availability_check_time  (struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_get_dfs_channel_availability_check_time(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1439,7 +1441,8 @@ ieee80211_get_dfs_channel_availability_check_time  (struct net_device *dev, stru
 }
 
 static int
-ieee80211_get_dfs_non_occupancy_period  (struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_get_dfs_non_occupancy_period(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1448,7 +1451,8 @@ ieee80211_get_dfs_non_occupancy_period  (struct net_device *dev, struct iw_reque
 	return 0;
 }
 static int
-ieee80211_set_dfs_channel_availability_check_time  (struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_set_dfs_channel_availability_check_time(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1457,7 +1461,8 @@ ieee80211_set_dfs_channel_availability_check_time  (struct net_device *dev, stru
 	return 0;
 }
 static int
-ieee80211_set_dfs_non_occupancy_period  (struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_set_dfs_non_occupancy_period  (struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1467,7 +1472,8 @@ ieee80211_set_dfs_non_occupancy_period  (struct net_device *dev, struct iw_reque
 }
 
 static int
-ieee80211_get_dfs_testmode(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_get_dfs_testmode(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1477,7 +1483,8 @@ ieee80211_get_dfs_testmode(struct net_device *dev, struct iw_request_info *info,
 }
 
 static int
-ieee80211_get_txcont_rate(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_get_txcont_rate(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1487,7 +1494,8 @@ ieee80211_get_txcont_rate(struct net_device *dev, struct iw_request_info *info, 
 }
 
 static int
-ieee80211_set_txcont(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_set_txcont(struct net_device *dev, struct iw_request_info *info, 
+		void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1497,7 +1505,8 @@ ieee80211_set_txcont(struct net_device *dev, struct iw_request_info *info, void 
 }
 
 static int
-ieee80211_set_dfs_testmode(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_set_dfs_testmode(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1507,7 +1516,8 @@ ieee80211_set_dfs_testmode(struct net_device *dev, struct iw_request_info *info,
 }
 
 static int
-ieee80211_set_txcont_rate(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_set_txcont_rate(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1517,7 +1527,8 @@ ieee80211_set_txcont_rate(struct net_device *dev, struct iw_request_info *info, 
 }
 
 static int
-ieee80211_set_txcont_power(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_set_txcont_power(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
@@ -1527,7 +1538,8 @@ ieee80211_set_txcont_power(struct net_device *dev, struct iw_request_info *info,
 }
 
 static int
-ieee80211_get_txcont_power(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
+ieee80211_get_txcont_power(struct net_device *dev, 
+		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;

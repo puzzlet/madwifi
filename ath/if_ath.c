@@ -328,9 +328,7 @@ static struct ath_buf* cleanup_ath_buf(struct ath_softc *sc, struct ath_buf *buf
 		int direction);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 
-/*
-Regulatory agency testing - continuous transmit support
-*/
+/* Regulatory agency testing - continuous transmit support */
 static void txcont_on(struct ieee80211com *ic);
 static void txcont_off(struct ieee80211com *ic);
 
@@ -343,9 +341,7 @@ static void ath_set_txcont_power(struct ieee80211com *, unsigned int);
 static unsigned int ath_get_txcont_rate(struct ieee80211com *);
 static void ath_set_txcont_rate(struct ieee80211com *ic, unsigned int new_rate);
 
-/*
-802.11h DFS support functions
-*/
+/* 802.11h DFS support functions */
 static void ath_dfs_channel_check_completed(unsigned long);
 static void ath_interrupt_dfs_channel_check(struct ath_softc *sc, const char* reason);
 
@@ -354,9 +350,7 @@ static int ath_check_total_radio_silence_not_required(struct ath_softc *sc, cons
 static int ath_radio_silence_required_for_dfs(struct ath_softc* sc);
 static int ath_check_radio_silence_not_required(struct ath_softc *sc, const char* func);
 
-/*
-802.11h DFS testing functions
-*/
+/* 802.11h DFS testing functions */
 static int ath_get_dfs_testmode(struct ieee80211com *);
 static void ath_set_dfs_testmode(struct ieee80211com *, int);
 
@@ -1347,23 +1341,18 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 	ATH_TXQ_LOCK_INIT(&avp->av_mcastq);
 	if (IEEE80211_IS_MODE_BEACON(opmode)) {
 		unsigned int slot;
-		/*
-		 * Allocate beacon state for hostap/ibss.  We know
-		 * a buffer is available because of the check above.
-		 */
+		/* Allocate beacon state for hostap/ibss.  We know
+		 * a buffer is available because of the check above. */
 		avp->av_bcbuf = STAILQ_FIRST(&sc->sc_bbuf);
 		STAILQ_REMOVE_HEAD(&sc->sc_bbuf, bf_list);
-		/*
-		 * Assign the VAP to a beacon xmit slot.  As
-		 * above, this cannot fail to find one.
-		 */
+		
+		/* Assign the VAP to a beacon xmit slot.  As
+		 * above, this cannot fail to find one. */
 		avp->av_bslot = 0;
 		for (slot = 0; slot < ath_maxvaps; slot++)
 			if (sc->sc_bslot[slot] == NULL) {
-				/*
-				 * XXX hack, space out slots to better
-				 * deal with misses
-				 */
+				/* XXX: Hack, space out slots to better
+				 * deal with misses. */
 				if (slot + 1 < ath_maxvaps &&
 				    sc->sc_bslot[slot+1] == NULL) {
 					avp->av_bslot = slot + 1;
@@ -2145,7 +2134,8 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 	HAL_INT status;
 	int needmark;
 
-	DPRINTF(sc, ATH_DEBUG_INTR, "dev->flags=0x%x%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s]\n",
+	DPRINTF(sc, ATH_DEBUG_INTR, 
+		"dev->flags=0x%x%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s]\n",
 		dev->flags,
 		(dev->flags & IFF_UP) 		? " IFF_UP" 		: "",
 		(dev->flags & IFF_BROADCAST)	? " IFF_BROADCAST"	: "",
@@ -2165,10 +2155,8 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 		(dev->flags & IFF_DYNAMIC)	? " IFF_DYNAMIC"	: "");
 
 	if (sc->sc_invalid) {
-		/*
-		 * The hardware is not ready/present, don't touch anything.
-		 * Note this can happen early on if the IRQ is shared.
-		 */
+		/* The hardware is not ready/present, don't touch anything.
+		 * Note this can happen early on if the IRQ is shared. */
 		return IRQ_NONE;
 	}
 	if (!ath_hal_intrpend(ah))		/* shared irq, not for us */
@@ -2180,12 +2168,11 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 		return IRQ_HANDLED;
 	}
 	needmark = 0;
-	/*
-	 * Figure out the reason(s) for the interrupt.  Note
+
+	/* Figure out the reason(s) for the interrupt.  Note
 	 * that the HAL returns a pseudo-ISR that may include
 	 * bits we haven't explicitly enabled so we mask the
-	 * value to ensure we only process bits we requested.
-	 */
+	 * value to ensure we only process bits we requested. */
 	ath_hal_getisr(ah, &status);		/* NB: clears ISR too */
 	DPRINTF(sc, ATH_DEBUG_INTR,
 		"ISR=0x%x%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", 
@@ -2220,8 +2207,7 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 	 * we will check to see if we need an initial hardware TSF reading. 
 	 * Normally we would just populate this all the time to keep things
 	 * clean, but this function (ath_hal_gettsf64) has been observed to be 
-	 * VERY slow and hurting performance.  There's nothing we can do for it.
-	 */
+	 * VERY slow and hurting performance.  There's nothing we can do for it. */
 	if (status & (HAL_INT_RX | HAL_INT_RXPHY | HAL_INT_SWBA))
 		hw_tsf = ath_hal_gettsf64(ah);
 
@@ -2244,14 +2230,12 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 			DPRINTF(sc, ATH_DEBUG_BEACON,
 				"ath_intr HAL_INT_SWBA at "
 				"tsf %10llx nexttbtt %10llx\n",
-				hw_tsf, (u_int64_t)sc->sc_nexttbtt<<10);
+				hw_tsf, (u_int64_t)sc->sc_nexttbtt << 10);
 
-			/*
-			 * Software beacon alert--time to send a beacon.
+			/* Software beacon alert--time to send a beacon.
 			 * Handle beacon transmission directly; deferring
 			 * this is too slow to meet timing constraints
-			 * under load.
-			 */
+			 * under load. */
 			if (!ath_total_radio_silence_required_for_dfs(sc))
 				ath_beacon_send(sc, &needmark, hw_tsf);
 			else {
@@ -6267,7 +6251,6 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 			 * A & B, A can merge to B and at the same time, B will
 			 * merge to A, still having a split */
 			if (intval != 0) {
-
 				if ((sc->sc_nexttbtt % intval) !=
 						(beacon_tu % intval)) {
 					DPRINTF(sc, ATH_DEBUG_BEACON,
@@ -8574,7 +8557,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 					"Channel change interrupted DFS wait.");
 
 	/* Need a doth channel availability check?  We do if ... */
-	doth_channel_availability_check_needed = 1 &&
+	doth_channel_availability_check_needed =
 		IEEE80211_IS_MODE_DFS_MASTER(ic->ic_opmode) &&
 		(hchan.channel != sc->sc_curchan.channel ||
 		/* the scan wasn't already done */
@@ -8728,17 +8711,21 @@ ath_calibrate(unsigned long arg)
 		 * to load new gain values.
 		 */
 		int txcont_was_active = sc->sc_txcont;
-		DPRINTF(sc, ATH_DEBUG_RESET | ATH_DEBUG_CALIBRATE | ATH_DEBUG_DOTH,
+		DPRINTF(sc, ATH_DEBUG_RESET | ATH_DEBUG_CALIBRATE | 
+				ATH_DEBUG_DOTH,
 			"Forcing reset() for (ath_hal_getrfgain(ah) == "
 			"HAL_RFGAIN_NEED_CHANGE)\n");
 		sc->sc_stats.ast_per_rfgain++;
-/* XXX: Ugly workaround */
-if (!sc->sc_beacons &&
-    TAILQ_FIRST(&ic->ic_vaps)->iv_opmode != IEEE80211_M_WDS &&
-    !txcont_was_active &&
-    !ath_total_radio_silence_required_for_dfs(sc)) {
-	sc->sc_beacons = 1;
-}
+
+		/* XXX: Ugly workaround */
+		if (!sc->sc_beacons &&
+				(TAILQ_FIRST(&ic->ic_vaps)->iv_opmode != 
+				 IEEE80211_M_WDS) &&
+				!txcont_was_active &&
+				!ath_total_radio_silence_required_for_dfs(sc)) {
+			sc->sc_beacons = 1;
+		}
+
 		ath_reset(dev);
 		/* Turn txcont back on as necessary */
 		if (txcont_was_active)
@@ -9098,7 +9085,8 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 				IEEE80211_IS_MODE_DFS_MASTER(vap->iv_opmode)) {
 			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, 
 				"VAP -> DFSWAIT_PENDING \n");
-			/* start calibration timer with a really small value 1/10 sec */
+			/* start calibration timer with a really small value 
+			 * 1/10 sec */
 			mod_timer(&sc->sc_cal_ch, jiffies + (HZ/10));
 			/* wake the receiver */
 			netif_wake_queue(dev);
@@ -9109,7 +9097,8 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 
 		/* Configure the beacon and sleep timers. */
 		if (!sc->sc_beacons && (vap->iv_opmode != IEEE80211_M_WDS)) {
-			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_BEACON | ATH_DEBUG_BEACON_PROC, 
+			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_BEACON | 
+					ATH_DEBUG_BEACON_PROC, 
 				"Beacons reconfigured by %p[%s]!\n",
 				vap, vap->iv_nickname);
 			ath_beacon_config(sc, vap);
@@ -9122,14 +9111,16 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 		{
 			del_timer_sync(&sc->sc_dfs_cac_timer);
 			sc->sc_dfs_cac = 0;
-			DPRINTF(sc, ATH_DEBUG_STATE, "VAP DFSWAIT_PENDING -> run\n");
+			DPRINTF(sc, ATH_DEBUG_STATE, 
+					"VAP DFSWAIT_PENDING -> run\n");
 		}
 
 		/* XXX: if it is SCAN state, disable beacons. */
 		if (nstate == IEEE80211_S_SCAN) {
 			sc->sc_imask &= ~(HAL_INT_SWBA | HAL_INT_BMISS);
 			ath_hal_intrset(ah, sc->sc_imask);
-			/* need to reconfigure the beacons when it moves to RUN */
+			/* need to reconfigure the beacons when it moves to 
+			 * RUN */
 			sc->sc_beacons = 0;
 		}
 	}
@@ -9259,7 +9250,7 @@ ath_dfs_channel_check_completed(unsigned long data )
 					"%ld.%06ld\n",
 					tv.tv_sec, tv.tv_usec);
 			mod_timer(&sc->sc_dfs_cac_timer,
-				  jiffies +(sc->sc_dfs_cac_period * HZ));
+				  jiffies + (sc->sc_dfs_cac_period * HZ));
 		} else {
 			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, 
 					"VAP DFSWAIT_PENDING still.  "
@@ -10404,8 +10395,8 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 	 * sysctl API is only unsigned 32 bits. As a result, tsf might get
 	 * truncated */
 	if (ctl->extra2 == (void *)ATH_RP) {
-	  ctl->data = &tab_3_val;
-	  ctl->maxlen = sizeof(tab_3_val);
+		ctl->data = &tab_3_val;
+		ctl->maxlen = sizeof(tab_3_val);
 	}
 
 	ATH_LOCK(sc);
@@ -10906,7 +10897,7 @@ ath_announce(struct net_device *dev)
 	u_int modes, cc;
 	static const int MLEN = 1024;
 	static const int BLEN = 64;
-	char m[MLEN+1], b[BLEN+1];
+	char m[MLEN + 1], b[BLEN + 1];
 	m[MLEN] = '\0';
 	b[BLEN] = '\0';
 
@@ -10944,7 +10935,7 @@ ath_announce(struct net_device *dev)
 		strncat(m, b, MLEN);
 	}
 	strncat(m, "\n", MLEN);
-	if (1/*bootverbose*/) {
+	if (1 /* bootverbose */) {
 		unsigned int i;
 		for (i = 0; i <= WME_AC_VO; i++) {
 			struct ath_txq *txq = sc->sc_ac2q[i];
@@ -10958,7 +10949,7 @@ ath_announce(struct net_device *dev)
 	}
 #undef HAL_MODE_DUALBAND
 }
-
+ 
 /*
  * Static (i.e. global) sysctls.  Note that the HAL sysctls
  * are located under ours by sharing the setting for DEV_ATH.
@@ -11570,7 +11561,7 @@ ath_set_dfs_testmode(struct ieee80211com *ic, int value)
 {
 	struct net_device *dev = ic->ic_dev;
 	struct ath_softc *sc = dev->priv;
-	sc->sc_dfs_testmode = ((0 != value) ? 1 : 0);
+	sc->sc_dfs_testmode = !!value;
 }
 
 /* Is continuous transmission mode enabled?  It may not actually be

@@ -2378,9 +2378,7 @@ count_nodes(void *_arg, struct ieee80211_node *ni)
 		}
 }
 
-/*
- * Structure to be passed through combinations() to channel_combination()
- */
+/* Structure to be passed through combinations() to channel_combination() */
 struct channel_combination_arg {
 	struct ieee80211com *ic;
 	struct ieee80211_node *new;
@@ -2389,9 +2387,7 @@ struct channel_combination_arg {
 };
 
 #ifdef IEEE80211_DEBUG
-/*
- * sprintf() set[] array consisting of k integers
- */
+/* sprintf() set[] array consisting of k integers */
 static const char*
 ints_sprintf(const int k, const int set[])
 {
@@ -2403,32 +2399,37 @@ ints_sprintf(const int k, const int set[])
 	return buf;
 }
 #endif
-/*
- * Action done for each combination of channels that are not supported by currently joining station.
- * Context: combinations()
- */
+
+/* Action done for each combination of channels that are not supported by 
+ * currently joining station.
+ * Context: combinations() */
 static void
 channel_combination(const int k, const int subset[], void *_arg)
 {
-	struct channel_combination_arg *arg = (struct channel_combination_arg *)_arg;
+	struct channel_combination_arg *arg = 
+		(struct channel_combination_arg *)_arg;
 	struct ieee80211com *ic = arg->ic;
 	struct count_nodes_arg cn_arg = { k, subset, 0, arg->new };
 	int permil, allowed;
-	int sta_assoc = ic->ic_sta_assoc;	/* make > 0 check consistent with / operation */
+	int sta_assoc = ic->ic_sta_assoc;	/* make > 0 check consistent 
+						 * with / operation */
 
-	ieee80211_iterate_nodes(&arg->ic->ic_sta, &count_nodes, (void*)&cn_arg);
+	ieee80211_iterate_nodes(&arg->ic->ic_sta, 
+			&count_nodes, (void*)&cn_arg);
 
 	/* The following two sanity checks can theoretically fail due to lack
 	 * of locking, but since it is not fatal, we will just print a debug
 	 * msg and neglect it */
 	if (cn_arg.count == 0) {
-		IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ANY, arg->new, "%s",
-				"ic_chan_nodes incosistency (incorrect uncommon channel count)");
+		IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ANY, arg->new, 
+				"%s", "ic_chan_nodes incosistency (incorrect "
+				"uncommon channel count)");
 		return;
 	}
 	if (sta_assoc == 0) {
-		IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ANY, arg->new, "%s",
-				"no STAs associated, so there should be no \"uncommon\" channels");
+		IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ANY, arg->new, 
+				"%s", "no STAs associated, so there should be "
+				"no \"uncommon\" channels");
 		return;
 	}
 
@@ -2438,11 +2439,13 @@ channel_combination(const int k, const int subset[], void *_arg)
 	if (allowed > 1000)
 		allowed = 1000;
 
-	IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, arg->new,
-			"Making channels %savailable would require kicking out %d stations,",
-			ints_sprintf(k, subset), cn_arg.count);
-	IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, arg->new,
-			"what is %d permils of all associated STAs (slcg permits < %d).", permil, allowed);
+	IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, 
+			arg->new, "Making channels %savailable would require "
+			"kicking out %d stations,", ints_sprintf(k, subset), 
+			cn_arg.count);
+	IEEE80211_NOTE(arg->new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, 
+			arg->new, "what is %d permils of all associated STAs "
+			"(slcg permits < %d).", permil, allowed);
 
 	if (permil > allowed)
 		return;
@@ -2452,11 +2455,11 @@ channel_combination(const int k, const int subset[], void *_arg)
 	}
 }
 
-/*
- * Enumerate all combinations of k-element subset of n-element set via a callback function
- */
+/* Enumerate all combinations of k-element subset of n-element set via a 
+ * callback function. */
 static void
-combinations(int n, int set[], int k, void (*callback)(const int, const int [], void *), void *arg)
+combinations(int n, int set[], int k, 
+		void (*callback)(const int, const int [], void *), void *arg)
 {
 	int subset[k], pos[k], i;
 	for (i = 0; i < k; i++)
@@ -2518,14 +2521,18 @@ find_worse_nodes(struct ieee80211com *ic, struct ieee80211_node *new)
 	}
 
 	to_gain = ic->ic_sc_mincom - n_common + 1;
-	IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
-			"By accepting STA we would need to gain at least %d common channels.", to_gain);
-	IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
-			"%d channels supported by the joining STA are not commonly supported by others.", n_uncommon);
+	IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC | IEEE80211_MSG_DOTH, 
+			new, "By accepting STA we would need to gain at least "
+			"%d common channels.", to_gain);
+	IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC | IEEE80211_MSG_DOTH, 
+			new, "%d channels supported by the joining STA are "
+			"not commonly supported by others.", n_uncommon);
 
 	if (to_gain > n_uncommon) {
-		IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
-				"%s", "Even disassociating all the nodes will not be enough.");
+		IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC | 
+				IEEE80211_MSG_DOTH, new, "%s", 
+				"Even disassociating all the nodes will not "
+				"be enough.");
 		return 0;
 	}
 
@@ -2536,34 +2543,45 @@ find_worse_nodes(struct ieee80211com *ic, struct ieee80211_node *new)
 		int j = 0;
 
 		CHANNEL_FOREACH(i, ic, tmp1, tmp2)
-			if (isset(new->ni_suppchans_new, i) && ic->ic_chan_nodes[i] != ic->ic_cn_total) {
+			if (isset(new->ni_suppchans_new, i) && 
+					(ic->ic_chan_nodes[i] != 
+					 ic->ic_cn_total)) {
 				if (j == n_uncommon)
 					/* silent assert */
 					break;
 				uncommon[j++] = i;
 			}
 
-		combinations(n_uncommon, uncommon, to_gain, &channel_combination, &arg);
+		combinations(n_uncommon, uncommon, to_gain, 
+				&channel_combination, &arg);
 		if (arg.benefit < 0) {
-			IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
-					"%s", "No combination of channels allows a beneficial trade-off.");
+			IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC | 
+					IEEE80211_MSG_DOTH, new, "%s", 
+					"No combination of channels allows a "
+					"beneficial trade-off.");
 			return 0;
 		}
-		IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, new,
-				"Nodes which don't support channels %swill be forced to leave.",
+		IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_ASSOC | 
+				IEEE80211_MSG_DOTH, new,
+				"Nodes which don't support channels %swill be "
+				"forced to leave.",
 				ints_sprintf(to_gain, best));
 
 		if (new->ni_needed_chans != NULL)
 			FREE(new->ni_needed_chans, M_DEVBUF);
-		MALLOC(new->ni_needed_chans, void*, to_gain * sizeof(*new->ni_needed_chans), M_DEVBUF, M_NOWAIT);
+		MALLOC(new->ni_needed_chans, void*, 
+				to_gain * sizeof(*new->ni_needed_chans), 
+				M_DEVBUF, M_NOWAIT);
+
 		if (new->ni_needed_chans == NULL) {
-			IEEE80211_NOTE(new->ni_vap,
-					IEEE80211_MSG_DEBUG | IEEE80211_MSG_DOTH, new,
-					"%s", "needed_chans allocation failed");
+			IEEE80211_NOTE(new->ni_vap, IEEE80211_MSG_DEBUG | 
+					IEEE80211_MSG_DOTH, new, "%s", 
+					"needed_chans allocation failed");
 			return 0;
 		}
 
-		/* store the list of channels to remove nodes which don't support them */
+		/* Store the list of channels to remove nodes which don't 
+		 * support them. */
 		for (i = 0; i < to_gain; i++)
 			new->ni_needed_chans[i] = best[i];
 		new->ni_n_needed_chans = to_gain;
@@ -2587,19 +2605,24 @@ ieee80211_parse_sc_ie(struct ieee80211_node *ni, u_int8_t *frm,
 
 	if (sc_ie == NULL) {
 		if (ni->ni_ic->ic_sc_algorithm == IEEE80211_SC_STRICT) {
-			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-					"deny %s request, no supported channels ie",
+			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | 
+					IEEE80211_MSG_DOTH, wh->i_addr2,
+					"deny %s request, no supported "
+					"channels IE",
 					reassoc ? "reassoc" : "assoc");
 			return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
 		}
-		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-				"%s request: no supported channels ie",
+		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | 
+				IEEE80211_MSG_DOTH, wh->i_addr2,
+				"%s request: no supported channels IE",
 				reassoc ? "reassoc" : "assoc");
 		return IEEE80211_STATUS_SUCCESS;
 	}
 	if (sc_ie->sc_len % 2 != 0) {
-		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-				"deny %s request, malformed supported channels ie (len)",
+		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | 
+				IEEE80211_MSG_DOTH, wh->i_addr2,
+				"deny %s request, malformed supported "
+				"channels IE (len)",
 				reassoc ? "reassoc" : "assoc");
 		/* XXX: deauth with IEEE80211_REASON_IE_INVALID? */
 		return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
@@ -2608,8 +2631,10 @@ ieee80211_parse_sc_ie(struct ieee80211_node *ni, u_int8_t *frm,
 		MALLOC(ni->ni_suppchans_new, void*, IEEE80211_CHAN_BYTES,
 				M_DEVBUF, M_NOWAIT);
 		if (ni->ni_suppchans_new == NULL) {
-			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-					"deny %s request, couldn't allocate memory for sc ie!",
+			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | 
+					IEEE80211_MSG_DOTH, wh->i_addr2,
+					"deny %s request, couldn't allocate "
+					"memory for SC IE!",
 					reassoc ? "reassoc" : "assoc");
 			return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
 		}
@@ -2620,14 +2645,19 @@ ieee80211_parse_sc_ie(struct ieee80211_node *ni, u_int8_t *frm,
 		/* XXX: see 802.11d-2001-4-05-03-interp,
 		 * but what about .11j, turbo, etc.? */
 		u_int8_t step = (chan <= 14 ? 1 : 4);
-		u_int16_t last = chan + step * (sc_ie->sc_subband[i].sc_number - 1);
+		u_int16_t last = chan + step * 
+			(sc_ie->sc_subband[i].sc_number - 1);
 
 		/* check for subband under- (sc_number == 0) or overflow */
-		if ((last < chan) || (chan <= 14 && last > 14) || (chan > 14 && last > 200)) {
+		if ((last < chan) || ((chan <= 14) && (last > 14)) || 
+				(chan > 14 && last > 200)) {
 			/* XXX: deauth with IEEE80211_REASON_IE_INVALID? */
-			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-					"deny %s request, malformed supported channels ie "
-					"(subbands, %d, %d)", reassoc ? "reassoc" : "assoc", chan, last);
+			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | 
+					IEEE80211_MSG_DOTH, wh->i_addr2,
+					"deny %s request, malformed supported "
+					"channels ie (subbands, %d, %d)", 
+					reassoc ? "reassoc" : "assoc", 
+					chan, last);
 			return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
 		}
 
@@ -2637,42 +2667,50 @@ ieee80211_parse_sc_ie(struct ieee80211_node *ni, u_int8_t *frm,
 	/* forbid STAs that claim they don't support the channel they are
 	 * currently operating at */
 	if (isclr(ni->ni_suppchans_new, ic->ic_bsschan->ic_ieee)) {
-		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-				"deny %s request, sc ie does not contain bss channel"
-				"(subbands)", reassoc ? "reassoc" : "assoc");
+		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | 
+				IEEE80211_MSG_DOTH, wh->i_addr2,
+				"deny %s request, sc ie does not contain bss "
+				"channel(subbands)", 
+				reassoc ? "reassoc" : "assoc");
 		return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
 	}
 
-	if (ic->ic_sc_algorithm != IEEE80211_SC_TIGHT &&
-			ic->ic_sc_algorithm != IEEE80211_SC_STRICT)
+	if ((ic->ic_sc_algorithm != IEEE80211_SC_TIGHT) &&
+			(ic->ic_sc_algorithm != IEEE80211_SC_STRICT))
 		goto success;
 
 	/* count number of channels that will be common to all STAs after the
 	 * new one joins */
 	count = 0;
 	CHANNEL_FOREACH(i, ic, tmp1, tmp2)
-		if (isset(ni->ni_suppchans_new, i) && ic->ic_chan_nodes[i] == ic->ic_cn_total)
+		if (isset(ni->ni_suppchans_new, i) && (
+				ic->ic_chan_nodes[i] == ic->ic_cn_total))
 			count++;
 
-	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-			"%s request: %d common channels, %d required",
-			reassoc ? "reassoc" : "assoc", count, ic->ic_sc_mincom);
+	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | IEEE80211_MSG_DOTH, 
+			wh->i_addr2, "%s request: %d common channels, %d "
+			"required", reassoc ? "reassoc" : "assoc", 
+			count, ic->ic_sc_mincom);
 	if (count < ic->ic_sc_mincom) {
 		/* common channel count decreases below the required minimum */
-		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-				"%s request: not enough common channels available, tight/strict algorithm engaged",
-				reassoc ? "reassoc" : "assoc");
+		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | IEEE80211_MSG_DOTH, 
+				wh->i_addr2, "%s request: not enough common "
+				"channels available, tight/strict algorithm "
+				"engaged", reassoc ? "reassoc" : "assoc");
 
 		if (!find_worse_nodes(ic, ni)) {
-			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC|IEEE80211_MSG_DOTH, wh->i_addr2,
-					"deny %s request, tight/strict criterium not met",
+			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_ASSOC | 
+					IEEE80211_MSG_DOTH, wh->i_addr2,
+					"deny %s request, tight/strict "
+					"criterion not met",
 					reassoc ? "reassoc" : "assoc");
 			return IEEE80211_STATUS_SUPPCHAN_UNACCEPTABLE;
 		}
 	}
 
 success:
-	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_DOTH|IEEE80211_MSG_ASSOC|IEEE80211_MSG_ELEMID, wh->i_addr2,
+	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_DOTH | IEEE80211_MSG_ASSOC | 
+			IEEE80211_MSG_ELEMID, wh->i_addr2,
 			"%s", "supported channels ie parsing successful");
 	return IEEE80211_STATUS_SUCCESS;
 }
@@ -2700,8 +2738,8 @@ ieee80211_doth_cancel_cs(struct ieee80211vap *vap)
 	del_timer(&vap->iv_csa_timer);
 	if (vap->iv_csa_jiffies)
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-				"channel switch canceled (was: to %3d (%4d MHz) in %u "
-				"TBTT, mode %u)\n",
+				"channel switch canceled (was: ""to %3d "
+				"(%4d MHz) in %u TBTT, mode %u)\n",
 				  vap->iv_csa_chan->ic_ieee,
 				  vap->iv_csa_chan->ic_freq,
 				vap->iv_csa_count, vap->iv_csa_mode);
@@ -3110,7 +3148,8 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			case IEEE80211_ELEMID_FHPARMS:
 				if (ic->ic_phytype == IEEE80211_T_FH) {
 					scan.fhdwell = LE_READ_2(&frm[2]);
-					scan.chan = IEEE80211_FH_CHAN(frm[4], frm[5]);
+					scan.chan = IEEE80211_FH_CHAN(frm[4], 
+							frm[5]);
 					scan.fhindex = frm[6];
 				}
 				break;
@@ -3233,42 +3272,57 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				sizeof(ni->ni_tstamp));
 			if (ni->ni_intval != scan.bintval) {
 				IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC, ni,
-                                              "beacon interval divergence: was %u, now %u",
-					ni->ni_intval, scan.bintval);
+						"beacon interval divergence: "
+						"was %u, now %u",
+						ni->ni_intval, scan.bintval);
                                if (!ni->ni_intval_end) {
                                        int msecs = 0; /* silence compiler */
                                        ni->ni_intval_cnt = 0;
                                        ni->ni_intval_old = ni->ni_intval;
-                                       msecs = (ni->ni_intval_old * 1024 * 10) / 1000;
+                                       msecs = (ni->ni_intval_old * 1024 * 10) /
+					       1000;
                                        ni->ni_intval_end = jiffies +
                                                msecs_to_jiffies(msecs);
-                                       IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC, ni,
-                                                      "scheduling beacon interval measurement for %u msecs",
-                                                      msecs);
+				       IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC, 
+						       ni, "scheduling beacon "
+						       "interval measurement "
+						       "for %u msecs",
+						       msecs);
                                }
                                if (scan.bintval > ni->ni_intval) {
                                        ni->ni_intval = scan.bintval;
-                                       vap->iv_flags_ext |= IEEE80211_FEXT_APPIE_UPDATE;
+                                       vap->iv_flags_ext |= 
+					       IEEE80211_FEXT_APPIE_UPDATE;
                                }
-                               /* XXX statistic */
+                               /* XXX: statistic */
                        }
                        if (ni->ni_intval_end) {
                                if (scan.bintval == ni->ni_intval_old)
                                        ni->ni_intval_cnt++;
                                if (!time_before(jiffies, ni->ni_intval_end)) {
-                                       IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC, ni,
-                                                      "beacon interval measurement finished, old value repeated: %u times",
-                                                      ni->ni_intval_cnt);
+				       IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC, 
+						       ni, "beacon interval "
+						       "measurement finished, "
+						       "old value repeated: "
+						       "%u times",
+						       ni->ni_intval_cnt);
                                        ni->ni_intval_end = 0;
                                        if (ni->ni_intval_cnt == 0) {
-                                               IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC, ni,
-                                                              "reprogramming bmiss timer from %u to %u",
-                                                              ni->ni_intval_old, scan.bintval);
-				ni->ni_intval = scan.bintval;
-                                               vap->iv_flags_ext |= IEEE80211_FEXT_APPIE_UPDATE;
+                                               IEEE80211_NOTE(vap, 
+						       IEEE80211_MSG_ASSOC, ni,
+						       "reprogramming bmiss "
+						       "timer from %u to %u",
+						       ni->ni_intval_old, 
+						       scan.bintval);
+					       ni->ni_intval = scan.bintval;
+					       vap->iv_flags_ext |= 
+						       IEEE80211_FEXT_APPIE_UPDATE;
                                        } else {
-                                               IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC, ni,
-                                                              "ignoring the divergence (maybe someone tried to spoof the AP?)", 0);
+                                               IEEE80211_NOTE(vap, 
+						       IEEE80211_MSG_ASSOC, ni,
+						      "ignoring the divergence "
+						      "(maybe someone tried to "
+						      "spoof the AP?)", 0);
                                        }
                                 }
 				/* XXX statistic */
@@ -3284,7 +3338,8 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				ni->ni_erp = scan.erp;
 				/* XXX statistic */
 			}
-			if ((ni->ni_capinfo ^ scan.capinfo) & IEEE80211_CAPINFO_SHORT_SLOTTIME) {
+			if ((ni->ni_capinfo ^ scan.capinfo) & 
+					IEEE80211_CAPINFO_SHORT_SLOTTIME) {
 				IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC, ni,
 					"capabilities change: was 0x%x, now 0x%x",
 					ni->ni_capinfo, scan.capinfo);
@@ -3294,16 +3349,20 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				 */
 				ieee80211_set_shortslottime(ic,
 					IEEE80211_IS_CHAN_A(ic->ic_bsschan) ||
-					(ni->ni_capinfo & IEEE80211_CAPINFO_SHORT_SLOTTIME));
+					(ni->ni_capinfo & 
+					 IEEE80211_CAPINFO_SHORT_SLOTTIME));
 				ni->ni_capinfo = scan.capinfo;
 				/* XXX statistic */
 			}
 			if (scan.wme != NULL &&
 			    (ni->ni_flags & IEEE80211_NODE_QOS)) {
 				int _retval;
-				if ((_retval = ieee80211_parse_wmeparams(vap, scan.wme, wh, &qosinfo)) >= 0) {
+				if ((_retval = ieee80211_parse_wmeparams(
+							vap, scan.wme, 
+							wh, &qosinfo)) >= 0) {
 					if (qosinfo & WME_CAPINFO_UAPSD_EN)
-						ni->ni_flags |= IEEE80211_NODE_UAPSD;
+						ni->ni_flags |= 
+							IEEE80211_NODE_UAPSD;
 					if (_retval > 0)
 						ieee80211_wme_updateparams(vap);
 				}
@@ -3331,14 +3390,15 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				vap->iv_dtim_count = tim->tim_count;
 			}
 
-			/* WDS/Repeater: re-schedule software beacon timer for STA */
-			if (vap->iv_state == IEEE80211_S_RUN &&
-			    vap->iv_flags_ext & IEEE80211_FEXT_SWBMISS) {
-				mod_timer(&vap->iv_swbmiss, jiffies + vap->iv_swbmiss_period);
+			/* WDS/Repeater: re-schedule software beacon timer for 
+			 * STA. */
+			if ((vap->iv_state == IEEE80211_S_RUN) &&
+			    (vap->iv_flags_ext & IEEE80211_FEXT_SWBMISS)) {
+				mod_timer(&vap->iv_swbmiss, 
+						jiffies + vap->iv_swbmiss_period);
 			}
 
-			/*
-			 * If scanning, pass the info to the scan module.
+			/* If scanning, pass the info to the scan module.
 			 * Otherwise, check if it's the right time to do
 			 * a background scan.  Background scanning must
 			 * be enabled and we must not be operating in the
@@ -3349,8 +3409,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			 * is the mechanism by which a background scan
 			 * is started _and_ continued each time we
 			 * return on-channel to receive a beacon from
-			 * our ap.
-			 */
+			 * our ap. */
 			if (ic->ic_flags & IEEE80211_F_SCAN)
 				ieee80211_add_scan(vap, &scan, wh,
 					subtype, rssi, rtsf);
@@ -3382,7 +3441,8 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				IEEE80211_ADDR_COPY(ni->ni_bssid, wh->i_addr3);
 				memcpy(ni->ni_tstamp.data, scan.tstamp,
 					sizeof(ni->ni_tstamp));
-				ni->ni_intval = IEEE80211_BINTVAL_SANITISE(scan.bintval);
+				ni->ni_intval = 
+					IEEE80211_BINTVAL_SANITISE(scan.bintval);
 				ni->ni_capinfo = scan.capinfo;
 				ni->ni_chan = ic->ic_curchan;
 				ni->ni_fhdwell = scan.fhdwell;
@@ -3420,7 +3480,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		}
 		if (IEEE80211_IS_MULTICAST(wh->i_addr2)) {
 			/* frame must be directed */
-			vap->iv_stats.is_rx_mgtdiscard++;	/* XXX stat */
+			vap->iv_stats.is_rx_mgtdiscard++;	/* XXX: stat */
 			return;
 		}
 
@@ -3542,9 +3602,9 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					ni = vap->iv_xrvap->iv_bss;
 				else {
 					ieee80211_node_leave(ni);
-					/* This would be a stupid place to add a node to the table
-					 * XR stuff needs work anyway
-					 */
+					/* This would be a stupid place to add 
+					 * a node to the table; XR stuff needs 
+					 * work anyway. */
 					ieee80211_node_reset(ni, vap->iv_xrvap);
 				}
 				vap = vap->iv_xrvap;
@@ -3590,7 +3650,8 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				/* XXX not right */
 				ieee80211_send_error(ni, wh->i_addr2,
 					IEEE80211_FC0_SUBTYPE_AUTH,
-					(seq + 1) | (IEEE80211_STATUS_ALG << 16));
+					(seq + 1) | 
+					(IEEE80211_STATUS_ALG << 16));
 			}
 			return;
 		}
@@ -3664,8 +3725,10 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					rsn = frm;
 				else
 					IEEE80211_DPRINTF(vap,
-						IEEE80211_MSG_ASSOC | IEEE80211_MSG_WPA,
-						"[" MAC_FMT "] ignoring RSN IE in association request\n",
+						IEEE80211_MSG_ASSOC | 
+						IEEE80211_MSG_WPA,
+						"[" MAC_FMT "] ignoring RSN IE "
+						"in association request\n",
 						MAC_ADDR(wh->i_addr2));
 				break;
 			case IEEE80211_ELEMID_VENDOR:
@@ -3676,8 +3739,11 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 						wpa = frm;
 					else
 						IEEE80211_DPRINTF(vap,
-							IEEE80211_MSG_ASSOC | IEEE80211_MSG_WPA,
-							"[" MAC_FMT "] ignoring WPA IE in association request\n",
+							IEEE80211_MSG_ASSOC | 
+							IEEE80211_MSG_WPA,
+							"[" MAC_FMT "] "
+							"ignoring WPA IE in "
+							"association request\n",
 							MAC_ADDR(wh->i_addr2));
 				} else if (iswmeinfo(frm))
 					wme = frm;
@@ -3839,7 +3905,8 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 
 		ieee80211_saveath(ni, ath);
 
-		/* Send Receiver Not Ready (RNR) followed by XID for newly associated stations */
+		/* Send Receiver Not Ready (RNR) followed by XID for newly 
+		 * associated stations. */
 		ieee80211_deliver_l2_rnr(ni);
 		ieee80211_deliver_l2_xid(ni);
 		ieee80211_node_join(ni, resp);

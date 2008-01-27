@@ -484,8 +484,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 	 * - iv_chanchange_count= number of beacon intervals elapsed (0)
 	 * - ic_chanchange_tbtt = number of beacon intervals before switching
 	 * - ic_chanchange_chan = IEEE channel number after switching
-	 * - ic_flags |= IEEE80211_F_CHANSWITCH
-	 */
+	 * - ic_flags |= IEEE80211_F_CHANSWITCH */
 
 	if (IEEE80211_IS_MODE_BEACON(vap->iv_opmode)) {
 
@@ -494,18 +493,25 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 			struct ieee80211_ie_csa *csa_ie =
 				(struct ieee80211_ie_csa *)bo->bo_chanswitch;
 
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH, "%s: Sending 802.11h chanswitch IE: %d/%d\n", __func__, ic->ic_chanchange_chan, ic->ic_chanchange_tbtt);
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH, 
+					"%s: Sending 802.11h chanswitch IE: "
+					"%d/%d\n", __func__, 
+					ic->ic_chanchange_chan, 
+					ic->ic_chanchange_tbtt);
 			if (!vap->iv_chanchange_count) {
 				vap->iv_flags |= IEEE80211_F_CHANSWITCH;
 
 				/* copy out trailer to open up a slot */
 				memmove(bo->bo_chanswitch + sizeof(*csa_ie),
-					bo->bo_chanswitch, bo->bo_chanswitch_trailerlen);
+					bo->bo_chanswitch, 
+					bo->bo_chanswitch_trailerlen);
 
 				/* add ie in opened slot */
 				csa_ie->csa_id = IEEE80211_ELEMID_CHANSWITCHANN;
-				csa_ie->csa_len = sizeof(*csa_ie) - 2;	/* fixed length */
-				csa_ie->csa_mode = 1;			/* STA shall transmit no further frames */
+				/* fixed length */
+				csa_ie->csa_len = sizeof(*csa_ie) - 2;
+				/* STA shall transmit no further frames */
+				csa_ie->csa_mode = 1;
 				csa_ie->csa_chan = ic->ic_chanchange_chan;
 				csa_ie->csa_count = ic->ic_chanchange_tbtt;
 
@@ -517,7 +523,8 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 				bo->bo_ath_caps += sizeof(*csa_ie);
 				bo->bo_xr += sizeof(*csa_ie);
 
-				/* indicate new beacon length so other layers may manage memory */
+				/* indicate new beacon length so other layers 
+				 * may manage memory */
 				skb_put(skb, sizeof(*csa_ie));
 				len_changed = 1;
 			} else if(csa_ie->csa_count)
@@ -531,40 +538,49 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 #ifdef ATH_SUPERG_XR
 		if (vap->iv_flags & IEEE80211_F_XRUPDATE) {
 			if (vap->iv_xrvap)
-				(void) ieee80211_add_xr_param(bo->bo_xr, vap);
+				(void)ieee80211_add_xr_param(bo->bo_xr, vap);
 			vap->iv_flags &= ~IEEE80211_F_XRUPDATE;
 		}
 #endif
-		if ((ic->ic_flags_ext & IEEE80211_FEXT_ERPUPDATE) && (bo->bo_erp != NULL)) {
-			(void) ieee80211_add_erp(bo->bo_erp, ic);
+		if ((ic->ic_flags_ext & IEEE80211_FEXT_ERPUPDATE) && 
+				(bo->bo_erp != NULL)) {
+			(void)ieee80211_add_erp(bo->bo_erp, ic);
 			ic->ic_flags_ext &= ~IEEE80211_FEXT_ERPUPDATE;
 		}
 	}
 	/* if it is a mode change beacon for dynamic turbo case */
 	if (((ic->ic_ath_cap & IEEE80211_ATHC_BOOST) != 0) ^
 	    IEEE80211_IS_CHAN_TURBO(ic->ic_curchan))
-		ieee80211_add_athAdvCap(bo->bo_ath_caps, vap->iv_bss->ni_ath_flags,
-			vap->iv_bss->ni_ath_defkeyindex);
+		ieee80211_add_athAdvCap(bo->bo_ath_caps, 
+				vap->iv_bss->ni_ath_flags,
+				vap->iv_bss->ni_ath_defkeyindex);
 	/* add APP_IE buffer if app updated it */
 	if (vap->iv_flags_ext & IEEE80211_FEXT_APPIE_UPDATE) {
 		/* adjust the buffer size if the size is changed */
-		if (vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].length != bo->bo_appie_buf_len) {
+		if (vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].length != 
+				bo->bo_appie_buf_len) {
 			int diff_len;
-			diff_len = vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].length - bo->bo_appie_buf_len;
+			diff_len = 
+				vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].
+					length - 
+				bo->bo_appie_buf_len;
 
 			if (diff_len > 0)
 				skb_put(skb, diff_len);
 			else
 				skb_trim(skb, skb->len + diff_len);
 
-			bo->bo_appie_buf_len = vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].length;
+			bo->bo_appie_buf_len = 
+				vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].
+					length;
 			/* update the trailer lens */
 			bo->bo_chanswitch_trailerlen += diff_len;
 			bo->bo_tim_trailerlen += diff_len;
 
 			len_changed = 1;
 		}
-		memcpy(bo->bo_appie_buf, vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].ie,
+		memcpy(bo->bo_appie_buf, 
+			vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].ie,
 			vap->app_ie[IEEE80211_APPIE_FRAME_BEACON].length);
 
 		vap->iv_flags_ext &= ~IEEE80211_FEXT_APPIE_UPDATE;
