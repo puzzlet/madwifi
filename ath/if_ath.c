@@ -3261,8 +3261,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			requeue = 1;
 			goto hardstart_fail;
 		}
-		/* If the clone works, bump the reference count for our copy. */
-		SKB_CB(skb)->ni = ieee80211_ref_node(SKB_CB(skb_orig)->ni);
+		ieee80211_skb_copy_noderef(skb_orig, skb);
 		ieee80211_dev_kfree_skb(&skb_orig);
 	} else {
 		if (SKB_CB(skb)->ni != NULL) 
@@ -6104,9 +6103,7 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 	return 0;
 }
 
-/*
- * Add a prism2 header to a received frame and
- * dispatch it to capture tools like kismet.
+/* This function calculates the presence of, and then removes any padding 
  * bytes between the frame header and frame body, and returns a modified 
  * SKB. If padding is removed and copy_skb is specified, then a new SKB is 
  * created, otherwise the same SKB is used.
@@ -6129,10 +6126,7 @@ ath_skb_removepad(struct sk_buff *skb, unsigned int copy_skb)
 				tskb = skb_copy(skb, GFP_ATOMIC);
 				if (tskb == NULL)
 					return NULL;
-				/* Reference any node from the source skb. */
-				if (SKB_CB(skb)->ni != NULL)
-					SKB_CB(tskb)->ni = ieee80211_ref_node(
-							SKB_CB(skb)->ni);
+				ieee80211_skb_copy_noderef(skb, tskb);
 			}
 			memmove(tskb->data + padbytes, tskb->data, headersize);
 			skb_pull(tskb, padbytes);
@@ -8176,6 +8170,19 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 		}
 
 		{
+			u_int32_t tstamp; 
+			/* Extend tstamp to a full TSF. 
+			 * TX descriptor contains the transmit time in TUs, 
+			 * (bits 25-10 of the TSF). */ 
+#define TSTAMP_TX_MASK  ((2 ^ (27 - 1)) - 1)    /* First 27 bits. */ 
+
+			tstamp = ts->ts_tstamp << 10; 
+			bf->bf_tsf = ((bf->bf_tsf & ~TSTAMP_TX_MASK) | tstamp); 
+			if ((bf->bf_tsf & TSTAMP_TX_MASK) < tstamp) 
+				bf->bf_tsf -= TSTAMP_TX_MASK + 1; 
+		} 
+
+		{ 
 			struct sk_buff *tskb = NULL, *skb = bf->bf_skb;
 #ifdef ATH_SUPERG_FF
 			unsigned int i;

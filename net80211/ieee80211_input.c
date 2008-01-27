@@ -1136,8 +1136,8 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 		struct sk_buff *skb1 = NULL;
 
 		if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
+			/* Create a SKB for the BSS to send out. */
 			skb1 = skb_copy(skb, GFP_ATOMIC);
-			/* We duplicate the reference after skb_copy */
 			ieee80211_skb_copy_noderef(skb, skb1);
 		}
 		else {
