@@ -700,14 +700,14 @@ void ieee80211_expire_channel_non_occupancy_restrictions(struct ieee80211com *);
  * It relies on the assumption that ic_ieee cannot be 0 and that all the
  * duplicates in ic_channels occur subsequently.
  *
- * _i and prevchan are temporary variables
+ * _i and _prevchan are temporary variables
  */
-#define CHANNEL_FOREACH(i, _ic, _i, _prevchan)				\
+#define CHANNEL_FOREACH(_chan, _ic, _i, _prevchan)			\
 	for ((_i) = 0, (_prevchan) = 0;					\
-	     (_i) < (_ic)->ic_nchans && ((i) =				\
+	     (_i) < (_ic)->ic_nchans && ((_chan) =			\
 		     (_ic)->ic_channels[(_i)].ic_ieee);			\
-	     (_prevchan) = (i), (_i)++					\
-	    ) if ((i) != (_prevchan))
+	     (_prevchan) = (_chan), (_i)++				\
+	    ) if ((_chan) != (_prevchan))
 
 /* Key update synchronization methods.  XXX should not be visible. */
 static __inline void
