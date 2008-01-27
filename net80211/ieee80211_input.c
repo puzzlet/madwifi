@@ -2355,10 +2355,7 @@ struct count_nodes_arg {
 	struct ieee80211_node *new;
 };
 
-/*
- * Count nodes which don't support at least one of arg->subset
- * Context: channel_combination()
- */
+/* Count nodes which don't support at least one of arg->subset. */
 static void
 count_nodes(void *_arg, struct ieee80211_node *ni)
 {
@@ -2401,8 +2398,7 @@ ints_sprintf(const int k, const int set[])
 #endif
 
 /* Action done for each combination of channels that are not supported by 
- * currently joining station.
- * Context: combinations() */
+ * currently joining station. */
 static void
 channel_combination(const int k, const int subset[], void *_arg)
 {

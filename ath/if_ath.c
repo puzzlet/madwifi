@@ -4503,11 +4503,8 @@ ath_beacon_alloc(struct ath_softc *sc, struct ieee80211_node *ni)
 	return 0;
 }
 
-/*
- * Allocate and setup an initial beacon frame.
- *
- * Context: SWBA interrupt
- */
+/* Allocate and setup an initial beacon frame.
+ * Context: hwIRQ */
 static int
 ath_beacon_alloc_internal(struct ath_softc *sc, struct ieee80211_node *ni)
 {
