@@ -158,7 +158,7 @@ static void ath_beacon_dturbo_config(struct ieee80211vap *, u_int32_t);
 static void ath_turbo_switch_mode(unsigned long);
 static int ath_check_beacon_done(struct ath_softc *);
 #endif
-static void ath_beacon_send(struct ath_softc *, int *);
+static void ath_beacon_send(struct ath_softc *, int *, uint64_t hw_tsf);
 static void ath_beacon_return(struct ath_softc *, struct ath_buf *);
 static void ath_beacon_free(struct ath_softc *);
 static void ath_beacon_config(struct ath_softc *, struct ieee80211vap *);
@@ -1633,7 +1633,7 @@ ath_extend_tsf(u_int64_t tsf, u_int32_t rstamp)
 }
 
 static void
-ath_uapsd_processtriggers(struct ath_softc *sc)
+ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 {
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_desc *ds;
@@ -1650,7 +1650,6 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 	struct ath_buf *prev_rxbufcur;
 	u_int8_t tid;
 	u_int16_t frame_seq;
-	u_int64_t hw_tsf;
 	int count = 0;
 	int rollover = 0;
 
@@ -1664,6 +1663,10 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 	/* Do not move hw_tsf processing and noise processing out to the rx
 	 * tasklet.  The ONLY place we can properly correct for TSF errors and
 	 * get accurate noise floor information is in the interrupt handler.
+	 * We collect the first hw_tsf in the ath_intr (the interrupt handler)
+	 * so it can be passed to some helper functions... later in this 
+	 * function, however, we read it again to perform rollover adjustments.
+	 *
 	 * The HW returns a 15-bit TS on rx.  We get interrupts after multiple
 	 * packets are queued up.  Sometimes (read often), the 15-bit counter
 	 * in the hardware has rolled over one or more times.  We correct for
@@ -1677,7 +1680,6 @@ ath_uapsd_processtriggers(struct ath_softc *sc)
 	 * get to reality.  This value is used in monitor mode and by tools like
 	 * Wireshark and Kismet.
 	 */
-	hw_tsf = ath_hal_gettsf64(ah);
 	ic->ic_channoise = ath_hal_get_channel_noise(ah, &(sc->sc_curchan));
 
 	ATH_RXBUF_LOCK_IRQ(sc);
@@ -2139,6 +2141,7 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 	struct net_device *dev = dev_id;
 	struct ath_softc *sc = dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
+	u_int64_t hw_tsf = 0;
 	HAL_INT status;
 	int needmark;
 
@@ -2213,6 +2216,15 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 		);
 
 	status &= sc->sc_imask;			/* discard unasked for bits */
+	/* As soon as we know we have a real interrupt we intend to service, 
+	 * we will check to see if we need an initial hardware TSF reading. 
+	 * Normally we would just populate this all the time to keep things
+	 * clean, but this function (ath_hal_gettsf64) has been observed to be 
+	 * VERY slow and hurting performance.  There's nothing we can do for it.
+	 */
+	if (status & (HAL_INT_RX | HAL_INT_RXPHY | HAL_INT_SWBA))
+		hw_tsf = ath_hal_gettsf64(ah);
+
 	if (status & HAL_INT_FATAL) {
 		sc->sc_stats.ast_hardware++;
 		ath_hal_intrset(ah, 0);		/* disable intr's until reset */
@@ -2229,16 +2241,10 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 			vap = TAILQ_FIRST(&sc->sc_ic.ic_vaps);
 			sc->sc_nexttbtt += vap->iv_bss->ni_intval;
 
-			/* Because ath_hal_gettsf64 is expensive and only used
-			 * for this one debug call, surround it with a debug
-			 * flag check. */
-			if (DFLAG_ISSET(sc, ATH_DEBUG_BEACON)) {
-				u_int64_t hw_tsf = ath_hal_gettsf64(ah);
-				DPRINTF(sc, ATH_DEBUG_BEACON,
-					"ath_intr HAL_INT_SWBA at "
-					"tsf %10llx nexttbtt %10llx\n",
-					hw_tsf, (u_int64_t)sc->sc_nexttbtt<<10);
-			}
+			DPRINTF(sc, ATH_DEBUG_BEACON,
+				"ath_intr HAL_INT_SWBA at "
+				"tsf %10llx nexttbtt %10llx\n",
+				hw_tsf, (u_int64_t)sc->sc_nexttbtt<<10);
 
 			/*
 			 * Software beacon alert--time to send a beacon.
@@ -2247,7 +2253,7 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 			 * under load.
 			 */
 			if (!ath_total_radio_silence_required_for_dfs(sc))
-				ath_beacon_send(sc, &needmark);
+				ath_beacon_send(sc, &needmark, hw_tsf);
 			else {
 				sc->sc_beacons = 0;
 				sc->sc_imask &= ~(HAL_INT_SWBA | HAL_INT_BMISS);
@@ -2268,7 +2274,7 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 			ath_hal_updatetxtriglevel(ah, AH_TRUE);
 		}
 		if (status & (HAL_INT_RX | HAL_INT_RXPHY)) {
-			ath_uapsd_processtriggers(sc);
+			ath_uapsd_processtriggers(sc, hw_tsf);
 			ATH_SCHEDULE_TQUEUE(&sc->sc_rxtq, &needmark);
 		}
 		if (status & HAL_INT_TX) {
@@ -4554,7 +4560,7 @@ ath_beacon_alloc_internal(struct ath_softc *sc, struct ieee80211_node *ni)
 	 * following the header.
 	 */
 	if (sc->sc_stagbeacons && avp->av_bslot > 0) {
-		uint64_t tuadjust;
+		u_int64_t tuadjust;
 		__le64 tsfadjust;
 		/*
 		 * The beacon interval is in TUs; the TSF in usecs.
@@ -4864,7 +4870,7 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
  * the slot time is also adjusted based on current state.
  */
 static void
-ath_beacon_send(struct ath_softc *sc, int *needmark)
+ath_beacon_send(struct ath_softc *sc, int *needmark, uint64_t hw_tsf)
 {
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211vap *vap;
@@ -4907,22 +4913,20 @@ ath_beacon_send(struct ath_softc *sc, int *needmark)
 	/*
 	 * Generate beacon frames.  If we are sending frames
 	 * staggered then calculate the slot for this frame based
-	 * on the tsf to safeguard against missing an swba.
+	 * on the hw_tsf to safeguard against missing an swba.
 	 * Otherwise we are bursting all frames together and need
 	 * to generate a frame for each VAP that is up and running.
 	 */
 	if (sc->sc_stagbeacons) {		/* staggered beacons */
 		struct ieee80211com *ic = &sc->sc_ic;
-		u_int64_t tsf;
 		u_int32_t tsftu;
 
-		tsf = ath_hal_gettsf64(ah);
-		tsftu = tsf >> 10; /* NB: 64 -> 32: See note far above. */
+		tsftu = hw_tsf >> 10; /* NB: 64 -> 32: See note far above. */
 		slot = ((tsftu % ic->ic_lintval) * ath_maxvaps) / ic->ic_lintval;
 		vap = sc->sc_bslot[(slot + 1) % ath_maxvaps];
 		DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
 			"Slot %d [tsf %llu tsftu %llu intval %u] vap %p\n",
-			slot, (unsigned long long)tsf, 
+			slot, (unsigned long long)hw_tsf, 
 			(unsigned long long)tsftu, ic->ic_lintval, vap);
 		bfaddr = 0;
 		if (vap != NULL) {
