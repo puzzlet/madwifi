@@ -1815,8 +1815,8 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 			 *   - generate spurious SP on exit (due to frame
 			 *     following exit frame)
 			 */
-			if (((qwh->i_fc[1] & IEEE80211_FC1_PWR_MGT) ^
-			     (ni->ni_flags & IEEE80211_NODE_PWR_MGT))) {
+			if ((!!(qwh->i_fc[1] & IEEE80211_FC1_PWR_MGT) !=
+			     !!(ni->ni_flags & IEEE80211_NODE_PWR_MGT))) {
 				/*
 				 * NB: do not require lock here since this runs
 				 * at intr "proper" time and cannot be
