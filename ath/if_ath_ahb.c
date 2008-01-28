@@ -46,6 +46,15 @@ struct ath_ahb_softc {
 static struct ath_ahb_softc *sclist[2] = {NULL, NULL};
 static u_int8_t num_activesc = 0;
 
+/*
+ * Module glue.
+ */
+#include "release.h"
+static char *version = RELEASE_VERSION;
+static char *dev_info = "ath_ahb";
+
+#include <linux/ethtool.h>
+
 /* set bus cachesize in 4B word units */
 void
 bus_read_cachesize(struct ath_softc *sc, u_int8_t *csz)
@@ -214,7 +223,7 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 
 	dev = alloc_netdev(sizeof(struct ath_ahb_softc), "wifi%d", ether_setup);
 	if (dev == NULL) {
-		printk(KERN_ERR "ath_dev_probe: no memory for device state\n");
+		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;
 	}
 	sc = dev->priv;
@@ -251,15 +260,15 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 	sc->aps_sc.sc_bdev = NULL;
 
 	if (request_irq(dev->irq, ath_intr, IRQF_SHARED, dev->name, dev)) {
-		printk(KERN_WARNING "%s: request_irq failed\n", dev->name);
+		printk(KERN_WARNING "%s: %s: request_irq failed\n", dev_info, dev->name);
 		goto bad3;
 	}
 
 	if (ath_attach(devid, dev, config) != 0)
 		goto bad4;
 	athname = ath_hal_probe(ATHEROS_VENDOR_ID, devid);
-	printk(KERN_INFO "%s: %s: mem=0x%lx, irq=%d\n",
-		dev->name, athname ? athname : "Atheros ???", dev->mem_start, dev->irq);
+	printk(KERN_INFO "%s: %s: %s: mem=0x%lx, irq=%d\n",
+		dev_info, dev->name, athname ? athname : "Atheros ???", dev->mem_start, dev->irq);
 	num_activesc++;
 	/* Ready to process interrupts */
 
@@ -302,16 +311,6 @@ static struct platform_driver ahb_wmac_driver = {
 	.probe = ahb_wmac_probe,
 	.remove = ahb_wmac_remove
 };
-
-/*
- * Module glue.
- */
-#include "release.h"
-static char *version = RELEASE_VERSION;
-static char *dev_info = "ath_ahb";
-
-#include <linux/ethtool.h>
-
 int
 ath_ioctl_ethtool(struct ath_softc *sc, int cmd, void __user *addr)
 {
