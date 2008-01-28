@@ -1276,7 +1276,7 @@ ieee80211_add_erp(u_int8_t *frm, struct ieee80211com *ic)
 		erp |= IEEE80211_ERP_NON_ERP_PRESENT;
 	if (ic->ic_flags & IEEE80211_F_USEPROT)
 		erp |= IEEE80211_ERP_USE_PROTECTION;
-	if (ic->ic_flags & IEEE80211_F_USEBARKER)
+	if ((ic->ic_flags & IEEE80211_F_USEBARKER) || (ic->ic_nonerpsta > 0))
 		erp |= IEEE80211_ERP_LONG_PREAMBLE;
 	*frm++ = erp;
 	return frm;
