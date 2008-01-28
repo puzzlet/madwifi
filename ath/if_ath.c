@@ -3248,12 +3248,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		}
 		ieee80211_skb_copy_noderef(skb_orig, skb);
 		ieee80211_dev_kfree_skb(&skb_orig);
-	} else {
-		if (SKB_CB(skb)->ni != NULL) 
-			ieee80211_unref_node(&SKB_CB(skb)->ni);
-		skb_orphan(skb);
-	}
-
+	} 
 	eh = (struct ether_header *)skb->data;
 
 #ifdef ATH_SUPERG_FF
