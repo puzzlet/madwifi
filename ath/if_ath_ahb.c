@@ -65,33 +65,6 @@ bus_read_cachesize(struct ath_softc *sc, u_int8_t *csz)
 	*csz = L1_CACHE_BYTES / sizeof(u_int32_t);
 }
 
-/* NOTE: returns uncached (kseg1) address. */
-void *
-bus_alloc_consistent(void *hwdev, size_t size, dma_addr_t *dma_handle)
-{
-	void *ret;
-
-	ret = (void *) __get_free_pages(GFP_ATOMIC, get_order(size));
-
-	if (ret != NULL) {
-		memset(ret, 0, size);
-		*dma_handle = __pa(ret);
-		dma_cache_wback_inv((unsigned long) ret, size);
-		ret = UNCAC_ADDR(ret);
-	}
-
-	return ret;
-}
-
-void
-bus_free_consistent(void *hwdev, size_t size, void *vaddr, dma_addr_t dma_handle)
-{
-	unsigned long addr = (unsigned long) vaddr;
-
-	addr = CAC_ADDR(addr);
-	free_pages(addr, get_order(size));
-}
-
 static int
 ahb_enable_wmac(u_int16_t devid, u_int16_t wlanNum)
 {
