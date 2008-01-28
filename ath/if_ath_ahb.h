@@ -10,6 +10,7 @@
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
+#include <linux/dma-mapping.h>
 
 #define AR531X_WLAN0_NUM       0
 #define AR531X_WLAN1_NUM       1
