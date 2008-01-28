@@ -83,18 +83,6 @@ If the kernel was built outside the source directory, KERNELPATH should
 point to the output directory where .config is located, not to the
 sources.
 
-MadWifi currently provides four different rate control algorithms,
-ONOE, AMRR, SAMPLE and MINSTREL.  SAMPLE and MINSTREL are both very
-advanced, but MINSTREL is quite new.  Consequently, SAMPLE is used by
-default.  In order to make MadWifi use e.g. AMRR instead, you have to
-specify that as the module parameter e.g.
-
-  # modprobe ath_pci ratectl=amrr
-
-NOTE: Changing the rate control is only required (and recommended) for
-      users who want to setup an access point using MadWifi in difficult
-      (e.g. lossy) environments and who know what they are doing.
-
 This distribution includes support for a variety of target platforms.
 Because of the binary nature of the HAL not all platforms are supported
 (the list grows as time permits).  The supported target platforms can be
@@ -184,6 +172,18 @@ http://www.unicode.org/onlinedat/countries.html to find your code.
 To activate German frequencies you would specify:
 
   # modprobe ath_pci countrycode=276
+
+MadWifi currently provides four different rate control algorithms,
+ONOE, AMRR, SAMPLE and MINSTREL.  SAMPLE and MINSTREL are both very
+advanced, but MINSTREL is quite new.  Consequently, SAMPLE is used by
+default.  In order to make MadWifi use e.g. AMRR instead, you have to
+specify that as the module parameter e.g.
+
+  # modprobe ath_pci ratectl=amrr
+
+NOTE: Changing the rate control is only required (and recommended) for
+      users who want to setup an access point using MadWifi in difficult
+      (e.g. lossy) environments and who know what they are doing.
 
 To see all available module parameters type:
 
