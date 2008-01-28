@@ -118,6 +118,4 @@
 	dma_alloc_coherent((_hwdev), (_sz), (_hdma), GFP_ATOMIC)
 #define bus_free_consistent	dma_free_coherent
 
-#define sysRegRead(phys)      (*(volatile u_int32_t *)phys)
-
 #endif    /* _DEV_ATH_AHB_H_ */
