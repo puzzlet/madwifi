@@ -119,6 +119,7 @@ void ieee80211_note_frame(struct ieee80211vap *,
 #define	ieee80211_msg_assoc(_vap) \
 	ieee80211_msg_is_reported(_vap, IEEE80211_MSG_ASSOC)
 #else /* IEEE80211_DEBUG */
+#define	ieee80211_msg_is_reported(_vap, _m)	(0)
 #define	IEEE80211_DPRINTF(_vap, _m, _fmt, ...)
 #define	IEEE80211_NOTE(_vap, _m, _wh, _fmt, ...)
 #define	IEEE80211_NOTE_FRAME(_vap, _m, _wh, _fmt, ...)
