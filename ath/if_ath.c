@@ -249,10 +249,10 @@ static unsigned int ath_read_register(struct ieee80211com *ic,
 static unsigned int ath_write_register(struct ieee80211com *ic, 
 		unsigned int address, unsigned int value);
 static void ath_ar5212_registers_dump(struct ath_softc *sc);
-static void ath_print_register(const char* name, u_int32_t address, 
-		u_int32_t v);
-static void ath_print_register_delta(const char* name, u_int32_t address, 
-		u_int32_t v_old, u_int32_t v_new);
+static void ath_print_register(struct ath_softc *sc, const char* name, 
+		u_int32_t address, u_int32_t v);
+static void ath_print_register_delta(struct ath_softc *sc, const char* name, 
+		u_int32_t address, u_int32_t v_old, u_int32_t v_new);
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
 
 static int ath_set_mac_address(struct net_device *, void *);
@@ -11827,7 +11827,8 @@ ath_rcv_dev_event(struct notifier_block *this, unsigned long event,
  * printed with the status in symbolic form. */
 #ifdef ATH_REVERSE_ENGINEERING
 static void
-ath_print_register_details(const char* name, u_int32_t address, u_int32_t v)
+ath_print_register_details(struct ath_softc *sc, const char* name, 
+			   u_int32_t address, u_int32_t v)
 {
 /* constants from openhal ar5212reg.h */
 #define AR5K_AR5212_PHY_ERR_FIL		    0x810c
@@ -11989,8 +11990,8 @@ ath_print_register_details(const char* name, u_int32_t address, u_int32_t v)
  * characters than 1. */
 #ifdef ATH_REVERSE_ENGINEERING
 static void
-ath_print_register_delta(const char* name, u_int32_t address, u_int32_t v_old, 
-		u_int32_t v_new)
+ath_print_register_delta(struct ath_softc *sc, const char* name, 
+			 u_int32_t address, u_int32_t v_old, u_int32_t v_new)
 {
 #define BIT_UNCHANGED_ON  "1"
 #define BIT_UNCHANGED_OFF "."
@@ -12426,10 +12427,11 @@ ath_lookup_register_name(struct ath_softc *sc, char* buf, int buflen,
 /* Print out a single register name/address/value in hex and binary */
 #ifdef ATH_REVERSE_ENGINEERING
 static void
-ath_print_register(const char* name, u_int32_t address, u_int32_t v)
+ath_print_register(struct ath_softc *sc, const char* name, u_int32_t address, 
+		   u_int32_t v)
 {
-	ath_print_register_delta(name, address, v, v);
-	ath_print_register_details(name, address, v);
+	ath_print_register_delta(sc, name, address, v, v);
+	ath_print_register_details(sc, name, address, v);
 }
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
 
@@ -12485,7 +12487,7 @@ ath_ar5212_registers_dump(struct ath_softc *sc) {
 		ath_lookup_register_name(sc, name, 
 				MAX_REGISTER_NAME_LEN, address);
 		value = ath_reg_read(sc, address);
-		ath_print_register(name, address, value);
+		ath_print_register(sc, name, address, value);
 	} while ((address += 4) < MAX_REGISTER_ADDRESS);
 }
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
@@ -12509,8 +12511,8 @@ ath_ar5212_registers_dump_delta(struct ath_softc *sc)
 		if (*p_old != value) {
 			ath_lookup_register_name(sc, name, 
 					MAX_REGISTER_NAME_LEN, address);
-			ath_print_register_delta(name, address, *p_old, value);
-			ath_print_register_details(name, address, value);
+			ath_print_register_delta(sc, name, address, *p_old, value);
+			ath_print_register_details(sc, name, address, value);
 		}
 	} while ((address += 4) < MAX_REGISTER_ADDRESS);
 }
