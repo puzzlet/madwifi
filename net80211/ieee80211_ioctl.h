@@ -632,10 +632,10 @@ enum {
 	IEEE80211_PARAM_TXCONT_RATE		= 68,	/* continuous transmit mode data rate (in mbit/sec) - will use closest match from current rate table */
 	IEEE80211_PARAM_TXCONT_POWER		= 69,	/* power level in units of 0.5dBm */
 	IEEE80211_PARAM_DFS_TESTMODE		= 70,	/* do not perform DFS actions (i.e. markng DFS and channel change on interference), just report them via debug. */
-	IEEE80211_PARAM_DFS_CHANCHECKTIME	= 71,	/* how long do we wait for chan availability
+	IEEE80211_PARAM_DFS_CACTIME		= 71,	/* how long do we wait for chan availability
 							   scans ?
 							   FCC requires 60s, so that is the default. */
-	IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD	= 72,	/* DFS no-occupancy limit - how long do we stay
+	IEEE80211_PARAM_DFS_EXCLPERIOD		= 72,	/* DFS no-occupancy limit - how long do we stay
 							   off a channel once radar is detected?
 							   FCC requires 30m, so that is the default. */
 };

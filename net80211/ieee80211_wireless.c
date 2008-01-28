@@ -1441,13 +1441,13 @@ ieee80211_get_dfs_cac_time(struct net_device *dev,
 }
 
 static int
-ieee80211_get_dfs_non_occupancy_period(struct net_device *dev, 
+ieee80211_get_dfs_excl_period(struct net_device *dev, 
 		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
 	struct ieee80211com *ic = vap->iv_ic;
-	params[0] = ic->ic_get_dfs_non_occupancy_period(ic);
+	params[0] = ic->ic_get_dfs_excl_period(ic);
 	return 0;
 }
 static int
@@ -1461,13 +1461,13 @@ ieee80211_set_dfs_cac_time(struct net_device *dev,
 	return 0;
 }
 static int
-ieee80211_set_dfs_non_occupancy_period  (struct net_device *dev, 
+ieee80211_set_dfs_excl_period  (struct net_device *dev, 
 		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
 	struct ieee80211com *ic = vap->iv_ic;
-	ic->ic_set_dfs_non_occupancy_period(ic, params[1]);
+	ic->ic_set_dfs_excl_period(ic, params[1]);
 	return 0;
 }
 
@@ -2626,11 +2626,11 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 	case IEEE80211_PARAM_TXCONT_POWER:
 		ieee80211_set_txcont_power(dev, info, w, extra);
 		break;
-	case IEEE80211_PARAM_DFS_CHANCHECKTIME:
+	case IEEE80211_PARAM_DFS_CACTIME:
 		ieee80211_set_dfs_cac_time(dev, info, w, extra);
 		break;
-	case IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD:
-		ieee80211_set_dfs_non_occupancy_period(dev, info, w, extra);
+	case IEEE80211_PARAM_DFS_EXCLPERIOD:
+		ieee80211_set_dfs_excl_period(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_COMPRESSION:
 		retv = ieee80211_setathcap(vap, IEEE80211_ATHC_COMP, value);
@@ -3060,11 +3060,11 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 	case IEEE80211_PARAM_TXCONT_POWER:
 		ieee80211_get_txcont_power(dev, info, w, extra);
 		break;
-	case IEEE80211_PARAM_DFS_CHANCHECKTIME:
+	case IEEE80211_PARAM_DFS_CACTIME:
 		ieee80211_get_dfs_cac_time(dev, info, w, extra);
 		break;
-	case IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD:
-		ieee80211_get_dfs_non_occupancy_period(dev, info, w, extra);
+	case IEEE80211_PARAM_DFS_EXCLPERIOD:
+		ieee80211_get_dfs_excl_period(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_PUREG:
 		param[0] = (vap->iv_flags & IEEE80211_F_PUREG) != 0;
@@ -5424,14 +5424,14 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dfstestmode" },
 	{ IEEE80211_PARAM_DFS_TESTMODE,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_dfstestmode" },
-	{ IEEE80211_PARAM_DFS_CHANCHECKTIME,
-	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dfschecktime" },
-	{ IEEE80211_PARAM_DFS_CHANCHECKTIME,
-	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_dfschecktim" },
-	{ IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD,
-	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dfsnonocclmt" },
-	{ IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD,
-	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_dfsnonocclmt" },
+	{ IEEE80211_PARAM_DFS_CACTIME,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dfscactime" },
+	{ IEEE80211_PARAM_DFS_CACTIME,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_dfscactime" },
+	{ IEEE80211_PARAM_DFS_EXCLPERIOD,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dfsexcltim" },
+	{ IEEE80211_PARAM_DFS_EXCLPERIOD,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_dfsexcltim" },
 	{ IEEE80211_PARAM_COMPRESSION,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "compression" },
 	{ IEEE80211_PARAM_COMPRESSION, 0,

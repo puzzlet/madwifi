@@ -69,7 +69,7 @@ static int ieee80211com_media_change(struct net_device *);
 static struct net_device_stats *ieee80211_getstats(struct net_device *);
 static int ieee80211_change_mtu(struct net_device *, int);
 static void ieee80211_set_multicast_list(struct net_device *);
-static void ieee80211_expire_dfs_channel_non_occupancy_timer(unsigned long);
+static void ieee80211_expire_dfs_excl_timer(unsigned long);
 
 MALLOC_DEFINE(M_80211_VAP, "80211vap", "802.11 vap state");
 
@@ -333,10 +333,10 @@ ieee80211_ifattach(struct ieee80211com *ic)
 	ic->ic_txpowlimit = IEEE80211_TXPOWER_MIN;
 	ic->ic_newtxpowlimit = IEEE80211_TXPOWER_MAX;
 
-	init_timer(&ic->ic_dfs_non_occupancy_timer);
-	ic->ic_dfs_non_occupancy_timer.function = 
-		ieee80211_expire_dfs_channel_non_occupancy_timer;
-	ic->ic_dfs_non_occupancy_timer.data = (unsigned long) ic;
+	init_timer(&ic->ic_dfs_excl_timer);
+	ic->ic_dfs_excl_timer.function = 
+		ieee80211_expire_dfs_excl_timer;
+	ic->ic_dfs_excl_timer.data = (unsigned long) ic;
 
 	ieee80211_crypto_attach(ic);
 	ieee80211_node_attach(ic);
@@ -363,7 +363,7 @@ ieee80211_ifdetach(struct ieee80211com *ic)
 		ic->ic_vap_delete(vap);
 	rtnl_unlock();
 
-	del_timer(&ic->ic_dfs_non_occupancy_timer);
+	del_timer(&ic->ic_dfs_excl_timer);
 	ieee80211_scan_detach(ic);
 	ieee80211_proto_detach(ic);
 	ieee80211_crypto_detach(ic);
@@ -838,7 +838,7 @@ ieee80211_dfs_action(struct ieee80211com *ic) {
 }
 
 void
-ieee80211_expire_channel_non_occupancy_restrictions(struct ieee80211com *ic)
+ieee80211_expire_excl_restrictions(struct ieee80211com *ic)
 {
 	struct ieee80211_channel* c = NULL;
 	struct net_device *dev = ic->ic_dev;
@@ -874,12 +874,12 @@ ieee80211_expire_channel_non_occupancy_restrictions(struct ieee80211com *ic)
 		}
 	}
 }
-EXPORT_SYMBOL(ieee80211_expire_channel_non_occupancy_restrictions);
+EXPORT_SYMBOL(ieee80211_expire_excl_restrictions);
 
 /* Update the Non-Occupancy Period timer with the first Non-Occupancy Period
  * that will expire */
 static void
-ieee80211_update_dfs_channel_non_occupancy_timer(struct ieee80211com *ic)
+ieee80211_update_dfs_excl_timer(struct ieee80211com *ic)
 {
 	struct ieee80211_channel * chan;
 	struct timeval tv_now, tv_next;
@@ -907,9 +907,9 @@ ieee80211_update_dfs_channel_non_occupancy_timer(struct ieee80211com *ic)
 
 	if ((tv_next.tv_sec == 0) &&
 	    (tv_next.tv_usec == 0)) {
-		del_timer(&ic->ic_dfs_non_occupancy_timer);
+		del_timer(&ic->ic_dfs_excl_timer);
 	} else {
-		mod_timer(&ic->ic_dfs_non_occupancy_timer,
+		mod_timer(&ic->ic_dfs_excl_timer,
 			  jiffies_tmp + 
 			  (tv_next.tv_sec - tv_now.tv_sec + 1) * HZ);
 	}
@@ -917,7 +917,7 @@ ieee80211_update_dfs_channel_non_occupancy_timer(struct ieee80211com *ic)
 
 /* Periodically expire radar avoidance marks. */
 static void
-ieee80211_expire_dfs_channel_non_occupancy_timer(unsigned long data)
+ieee80211_expire_dfs_excl_timer(unsigned long data)
 {
 	struct ieee80211com *ic = (struct ieee80211com *) data;
 	struct ieee80211vap *vap;
@@ -928,7 +928,7 @@ ieee80211_expire_dfs_channel_non_occupancy_timer(unsigned long data)
 	if (ic->ic_flags_ext & IEEE80211_FEXT_MARKDFS) {
 		/* Make sure there are no channels that have just become 
 		 * available. */
-		ieee80211_expire_channel_non_occupancy_restrictions(ic);
+		ieee80211_expire_excl_restrictions(ic);
 		/* Go through and clear any interference flag we have, if we
 		 * just got it cleared up for us */
 		TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
@@ -1010,7 +1010,7 @@ ieee80211_expire_dfs_channel_non_occupancy_timer(unsigned long data)
 	}
 
 	/* update the timer */
-	ieee80211_update_dfs_channel_non_occupancy_timer(ic);
+	ieee80211_update_dfs_excl_timer(ic);
 }
 
 /* This function is called whenever a radar is detected on channel ichan */
@@ -1021,7 +1021,7 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 	struct ieee80211_channel *c=NULL;
 	struct net_device *dev = ic->ic_dev;
 	struct timeval tv_now;
-	unsigned int avoidance_time = ic->ic_get_dfs_non_occupancy_period(ic);
+	unsigned int excl_period = ic->ic_get_dfs_excl_period(ic);
 	int i;
 
 	do_gettimeofday(&tv_now);
@@ -1041,7 +1041,7 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 				if (c->ic_freq == ichan->ic_freq) {
 					c->ic_flags |= IEEE80211_CHAN_RADAR;
 					ic->ic_chan_non_occupy[i].tv_sec = 
-						tv_now.tv_sec + avoidance_time;
+						tv_now.tv_sec + excl_period;
 					ic->ic_chan_non_occupy[i].tv_usec = 
 						tv_now.tv_usec;
 
@@ -1051,7 +1051,7 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 						"the channel until: "
 						"%ld.%06ld\n",
 						ichan->ic_ieee, ichan->ic_freq,
-						avoidance_time,
+						excl_period,
 						ic->ic_chan_non_occupy[i].tv_sec,
 						ic->ic_chan_non_occupy[i].tv_usec);
 				}
@@ -1059,7 +1059,7 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 
 			/* Recompute the next time a Non-Occupancy Period
 			 * expires. */
-			ieee80211_update_dfs_channel_non_occupancy_timer(ic);
+			ieee80211_update_dfs_excl_timer(ic);
 
 			c = ieee80211_find_channel(ic, ichan->ic_freq, 
 					ichan->ic_flags);

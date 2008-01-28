@@ -1069,8 +1069,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ic->ic_get_dfs_cac_time = ath_get_dfs_cac_time;
 
 	/* DFS radar avoidance channel use delay */
-	ic->ic_set_dfs_non_occupancy_period = ath_set_dfs_excl_period;
-	ic->ic_get_dfs_non_occupancy_period = ath_get_dfs_excl_period;
+	ic->ic_set_dfs_excl_period = ath_set_dfs_excl_period;
+	ic->ic_get_dfs_excl_period = ath_get_dfs_excl_period;
 
 	if (register_netdev(dev)) {
 		EPRINTF(sc, "Unable to register device\n");

@@ -334,7 +334,7 @@ struct ieee80211com {
 	struct ieee80211_channel *ic_curchan;	/* current channel */
 	struct ieee80211_channel *ic_bsschan;	/* bss channel */
 	int16_t ic_channoise;			/* current channel noise in dBm */
-	struct timer_list ic_dfs_non_occupancy_timer;
+	struct timer_list ic_dfs_excl_timer;
 	/*
 	 * Spectrum management (IEEE 802.11h-2003):
 	 *
@@ -487,8 +487,8 @@ struct ieee80211com {
 	unsigned int (*ic_get_dfs_cac_time)(struct ieee80211com *);
 
 	/* DFS non-occupancy period (in seconds) */
-	void (*ic_set_dfs_non_occupancy_period)(struct ieee80211com *, unsigned int);
-	unsigned int (*ic_get_dfs_non_occupancy_period)(struct ieee80211com *);
+	void (*ic_set_dfs_excl_period)(struct ieee80211com *, unsigned int);
+	unsigned int (*ic_get_dfs_excl_period)(struct ieee80211com *);
 
 	/* Set coverage class */
 	void (*ic_set_coverageclass)(struct ieee80211com *);
@@ -693,7 +693,7 @@ int ieee80211_media_setup(struct ieee80211com *, struct ifmedia *, u_int32_t,
 	ifm_change_cb_t, ifm_stat_cb_t);
 void ieee80211_build_sc_ie(struct ieee80211com *);
 void ieee80211_dfs_action(struct ieee80211com *);
-void ieee80211_expire_channel_non_occupancy_restrictions(struct ieee80211com *);
+void ieee80211_expire_channel_excl_restrictions(struct ieee80211com *);
 
 /*
  * Iterate through ic_channels to enumerate all distinct ic_ieee channel numbers.
