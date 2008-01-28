@@ -742,9 +742,9 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 			frame_len = ntohs(eh_tmp->ether_type); 
 
 			skb1 = skb_copy(skb, GFP_ATOMIC);
-			/* Increment reference count after copy */
-			if (skb1 != NULL)
-				ieee80211_skb_copy_noderef(skb, skb1);
+			if (skb1 == NULL)
+				goto err;
+			ieee80211_skb_copy_noderef(skb, skb1);
 
 			/* we now have 802.3 MAC hdr followed by 802.2 LLC/SNAP; convert to EthernetII.
 			 * Note that the frame is at least IEEE80211_MIN_LEN, due to the driver code. */
@@ -1059,9 +1059,10 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 				 * assemble fragments
 				 */
 				ni->ni_rxfrag = skb_copy(skb, GFP_ATOMIC);
-				/* We duplicate the reference after skb_copy */
-				ieee80211_skb_copy_noderef(skb, ni->ni_rxfrag);
-				ieee80211_dev_kfree_skb(&skb);
+				if (ni->ni_rxfrag) {
+					ieee80211_skb_copy_noderef(skb, ni->ni_rxfrag);
+					ieee80211_dev_kfree_skb(&skb);
+				}
 			}
 			/*
 			 * Check that we have enough space to hold
@@ -1074,8 +1075,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 					(ni->ni_vap->iv_dev->mtu + hdrlen) -
 					(skb_end_pointer(skb) - skb->head),
 					GFP_ATOMIC);
-				/* We duplicate the reference after skb_copy */
-				if (skb != ni->ni_rxfrag)
+				if (ni->ni_rxfrag)
 					ieee80211_skb_copy_noderef(skb, ni->ni_rxfrag);
 				ieee80211_dev_kfree_skb(&skb);
 			}
@@ -1282,8 +1282,8 @@ ieee80211_decap(struct ieee80211vap *vap, struct sk_buff *skb, int hdrlen)
 
 		/* XXX: does this always work? */
 		tskb = skb_copy(skb, GFP_ATOMIC);
-		/* We duplicate the reference after skb_copy */
-		ieee80211_skb_copy_noderef(skb, tskb);
+		if (tskb)
+			ieee80211_skb_copy_noderef(skb, tskb);
 		ieee80211_dev_kfree_skb(&skb);
 		skb = tskb;
 	}
