@@ -471,8 +471,8 @@ struct ieee80211com {
 	void (*ic_set_txcont_rate)(struct ieee80211com *, u_int);
 	u_int (*ic_get_txcont_rate)(struct ieee80211com *);
 
-	/* DFS test mode prevents marking channel interference and channel switching during
-	detection probability tests */
+	/* DFS test mode prevents marking channel interference and channel 
+	 * switching during detection probability tests */
 	void (*ic_set_dfs_testmode)(struct ieee80211com *, int);
 	int (*ic_get_dfs_testmode)(struct ieee80211com *);
 
@@ -483,8 +483,8 @@ struct ieee80211com {
 	unsigned int (*ic_dump_hal_map)(struct ieee80211com *);
 
 	/* DFS channel availability check time (in seconds) */
-	void (*ic_set_dfs_channel_availability_check_time)(struct ieee80211com *, unsigned int);
-	unsigned int (*ic_get_dfs_channel_availability_check_time)(struct ieee80211com *);
+	void (*ic_set_dfs_cac_time)(struct ieee80211com *, unsigned int);
+	unsigned int (*ic_get_dfs_cac_time)(struct ieee80211com *);
 
 	/* DFS non-occupancy period (in seconds) */
 	void (*ic_set_dfs_non_occupancy_period)(struct ieee80211com *, unsigned int);

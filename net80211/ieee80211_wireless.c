@@ -1430,13 +1430,13 @@ ieee80211_get_txcont(struct net_device *dev,
 }
 
 static int
-ieee80211_get_dfs_channel_availability_check_time(struct net_device *dev, 
+ieee80211_get_dfs_cac_time(struct net_device *dev, 
 		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
 	struct ieee80211com *ic = vap->iv_ic;
-	params[0] = ic->ic_get_dfs_channel_availability_check_time(ic);
+	params[0] = ic->ic_get_dfs_cac_time(ic);
 	return 0;
 }
 
@@ -1451,13 +1451,13 @@ ieee80211_get_dfs_non_occupancy_period(struct net_device *dev,
 	return 0;
 }
 static int
-ieee80211_set_dfs_channel_availability_check_time(struct net_device *dev, 
+ieee80211_set_dfs_cac_time(struct net_device *dev, 
 		struct iw_request_info *info, void *w, char *extra)
 {
 	int *params = (int*) extra;
 	struct ieee80211vap *vap = dev->priv;
 	struct ieee80211com *ic = vap->iv_ic;
-	ic->ic_set_dfs_channel_availability_check_time(ic, params[1]);
+	ic->ic_set_dfs_cac_time(ic, params[1]);
 	return 0;
 }
 static int
@@ -2627,7 +2627,7 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		ieee80211_set_txcont_power(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_DFS_CHANCHECKTIME:
-		ieee80211_set_dfs_channel_availability_check_time(dev, info, w, extra);
+		ieee80211_set_dfs_cac_time(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD:
 		ieee80211_set_dfs_non_occupancy_period(dev, info, w, extra);
@@ -3061,7 +3061,7 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		ieee80211_get_txcont_power(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_DFS_CHANCHECKTIME:
-		ieee80211_get_dfs_channel_availability_check_time(dev, info, w, extra);
+		ieee80211_get_dfs_cac_time(dev, info, w, extra);
 		break;
 	case IEEE80211_PARAM_DFS_NONOCCUPANCYPERIOD:
 		ieee80211_get_dfs_non_occupancy_period(dev, info, w, extra);
