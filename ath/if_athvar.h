@@ -730,7 +730,9 @@ struct ath_softc {
 	u_int16_t sc_cachelsz;			/* cache line size */
 
 	struct ath_descdma sc_txdma;		/* TX descriptors */
-	ath_bufhead sc_txbuf;			/* transmit buffer */
+	ath_bufhead sc_txbuf;			/* TX buffers pool */
+	atomic_t sc_txbuf_counter;              /* number of available TX
+						 * buffers */
 	spinlock_t sc_txbuflock;		/* txbuf lock */
 	u_int sc_txqsetup;			/* h/w queues setup */
 	u_int sc_txintrperiod;			/* tx interrupt batching */

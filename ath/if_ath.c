@@ -474,8 +474,6 @@ module_param(ieee80211_debug, int, 0600);
 MODULE_PARM_DESC(ieee80211_debug, "Load-time 802.11 debug output enable");
 #endif /* defined(AR_DEBUG) */
 
-static atomic_t ath_buf_counter = ATOMIC_INIT(0);
-
 #define ATH_SETUP_XR_VAP(sc,vap,rfilt)						\
 	do {									\
 		if (sc->sc_curchan.privFlags & CHANNEL_4MS_LIMIT)		\
@@ -505,6 +503,8 @@ static atomic_t ath_buf_counter = ATOMIC_INIT(0);
 			if (id)						\
 				(bssid)[0] |= (((id) << 2) | 0x02);	\
 		} while (0)
+
+/* Initialize ath_softc structure */
 
 int
 ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
@@ -540,6 +540,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ATH_HAL_LOCK_INIT(sc);
 	ATH_TXBUF_LOCK_INIT(sc);
 	ATH_RXBUF_LOCK_INIT(sc);
+
+	atomic_set(&sc->sc_txbuf_counter, 0);
 
 	ATH_INIT_TQUEUE(&sc->sc_rxtq,     ath_rx_tasklet,	dev);
 	ATH_INIT_TQUEUE(&sc->sc_txtq,	  ath_tx_tasklet,	dev);
@@ -3017,18 +3019,18 @@ ath_ffstageq_flush(struct ath_softc *sc, struct ath_txq *txq,
 
 static inline
 u_int32_t
-ath_get_buffers_available(void)
+ath_get_buffers_available(const struct ath_softc *sc)
 {
-	return ATH_TXBUF - atomic_read(&ath_buf_counter);
+	return ATH_TXBUF - atomic_read(&sc->sc_txbuf_counter);
 }
 
 #ifdef IEEE80211_DEBUG_REFCNT
 /* NOTE: This function is valid in non-debug configurations, just not used. */
 static inline
 u_int32_t
-ath_get_buffer_count(void)
+ath_get_buffer_count(const struct ath_softc *sc)
 {
-	return atomic_read(&ath_buf_counter);
+	return atomic_read(&sc->sc_txbuf_counter);
 }
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 
@@ -3044,7 +3046,7 @@ _take_txbuf_locked(struct ath_softc *sc, int for_management)
 	struct ath_buf* bf = NULL;
 	ATH_TXBUF_LOCK_ASSERT(sc);
 	/* Reserve at least ATH_TXBUF_MGT_RESERVED buffers for management frames */
-	if (ath_get_buffers_available() <= ATH_TXBUF_MGT_RESERVED) {
+	if (ath_get_buffers_available(sc) <= ATH_TXBUF_MGT_RESERVED) {
 		/* Stop the queue, we are full */
 		DPRINTF(sc, ATH_DEBUG_XMIT, "Stopping queuing of additional "
 					    "frames.  Insufficient free "
@@ -3056,7 +3058,7 @@ _take_txbuf_locked(struct ath_softc *sc, int for_management)
 	}
 
 	/* Only let us go further if management frame, or there are enough */
-	if (for_management || (ath_get_buffers_available() > ATH_TXBUF_MGT_RESERVED)) {
+	if (for_management || (ath_get_buffers_available(sc) > ATH_TXBUF_MGT_RESERVED)) {
 		bf = STAILQ_FIRST(&sc->sc_txbuf);
 		if (bf) {
 			STAILQ_REMOVE_HEAD(&sc->sc_txbuf, bf_list);
@@ -3067,11 +3069,11 @@ _take_txbuf_locked(struct ath_softc *sc, int for_management)
 #else
 			cleanup_ath_buf(sc, bf, BUS_DMA_TODEVICE);
 #endif
-			atomic_inc(&ath_buf_counter);
+			atomic_inc(&sc->sc_txbuf_counter);
 #ifdef IEEE80211_DEBUG_REFCNT
 			DPRINTF(sc, ATH_DEBUG_TXBUF, 
 				"[TXBUF=%03d/%03d] (from %s:%d) took txbuf %p.\n", 
-				ath_get_buffer_count(), ATH_TXBUF,
+				ath_get_buffer_count(sc), ATH_TXBUF,
 				func, line, bf);
 #endif
 		}
@@ -12645,11 +12647,11 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **bf)
 	cleanup_ath_buf(sc, (*bf), BUS_DMA_TODEVICE);
 #endif
 	STAILQ_INSERT_TAIL(&sc->sc_txbuf, (*bf), bf_list);
-	atomic_dec(&ath_buf_counter);
+	atomic_dec(&sc->sc_txbuf_counter);
 #ifdef IEEE80211_DEBUG_REFCNT
 	DPRINTF(sc, ATH_DEBUG_TXBUF, 
 		"[TXBUF=%03d/%03d] (invoked from %s:%d) returned txbuf %p.\n", 
-		ath_get_buffer_count(), ATH_TXBUF,
+		ath_get_buffer_count(sc), ATH_TXBUF,
 		func, line, bfaddr);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	if (sc->sc_devstopped) {
