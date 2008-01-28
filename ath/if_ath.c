@@ -5143,7 +5143,6 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 			 * next beacon timestamp again */
  			nexttbtt = roundup(hw_tsftu + FUDGE, intval);
 		} 
-#if 0
 		else {
 			if (tsf > hw_tsf) {
 				/* We received a beacon, but the HW TSF has
@@ -5151,7 +5150,8 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 				 * We cannot use the hardware TSF, so we
 				 * wait to synchronize beacons again. */
 				sc->sc_syncbeacon = 1;
-				goto ath_beacon_config_debug;
+				if (ic->ic_opmode == IEEE80211_M_IBSS)
+					goto ath_beacon_config_debug;
 			} else {
 				/* Normal case: we received a beacon to which
 				 * we have synchronized. Make sure that nexttbtt
@@ -5160,7 +5160,6 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 						tsftu, intval);
 			}
 		}
-#endif
 	}
 
 	if (ic->ic_opmode == IEEE80211_M_STA &&	!(sc->sc_nostabeacons)) {
