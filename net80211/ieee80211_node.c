@@ -416,8 +416,13 @@ ieee80211_reset_bss(struct ieee80211vap *vap)
 			  __func__, ni, MAC_ADDR(vap->iv_myaddr));
 	KASSERT(ni != NULL, ("unable to setup inital BSS node"));
 
-	/* New reference for caller */
-	vap->iv_bss = ieee80211_ref_node(ni);
+	/* ieee80211_alloc_node_table bumps the refcount twice.
+         * one reference is held by the node table and the other
+         * is a gift to the caller, so we do not bump the refcount
+         * when we assign to vap->iv_bss here. */
+	vap->iv_bss = ni;
+	KASSERT( (atomic_read(&ni->ni_refcnt) == 2), 
+		("wrong refcount for new node."));
 
 	if (obss != NULL) {
 		copy_bss_state(ni, obss);
@@ -2246,9 +2251,10 @@ ieee80211_node_leave(struct ieee80211_node *ni)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211_node_table *nt = ni->ni_table;
 
-	IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC | IEEE80211_MSG_DEBUG, ni,
-		"station with aid %d leaves (refcnt %u)",
-		IEEE80211_NODE_AID(ni), atomic_read(&ni->ni_refcnt));
+	if (IEEE80211_NODE_AID(ni) != 0)
+		IEEE80211_NOTE(vap, IEEE80211_MSG_ASSOC | IEEE80211_MSG_DEBUG,
+			ni, "station with aid %d leaves (refcnt %u)",
+			IEEE80211_NODE_AID(ni), atomic_read(&ni->ni_refcnt));
 
 	/* From this point onwards we can no longer find the node,
 	 * so no more references are generated
