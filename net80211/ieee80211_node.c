@@ -416,17 +416,13 @@ ieee80211_reset_bss(struct ieee80211vap *vap)
 			  __func__, ni, MAC_ADDR(vap->iv_myaddr));
 	KASSERT(ni != NULL, ("unable to setup inital BSS node"));
 
-	/* ieee80211_alloc_node_table bumps the refcount twice.
-         * one reference is held by the node table and the other
-         * is a gift to the caller, so we do not bump the refcount
-         * when we assign to vap->iv_bss here. */
-	vap->iv_bss = ni;
+	vap->iv_bss = PASS_NODE(ni);
 	KASSERT( (atomic_read(&ni->ni_refcnt) == 2), 
 		("wrong refcount for new node."));
 
 	if (obss != NULL) {
-		copy_bss_state(ni, obss);
-		ni->ni_intval = ic->ic_lintval;
+		copy_bss_state(vap->iv_bss, obss);
+		vap->iv_bss->ni_intval = ic->ic_lintval;
 		/* Caller's reference */
 		ieee80211_unref_node(&obss);
 	}
