@@ -1567,6 +1567,8 @@ ieee80211_auth_shared(struct ieee80211_node *ni, struct ieee80211_frame *wh,
 			ni->ni_rtsf = rtsf;
 			ni->ni_last_rx = jiffies;
 			if (!alloc_challenge(ni)) {
+				if(allocbs)
+					ieee80211_unref_node(&ni);
 				/* NB: don't return error so they rexmit */
 				return;
 			}
@@ -1654,6 +1656,8 @@ ieee80211_auth_shared(struct ieee80211_node *ni, struct ieee80211_frame *wh,
 		}
 		break;
 	}
+	if (allocbs)
+		ieee80211_unref_node(&ni);
 	return;
 bad:
 	/* Send an error response; but only when operating as an AP. */
@@ -1662,8 +1666,9 @@ bad:
 		ieee80211_send_error(ni, wh->i_addr2,
 			IEEE80211_FC0_SUBTYPE_AUTH,
 			(seq + 1) | (estatus<<16));
-		/* Remove node state if it exists. */
-		if (ni != vap->iv_bss)
+		/* Remove node state if it exists and isn't just a 
+		 * temporary copy of the bss (dereferenced later) */
+		if (!allocbs && ni != vap->iv_bss) 
 			ieee80211_node_leave(ni);
 	} else if (vap->iv_opmode == IEEE80211_M_STA) {
 		/*
@@ -1674,6 +1679,8 @@ bad:
 		if (vap->iv_state == IEEE80211_S_AUTH)
 			ieee80211_new_state(vap, IEEE80211_S_SCAN, 0);
 	}
+	if (allocbs)
+		ieee80211_unref_node(&ni);
 }
 
 /* Verify the existence and length of __elem or get out. */
