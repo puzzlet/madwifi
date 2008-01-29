@@ -1567,7 +1567,7 @@ ieee80211_auth_shared(struct ieee80211_node *ni, struct ieee80211_frame *wh,
 			ni->ni_rtsf = rtsf;
 			ni->ni_last_rx = jiffies;
 			if (!alloc_challenge(ni)) {
-				if(allocbs)
+				if (allocbs)
 					ieee80211_unref_node(&ni);
 				/* NB: don't return error so they rexmit */
 				return;
@@ -1668,7 +1668,7 @@ bad:
 			(seq + 1) | (estatus<<16));
 		/* Remove node state if it exists and isn't just a 
 		 * temporary copy of the bss (dereferenced later) */
-		if (!allocbs && ni != vap->iv_bss) 
+		if (!allocbs && (ni != vap->iv_bss))
 			ieee80211_node_leave(ni);
 	} else if (vap->iv_opmode == IEEE80211_M_STA) {
 		/*
