@@ -417,7 +417,7 @@ ieee80211_reset_bss(struct ieee80211vap *vap)
 	KASSERT(ni != NULL, ("unable to setup inital BSS node"));
 
 	vap->iv_bss = PASS_NODE(ni);
-	KASSERT( (atomic_read(&ni->ni_refcnt) == 2), 
+	KASSERT((atomic_read(&vap->iv_bss->ni_refcnt) == 2), 
 		("wrong refcount for new node."));
 
 	if (obss != NULL) {
