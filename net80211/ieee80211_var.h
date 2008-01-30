@@ -54,22 +54,37 @@
  * - Atheros chips use 7 bits when power is specified in half dBm units, with 
  *   a value range from 0 to 127.
  */
-#define	IEEE80211_TXPOWER_MAX	127		/* .5 dBm units */
-#define	IEEE80211_TXPOWER_MIN	0		/* kill radio */
+#define	IEEE80211_TXPOWER_MAX		127	/* .5 dBm units */
+#define	IEEE80211_TXPOWER_MIN		0	/* kill radio */
 
-#define	IEEE80211_DTIM_MAX	15		/* max DTIM period */
-#define	IEEE80211_DTIM_MIN	1		/* min DTIM period */
-#define	IEEE80211_DTIM_DEFAULT	1		/* default DTIM period */
+#define	IEEE80211_DTIM_MAX		15	/* max DTIM period */
+#define	IEEE80211_DTIM_MIN		1	/* min DTIM period */
+#define	IEEE80211_DTIM_DEFAULT		1	/* default DTIM period */
 
-#define	IEEE80211_BINTVAL_MAX	1000		/* max beacon interval (TUs) */
-#define	IEEE80211_BINTVAL_MIN	25		/* min beacon interval (TUs) */
-#define	IEEE80211_BINTVAL_DEFAULT 100		/* default beacon interval (TUs) */
+#define	IEEE80211_BINTVAL_MAX		1000	/* max beacon interval (TUs) */
+#define	IEEE80211_BINTVAL_MIN		25	/* min beacon interval (TUs) */
+#define	IEEE80211_BINTVAL_DEFAULT 	100	/* default beacon interval (TUs) */
 #define IEEE80211_BINTVAL_VALID(_bi) \
 	((IEEE80211_BINTVAL_MIN <= (_bi)) && \
 	 ((_bi) <= IEEE80211_BINTVAL_MAX))
 #define IEEE80211_BINTVAL_SANITISE(_bi) \
 	(IEEE80211_BINTVAL_VALID(_bi) ? \
 	 (_bi) : IEEE80211_BINTVAL_DEFAULT)
+
+#define IEEE80211_BMISSTHRESH_BMIN	2	/* min bmiss threshold (beacons) */
+/* Default beacon miss threshold is set to roundup from 850ms 
+ * This is halfway between the 10@100ms default from prior hardcoded setting for
+ * software beacon miss timers, and the 7@100ms default from prior hardcoded 
+ * timer value for hardware beacon miss timer.
+ * Based upon emperical evidence and practices of commercial vendors, I believe
+ * this should really be 2500ms by default. */
+#define IEEE80211_BMISSTHRESH_DEFAULT_MS 850
+
+#define IEEE80211_BMISSTHRESH_VALID(_bmt) \
+	(IEEE80211_BMISSTHRESH_BMIN <= (_bmt))
+#define IEEE80211_BMISSTHRESH_SANITISE(_bmt) \
+	((IEEE80211_BMISSTHRESH_BMIN > (_bmt)) ? \
+	 IEEE80211_BMISSTHRESH_BMIN : (_bmt))
 
 #define	IEEE80211_BGSCAN_INTVAL_MIN	15	/* min bg scan intvl (secs) */
 #define	IEEE80211_BGSCAN_INTVAL_DEFAULT	(5*60)	/* default bg scan intvl */
@@ -88,8 +103,6 @@
 #define	IEEE80211_XR_FRAG_THRESHOLD	540
 
 #define	IEEE80211_FIXED_RATE_NONE	-1
-
-#define IEEE80211_SWBMISS_THRESHOLD	10 	/* software beacon miss threshold, in TUs */
 
 #define DEV_NAME(_d) \
 	 ((NULL == _d || NULL == _d->name || 0 == strncmp(_d->name, "wifi%d", 6)) ? \
@@ -303,7 +316,7 @@ struct ieee80211com {
 	u_int16_t ic_curmode;			/* current mode */
 	u_int16_t ic_lintval;			/* beacon interval */
 	u_int16_t ic_holdover;			/* PM hold over duration */
-	u_int16_t ic_bmisstimeout;		/* beacon miss threshold (ms) */
+	u_int16_t ic_bmissthreshold;		/* beacon miss threshold (# beacons) */
 	unsigned long ic_bmiss_guard;		/* when to cease ignoring bmiss (jiffies) */
 	u_int16_t ic_txpowlimit; 		/* global tx power limit (in 0.5 dBm) */
 	u_int16_t ic_newtxpowlimit; 		/* tx power limit to change to (in 0.5 dBm) */

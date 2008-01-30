@@ -5240,17 +5240,11 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 		bs.bs_timoffset = ni->ni_timoff;
 #endif
 		/*
-		 * Calculate the number of consecutive beacons to miss
-		 * before taking a BMISS interrupt.  The configuration
-		 * is specified in TU so we only need calculate based
-		 * on the beacon interval.  Note that we clamp the
-		 * result to at most 10 beacons.
+		 * Store the number of consecutive beacons to miss
+		 * before taking a BMISS interrupt.
 		 */
-		bs.bs_bmissthreshold = howmany(ic->ic_bmisstimeout, intval);
-		if (bs.bs_bmissthreshold > 10)
-			bs.bs_bmissthreshold = 10;
-		else if (bs.bs_bmissthreshold < 2)
-			bs.bs_bmissthreshold = 2;
+		bs.bs_bmissthreshold = 
+			IEEE80211_BMISSTHRESH_SANITISE(ic->ic_bmissthreshold);
 
 		/*
 		 * Calculate sleep duration.  The configuration is

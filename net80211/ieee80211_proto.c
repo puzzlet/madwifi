@@ -1601,7 +1601,7 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 			vap->iv_swbmiss.function = ieee80211_sta_swbmiss;
 			vap->iv_swbmiss.data = (unsigned long) vap;
 			vap->iv_swbmiss_period = IEEE80211_TU_TO_JIFFIES(
-				IEEE80211_SWBMISS_THRESHOLD * ni->ni_intval);
+				vap->iv_ic->ic_bmissthreshold * ni->ni_intval);
 
 			mod_timer(&vap->iv_swbmiss, jiffies + vap->iv_swbmiss_period);
 		}

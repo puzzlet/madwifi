@@ -322,9 +322,18 @@ ieee80211_ifattach(struct ieee80211com *ic)
 		ic->ic_flags |= IEEE80211_F_WME;
 	(void) ieee80211_setmode(ic, ic->ic_curmode);
 
+	/* Store default beacon interval, as nec. */
 	if (ic->ic_lintval == 0)
 		ic->ic_lintval = IEEE80211_BINTVAL_DEFAULT;
-	ic->ic_bmisstimeout = 7 * ic->ic_lintval;	/* default 7 beacons */
+
+	/* We store the beacon miss threshold in integral number of beacons,
+	 * to keep the calculations on the critical path simple. */
+	if (ic->ic_bmissthreshold == 0) {
+		ic->ic_bmissthreshold = howmany(roundup(
+			IEEE80211_MS_TO_TU(IEEE80211_BMISSTHRESH_DEFAULT_MS), 
+			ic->ic_lintval), ic->ic_lintval);
+	}
+		
 	IEEE80211_LOCK_INIT(ic, "ieee80211com");
 	IEEE80211_VAPS_LOCK_INIT(ic, "ieee80211com_vaps");
 	TAILQ_INIT(&ic->ic_vaps);

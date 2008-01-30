@@ -2264,7 +2264,7 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 	unsigned int param = i[0];		/* parameter id is 1st */
 	unsigned int value = i[1];		/* NB: most values are TYPE_INT */
 	int retv = 0;
-	int j, caps;
+	int j, caps, bmiss;
 	const struct ieee80211_authenticator *auth;
 	const struct ieee80211_aclator *acl;
 
@@ -2567,12 +2567,43 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		} else
 			retv = EINVAL;
 		break;
+	case IEEE80211_PARAM_BEACON_MISS_THRESH_MS:
+		if ((vap->iv_opmode != IEEE80211_M_IBSS) &&
+		    (vap->iv_opmode != IEEE80211_M_STA))
+			return -EOPNOTSUPP;
+		/* Convert millis to TU to next highest integral # beacons */
+		bmiss = howmany(roundup(IEEE80211_MS_TO_TU(value), 
+				ic->ic_lintval), ic->ic_lintval);
+		if (IEEE80211_BMISSTHRESH_VALID(bmiss)) {
+			ic->ic_bmissthreshold = bmiss;
+			retv = ENETRESET;		/* requires restart */
+		} else
+			retv = EINVAL;
+		break;
+	case IEEE80211_PARAM_BEACON_MISS_THRESH:
+		if ((vap->iv_opmode != IEEE80211_M_IBSS) &&
+		    (vap->iv_opmode != IEEE80211_M_STA))
+			return -EOPNOTSUPP;
+		if (IEEE80211_BMISSTHRESH_VALID(value)) {
+			ic->ic_bmissthreshold = value;
+			retv = ENETRESET;		/* requires restart */
+		} else
+			retv = EINVAL;
+		break;
 	case IEEE80211_PARAM_BEACON_INTERVAL:
 		if ((vap->iv_opmode != IEEE80211_M_HOSTAP) &&
 		    (vap->iv_opmode != IEEE80211_M_IBSS))
 			return -EOPNOTSUPP;
 		if (IEEE80211_BINTVAL_VALID(value)) {
-			ic->ic_lintval = value;		/* XXX multi-bss */
+			/* Convert millis to TU to next highest integral # beacons */
+			bmiss = howmany(roundup(ic->ic_bmissthreshold * ic->ic_lintval, 
+					value), value);
+			/* Adjust beacon miss interval during a beacon interval
+			 * change so that the duration of missed beacons allowed
+			 * is greater than or equal to the old allowed duration 
+			 * of missed beacons.  */
+			ic->ic_bmissthreshold = bmiss;
+			ic->ic_lintval = value;
 			retv = ENETRESET;		/* requires restart */
 		} else
 			retv = EINVAL;
@@ -3022,6 +3053,13 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		break;
 	case IEEE80211_PARAM_DTIM_PERIOD:
 		param[0] = vap->iv_dtim_period;
+		break;
+	case IEEE80211_PARAM_BEACON_MISS_THRESH_MS:
+		param[0] = IEEE80211_TU_TO_MS(
+			vap->iv_ic->ic_bmissthreshold * vap->iv_ic->ic_lintval);
+		break;
+	case IEEE80211_PARAM_BEACON_MISS_THRESH:
+		param[0] = vap->iv_ic->ic_bmissthreshold;
 		break;
 	case IEEE80211_PARAM_BEACON_INTERVAL:
 		/* NB: get from ic_bss for station mode */
@@ -5381,6 +5419,14 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "bintval" },
 	{ IEEE80211_PARAM_BEACON_INTERVAL,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_bintval" },
+	{ IEEE80211_PARAM_BEACON_MISS_THRESH_MS,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "bmiss_ms" },
+	{ IEEE80211_PARAM_BEACON_MISS_THRESH_MS,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_bmiss_ms" },
+	{ IEEE80211_PARAM_BEACON_MISS_THRESH,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "bmiss" },
+	{ IEEE80211_PARAM_BEACON_MISS_THRESH,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_bmiss" },
 	{ IEEE80211_PARAM_DOTH,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "doth" },
 	{ IEEE80211_PARAM_DOTH,
