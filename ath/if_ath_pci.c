@@ -332,7 +332,7 @@ ath_pci_resume(struct pci_dev *pdev)
 
 MODULE_DEVICE_TABLE(pci, ath_pci_id_table);
 
-static struct pci_driver ath_pci_drv_id = {
+static struct pci_driver ath_pci_driver = {
 	.name		= "ath_pci",
 	.id_table	= ath_pci_id_table,
 	.probe		= ath_pci_probe,
@@ -378,7 +378,7 @@ init_ath_pci(void)
 {
 	printk(KERN_INFO "%s: %s\n", dev_info, version);
 
-	if (pci_register_driver(&ath_pci_drv_id) < 0) {
+	if (pci_register_driver(&ath_pci_driver) < 0) {
 		printk(KERN_ERR "%s: No devices found, driver not installed.\n", dev_info);
 		return (-ENODEV);
 	}
@@ -391,7 +391,7 @@ static void __exit
 exit_ath_pci(void)
 {
 	ath_sysctl_unregister();
-	pci_unregister_driver(&ath_pci_drv_id);
+	pci_unregister_driver(&ath_pci_driver);
 
 	printk(KERN_INFO "%s: driver unloaded\n", dev_info);
 }
