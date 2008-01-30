@@ -1698,7 +1698,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 			}
 			skb = bf->bf_skb;
 			if (skb == NULL) {
-				EPRINTF(sc, "skb is NULL in received ath_buf.\n");
+				EPRINTF(sc, "Dropping; skb is NULL in received ath_buf.\n");
 				continue;
 			}
 
@@ -3172,6 +3172,11 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ath_buf *tbf, *tempbf;
 	struct sk_buff *tskb;
 	int framecnt;
+	/* We will use the requeue flag to denote when to stuff a skb back into
+	 * the OS queues.  This should NOT be done under low memory conditions,
+	 * such as skb allocation failure.  However, it should be done for the
+	 * case where all the dma buffers are in use (take_txbuf returns null).
+	*/
 	int requeue = 0;
 #ifdef ATH_SUPERG_FF
 	unsigned int pktlen;
@@ -3198,6 +3203,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	if (SKB_CB(skb)->flags & M_RAW) {
 		bf = ath_take_txbuf(sc);
 		if (bf == NULL) {
+			/* All DMA buffers full, safe to try again. */
 			requeue = 1;
 			goto hardstart_fail;
 		}
@@ -3218,6 +3224,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		/* bypass FF handling */
 		bf = ath_take_txbuf(sc);
 		if (bf == NULL) {
+			/* All DMA buffers full, safe to try again. */
 			requeue = 1;
 			goto hardstart_fail;
 		}
@@ -3233,6 +3240,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	txq = sc->sc_ac2q[skb->priority];
 
 	if (txq->axq_depth > TAIL_DROP_COUNT) {
+		/* Wish to reserve some DMA buffers, try again later. */ 
 		requeue = 1;
 		goto hardstart_fail;
 	}
@@ -3245,7 +3253,9 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		struct sk_buff *skb_orig = skb;
 		skb = skb_copy(skb, GFP_ATOMIC);
 		if (skb == NULL) {
-			requeue = 1;
+			DPRINTF(sc, ATH_DEBUG_XMIT,
+				"Dropping; skb_copy failure.\n");
+			/* No free RAM, do not requeue! */
 			goto hardstart_fail;
 		}
 		ieee80211_skb_copy_noderef(skb_orig, skb);
@@ -3288,7 +3298,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			bf = ath_take_txbuf(sc);
 			if (bf == NULL) {
 				ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
-				requeue = 1;
+				/* All DMA buffers full, safe to try again. */
 				goto hardstart_fail;
 			}
 			DPRINTF(sc, ATH_DEBUG_XMIT | ATH_DEBUG_FF,
@@ -3339,6 +3349,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			}
 			bf = ath_take_txbuf(sc);
 			if (bf == NULL) {
+				/* All DMA buffers full, safe to try again. */
 				requeue = 1;
 				goto hardstart_fail;
 			}
@@ -3356,6 +3367,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 		bf = ath_take_txbuf(sc);
 		if (bf == NULL) {
 			ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
+			/* All DMA buffers full, safe to try again. */
 			requeue = 1;
 			goto hardstart_fail;
 		}
@@ -3370,6 +3382,7 @@ ff_bypass:
 
 	bf = ath_take_txbuf(sc);
 	if (bf == NULL) {
+		/* All DMA buffers full, safe to try again. */
 		requeue = 1;
 		goto hardstart_fail;
 	}
@@ -3458,7 +3471,7 @@ hardstart_fail:
 	/* Pass control of the skb to the caller (i.e., resources are their 
 	 * problem). */
 	if (requeue) {
-		/* queue is full, let the kernel backlog the skb */
+		/* Queue is full, let the kernel backlog the skb */
 		netif_stop_queue(dev);
 		sc->sc_devstopped = 1;
 		/* Stop tracking again we are giving it back*/
@@ -6017,6 +6030,9 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 			skb = ieee80211_dev_alloc_skb(sc->sc_rxbufsize + 
 					extra + sc->sc_cachelsz - 1);
 			if (skb == NULL) {
+				DPRINTF(sc, ATH_DEBUG_ANY,
+					"Dropping; skbuff allocation failed; size: %u!\n",
+					sc->sc_rxbufsize + extra + sc->sc_cachelsz - 1);
 				sc->sc_stats.ast_rx_nobuf++;
 				return -ENOMEM;
 			}
@@ -6131,8 +6147,11 @@ ath_capture(struct net_device *dev, const struct ath_buf *bf,
 	/* Never copy the SKB, as it is ours on the RX side, and this is the 
 	 * last process on the TX side and we only modify our own headers. */
 	tskb = ath_skb_removepad(skb, 0 /* Copy SKB */);
-	if (tskb == NULL)
+	if (tskb == NULL) {
+		DPRINTF(sc, ATH_DEBUG_ANY,
+			"Dropping; ath_skb_removepad failed!\n");
 		return;
+	}
 	
 	ieee80211_input_monitor(ic, tskb, bf, tx, tsf, sc);
 }
