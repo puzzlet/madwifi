@@ -526,7 +526,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
 	/* Allocate space for dynamically determined maximum VAP count */
 	sc->sc_bslot = 
-		kzalloc(ath_maxvaps * sizeof(struct ieee80211vap), GFP_KERNEL);
+		kmalloc(ath_maxvaps * sizeof(struct ieee80211vap), GFP_KERNEL);
+	memset(sc->sc_bslot, 0, ath_maxvaps * sizeof(struct ieee80211vap));
 
 	/*
 	 * Cache line size is used to size and align various
@@ -1345,7 +1346,11 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 		}
 	}
 	avp->av_bslot = -1;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
 	atomic_set(&avp->av_beacon_alloc, 0);
+#else	
+	clear_bit(0, &avp->av_beacon_alloc);
+#endif
 	STAILQ_INIT(&avp->av_mcastq.axq_q);
 	ATH_TXQ_LOCK_INIT(&avp->av_mcastq);
 	if (IEEE80211_IS_MODE_BEACON(opmode)) {
@@ -4509,7 +4514,11 @@ ath_beacon_alloc(struct ath_softc *sc, struct ieee80211_node *ni)
 {
 	struct ath_vap * avp = ATH_VAP(ni->ni_vap);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
 	atomic_set(&avp->av_beacon_alloc, 1);
+#else
+	set_bit(0, &avp->av_beacon_alloc);
+#endif
 
 	return 0;
 }
@@ -4754,9 +4763,12 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	}
 #endif
 
-	if (atomic_add_unless(&avp->av_beacon_alloc, -1, 0)) {
-		ath_beacon_alloc_internal(sc, vap->iv_bss);
-	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
+		if (atomic_add_unless(&avp->av_beacon_alloc, -1, 0))
+#else
+		if (test_and_clear_bit(0, &avp->av_beacon_alloc))
+#endif
+			ath_beacon_alloc_internal(sc, vap->iv_bss);
 
 	/*
 	 * Update dynamic beacon contents.  If this returns

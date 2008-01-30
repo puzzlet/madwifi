@@ -49,6 +49,9 @@
 #include "net80211/ieee80211.h"		/* XXX for WME_NUM_AC */
 #include <asm/io.h>
 #include <linux/list.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,15)
+# include	<asm/bitops.h>
+#endif
 
 /*
  * Deduce if tasklets are available.  If not then
@@ -121,11 +124,6 @@ typedef void irqreturn_t;
 #define ATH_GET_NETDEV_DEV(ndev)	((ndev)->dev.parent)
 #else
 #define ATH_GET_NETDEV_DEV(ndev)	((ndev)->class_dev.dev)
-#endif
-
-#ifndef	NETDEV_TX_OK
-#define	NETDEV_TX_OK	0
-#define	NETDEV_TX_BUSY	1
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,23)
@@ -520,8 +518,12 @@ struct ath_vap {
 	struct ieee80211_beacon_offsets av_boff;/* dynamic update state */
 	int av_bslot;			/* beacon slot index */
 	struct ath_txq av_mcastq;	/* multicast transmit queue */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
 	atomic_t av_beacon_alloc;       /* set to 1 when the next beacon needs
 					   to be recomputed */
+#else
+	unsigned int av_beacon_alloc;
+#endif
 };
 #define	ATH_VAP(_v)	((struct ath_vap *)(_v))
 

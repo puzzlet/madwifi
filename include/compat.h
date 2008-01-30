@@ -42,7 +42,9 @@
 #ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/time.h>
+#include <linux/netdevice.h>
 #endif
+
 #if !defined(__KERNEL__) || !defined (__bitwise)
 #define __le16 u_int16_t
 #define __le32 u_int32_t
@@ -54,9 +56,21 @@
 #endif
 
 #ifndef container_of
-#define container_of(ptr, type, member) ({			\
+#define container_of(ptr, type, member) ({				\
 	    const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
 	    (type *)( (char *)__mptr - offsetof(type,member) );})
+#endif
+
+#ifndef list_for_each_entry_reverse
+#define list_for_each_entry_reverse(pos, head, member)			\
+	for (pos = list_entry((head)->prev, typeof(*pos), member);	\
+	     prefetch(pos->member.prev), &pos->member != (head); 	\
+	     pos = list_entry(pos->member.prev, typeof(*pos), member))
+#endif
+
+#ifndef NETDEV_TX_OK
+#define NETDEV_TX_OK    0
+#define NETDEV_TX_BUSY  1
 #endif
 
 /*

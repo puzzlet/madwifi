@@ -46,7 +46,12 @@
 #include <linux/netdevice.h>
 #include <linux/init.h>
 #include <linux/delay.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,11)
+#include "sort.c"
+#else
 #include <linux/sort.h>
+#endif
 
 #include "if_media.h"
 

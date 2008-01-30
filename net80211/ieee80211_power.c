@@ -52,11 +52,6 @@
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_proto.h>
 
-#ifndef	NETDEV_TX_OK
-#define	NETDEV_TX_OK	0
-#define	NETDEV_TX_BUSY	1
-#endif
-
 static void ieee80211_set_tim(struct ieee80211_node *ni, int set);
 
 void
