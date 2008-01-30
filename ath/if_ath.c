@@ -8725,7 +8725,9 @@ ath_calibrate(unsigned long arg)
 			"HAL_RFGAIN_NEED_CHANGE)\n");
 		sc->sc_stats.ast_per_rfgain++;
 
-		/* XXX: Ugly workaround */
+		/* Even if beacons were not enabled presently,
+		 * set sc->beacons if we might need to restart
+                 * them after ath_reset. */
 		if (!sc->sc_beacons &&
 				(TAILQ_FIRST(&ic->ic_vaps)->iv_opmode != 
 				 IEEE80211_M_WDS) &&
