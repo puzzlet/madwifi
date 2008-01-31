@@ -25,6 +25,8 @@ endif
 
 # Determine the target (i.e. which HAL to use).
 # The default is $(ARCH)-elf
+TARGET-$(CONFIG_X86) = i386-elf
+TARGET-$(CONFIG_X86_64) = x86_64-elf
 TARGET-$(CONFIG_CPU_32v4) = armv4-$(ENDIAN)-elf
 TARGET-$(CONFIG_CPU_MIPS32_R1) = mips1-$(ENDIAN)-elf
 TARGET-$(CONFIG_CPU_MIPS32_R2) = mips-$(ENDIAN)-elf
