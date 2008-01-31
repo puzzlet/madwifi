@@ -2571,9 +2571,8 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		if ((vap->iv_opmode != IEEE80211_M_IBSS) &&
 		    (vap->iv_opmode != IEEE80211_M_STA))
 			return -EOPNOTSUPP;
-		/* Convert millis to TU to next highest integral # beacons */
-		bmiss = howmany(roundup(IEEE80211_MS_TO_TU(value), 
-				ic->ic_lintval), ic->ic_lintval);
+		/* Convert ms to TU to next highest integral # beacons */
+		bmiss = howmany(IEEE80211_MS_TO_TU(value), ic->ic_lintval);
 		if (IEEE80211_BMISSTHRESH_VALID(bmiss)) {
 			ic->ic_bmissthreshold = bmiss;
 			retv = ENETRESET;		/* requires restart */
@@ -2595,9 +2594,10 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		    (vap->iv_opmode != IEEE80211_M_IBSS))
 			return -EOPNOTSUPP;
 		if (IEEE80211_BINTVAL_VALID(value)) {
-			/* Convert millis to TU to next highest integral # beacons */
-			bmiss = howmany(roundup(ic->ic_bmissthreshold * ic->ic_lintval, 
-					value), value);
+			/* Convert ms to TU to next highest integral 
+			 * # beacons. */
+			bmiss = howmany(ic->ic_bmissthreshold * 
+					ic->ic_lintval, value);
 			/* Adjust beacon miss interval during a beacon interval
 			 * change so that the duration of missed beacons allowed
 			 * is greater than or equal to the old allowed duration 
