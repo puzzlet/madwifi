@@ -20,6 +20,7 @@
 #include <linux/netdevice.h>
 #include <linux/cache.h>
 #include <linux/platform_device.h>
+#include <linux/ethtool.h>
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -36,6 +37,13 @@
 #error "Kernel versions older than 2.6.19 are not supported!"
 #endif
 
+/*
+ * Module glue.
+ */
+#include "release.h"
+static char *version = RELEASE_VERSION;
+static char *dev_info = "ath_ahb";
+
 struct ath_ahb_softc {
 	struct ath_softc	aps_sc;
 #ifdef CONFIG_PM
@@ -46,14 +54,6 @@ struct ath_ahb_softc {
 static struct ath_ahb_softc *sclist[2] = {NULL, NULL};
 static u_int8_t num_activesc = 0;
 
-/*
- * Module glue.
- */
-#include "release.h"
-static char *version = RELEASE_VERSION;
-static char *dev_info = "ath_ahb";
-
-#include <linux/ethtool.h>
 
 /* set bus cachesize in 4B word units */
 void
