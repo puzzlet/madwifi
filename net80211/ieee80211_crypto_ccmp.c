@@ -98,6 +98,7 @@ static void *
 ccmp_attach(struct ieee80211vap *vap, struct ieee80211_key *k)
 {
 	struct ccmp_ctx *ctx;
+	int status = 1;
 
 	_MOD_INC_USE(THIS_MODULE, return NULL);
 
@@ -105,29 +106,39 @@ ccmp_attach(struct ieee80211vap *vap, struct ieee80211_key *k)
 		M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (ctx == NULL) {
 		vap->iv_stats.is_crypto_nomem++;
-		_MOD_DEC_USE(THIS_MODULE);
-		return NULL;
+		status = 0;
 	}
 
-	ctx->cc_vap = vap;
-	ctx->cc_ic = vap->iv_ic;
-
-/* This function (crypto_alloc_foo might sleep. Therefore:
- * Context: process
- */
+/* This function crypto_alloc_foo might sleep. Therefore:
+ * Context: process */
+	if (k->wk_flags & IEEE80211_KEY_SWCRYPT) {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
-	ctx->cc_tfm = crypto_alloc_tfm("aes", 0);
+		ctx->cc_tfm = crypto_alloc_tfm("aes", 0);
 #else
-	ctx->cc_tfm = crypto_alloc_cipher("aes", 0,
-					CRYPTO_ALG_ASYNC);
-	if (IS_ERR(ctx->cc_tfm))
-		ctx->cc_tfm = NULL;
+		ctx->cc_tfm = crypto_alloc_cipher("aes", 0,
+				CRYPTO_ALG_ASYNC);
+		if (IS_ERR(ctx->cc_tfm))
+			ctx->cc_tfm = NULL;
 #endif
 	
-	if (ctx->cc_tfm == NULL) {
-		IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
-				"%s: unable to load kernel AES crypto support\n",
-				__func__);
+		if (ctx->cc_tfm == NULL) {
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
+					"%s: kernel support for AES "
+					"cryptography is not available; the "
+					"module may not be loaded.\n", 
+					__func__);
+			FREE(ctx, M_DEVBUF);
+			ctx = NULL;
+			vap->iv_stats.is_crypto_nocipher++;
+			status = 0;
+		}
+	}
+
+	if (!status)
+		_MOD_DEC_USE(THIS_MODULE);
+	else {
+		ctx->cc_vap = vap;
+		ctx->cc_ic = vap->iv_ic;
 	}
 
 	return ctx;
@@ -161,16 +172,8 @@ ccmp_setkey(struct ieee80211_key *k)
 		return 0;
 	}
 
-	if (k->wk_flags & IEEE80211_KEY_SWCRYPT) {
-		if (ctx->cc_tfm == NULL) {
-			IEEE80211_DPRINTF(ctx->cc_vap, IEEE80211_MSG_CRYPTO,
-				"%s: Tried to add a software crypto key, but software crypto is not available\n",
-				__func__);
-			return 0;
-		}
-
+	if (k->wk_flags & IEEE80211_KEY_SWCRYPT)
 		crypto_cipher_setkey(ctx->cc_tfm, k->wk_key, k->wk_keylen);
-	}
 
 	return 1;
 }
