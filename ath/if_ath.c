@@ -9565,10 +9565,9 @@ ath_getchannels(struct net_device *dev, u_int cc,
 		kfree(chans);
 		return -EINVAL;
 	}
-	/*
-	 * Convert HAL channels to ieee80211 ones.
-	 */
-	IPRINTF(sc, "HAL returned %d channels.\n", nchan);
+	
+	/* Convert HAL channels to ieee80211 ones. */
+	DPRINTF(sc, ATH_DEBUG_RATE, "HAL returned %d channels.\n", nchan);
 	for (i = 0; i < nchan; i++) {
 		HAL_CHANNEL *c = &chans[i];
 		struct ieee80211_channel *ichan = &ic->ic_channels[i];
@@ -9595,7 +9594,8 @@ ath_getchannels(struct net_device *dev, u_int cc,
 		ic->ic_chan_non_occupy[i].tv_sec  = 0;
 		ic->ic_chan_non_occupy[i].tv_usec = 0;
 
-		IPRINTF(sc, "Channel %3d (%4d MHz) Max Tx Power %d dBm%s "
+		DPRINTF(sc, ATH_DEBUG_RATE,
+				"Channel %3d (%4d MHz) Max Tx Power %d dBm%s "
 				"[%d hw %d reg] Flags%s%s%s%s%s%s%s%s%s%s%s%s%"
 				"s%s%s%s%s%s%s%s%s%s%s%s\n",
 				ichan->ic_ieee,
