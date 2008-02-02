@@ -6589,8 +6589,15 @@ rx_next:
 		ATH_RXBUF_UNLOCK_IRQ(sc);
 	} while (ath_rxbuf_init(sc, bf) == 0);
 
-	/* rx signal state monitoring */
-	ath_hal_rxmonitor(ah, &sc->sc_halstats, &sc->sc_curchan);
+	/* RX signal state monitoring. 
+	 * XXX: GIANT HACK
+	 *      With 0.9.30.13 ANI control appears to be broken. ANI is designed 
+	 *      only for client (STA/AHDEMO) only mode. This function updates
+	 *      the data used for ANI, so we will only call it for client only
+	 *      mode. 
+	 *      This may will not affect ANI problems in client only mode. */
+	if (sc->sc_opmode == HAL_M_STA)
+		ath_hal_rxmonitor(ah, &sc->sc_halstats, &sc->sc_curchan);
 #undef PA2DESC
 }
 
