@@ -6319,9 +6319,8 @@ ath_rx_tasklet(TQUEUE_ARG data)
 	struct ath_rx_status *rs;
 	struct sk_buff *skb = NULL;
 	struct ieee80211_node *ni;
-	unsigned int len;
+	unsigned int len, phyerr, mic_fail = 0;
 	int type;
-	u_int phyerr;
 
 	DPRINTF(sc, ATH_DEBUG_RX_PROC, "invoked\n");
 	do {
@@ -6412,29 +6411,12 @@ ath_rx_tasklet(TQUEUE_ARG data)
 			}
 			if (rs->rs_status & HAL_RXERR_MIC) {
 				sc->sc_stats.ast_rx_badmic++;
-				/*
-				 * Do minimal work required to hand off
-				 * the 802.11 header for notification.
-				 */
-				/* XXX frag's and QoS frames */
-				if (len >= sizeof (struct ieee80211_frame)) {
-					bus_dma_sync_single(sc->sc_bdev,
-					    bf->bf_skbaddr, len,
-					    BUS_DMA_FROMDEVICE);
-#if 0
-/* XXX revalidate MIC, lookup ni to find VAP */
-					ieee80211_notify_michael_failure(ic,
-					    (struct ieee80211_frame *)skb->data,
-					    sc->sc_splitmic ?
-					        rs->rs_keyix - 32 : rs->rs_keyix
-					);
-#endif
-				}
+				mic_fail = 1;
+				goto rx_accept;
 			}
-			/*
-			 * Reject error frames if we have no vaps that
-			 * are operating in monitor mode.
-			 */
+
+			/* Reject error frames if we have no vaps that
+			 * are operating in monitor mode. */
 			if (sc->sc_nmonvaps == 0)
 				goto rx_next;
 		}
@@ -6464,11 +6446,10 @@ rx_accept:
 
 		ath_capture(dev, bf, skb, bf->bf_tsf, 0 /* RX */);
 
-		/*
-		 * Finished monitor mode handling, now reject
-		 * error frames before passing to other vaps
-		 */
-		if (rs->rs_status != 0) {
+		/* Finished monitor mode handling, now reject error frames 
+		 * before passing to other VAPs. Ignore MIC failures here, as 
+		 * we need to recheck them. */
+		if (rs->rs_status & ~(HAL_RXERR_MIC | HAL_RXERR_DECRYPT)) {
 			ieee80211_dev_kfree_skb(&skb);
 			goto rx_next;
 		}
@@ -6476,10 +6457,31 @@ rx_accept:
 		/* remove the CRC */
 		skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
 
-		/*
-		 * From this point on we assume the frame is at least
-		 * as large as ieee80211_frame_min; verify that.
-		 */
+		if (mic_fail) {
+			/* Ignore control frames which are reported with MIC 
+			 * error. */
+			if ((((struct ieee80211_frame *)skb->data)->i_fc[0] &
+						 IEEE80211_FC0_TYPE_MASK) == 
+						IEEE80211_FC0_TYPE_CTL)
+				goto drop_micfail;
+
+			ni = ieee80211_find_rxnode(ic, (const struct 
+						ieee80211_frame_min *)skb->data);
+			if (ni) {
+				if (ni->ni_table)
+					ieee80211_check_mic(ni, skb);
+				ieee80211_unref_node(&ni);
+			}
+
+drop_micfail:
+			ieee80211_dev_kfree_skb(&skb);
+			skb = NULL;
+			mic_fail = 0;
+			goto rx_next;
+		}
+
+		/* From this point on we assume the frame is at least
+		 * as large as ieee80211_frame_min; verify that: */
 		if (len < IEEE80211_MIN_LEN) {
 			DPRINTF(sc, ATH_DEBUG_RECV, "Dropping short packet; length %d.\n",
 				len);
@@ -6488,9 +6490,7 @@ rx_accept:
 			goto rx_next;
 		}
 
-		/*
-		 * Normal receive.
-		 */
+		/* Normal receive. */
 		if (IFF_DUMPPKTS(sc, ATH_DEBUG_RECV))
 			ieee80211_dump_pkt(ic, skb->data, skb->len,
 				   sc->sc_hwmap[rs->rs_rate].ieeerate,

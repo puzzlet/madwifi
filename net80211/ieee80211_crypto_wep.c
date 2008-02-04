@@ -54,7 +54,7 @@ static int wep_setkey(struct ieee80211_key *);
 static int wep_encap(struct ieee80211_key *, struct sk_buff *, u_int8_t);
 static int wep_decap(struct ieee80211_key *, struct sk_buff *, int);
 static int wep_enmic(struct ieee80211_key *, struct sk_buff *, int);
-static int wep_demic(struct ieee80211_key *, struct sk_buff *, int);
+static int wep_demic(struct ieee80211_key *, struct sk_buff *, int, int);
 
 static const struct ieee80211_cipher wep = {
 	.ic_name	= "WEP",
@@ -198,7 +198,7 @@ wep_encap(struct ieee80211_key *k, struct sk_buff *skb, u_int8_t keyid)
  * Add MIC to the frame as needed.
  */
 static int
-wep_enmic(struct ieee80211_key *k, struct sk_buff *skb, int force)
+wep_enmic(struct ieee80211_key *k, struct sk_buff *skb, int force_sw)
 {
 	return 1;
 }
@@ -244,7 +244,7 @@ wep_decap(struct ieee80211_key *k, struct sk_buff *skb, int hdrlen)
  * Verify and strip MIC from the frame.
  */
 static int
-wep_demic(struct ieee80211_key *k, struct sk_buff *skb, int hdrlen)
+wep_demic(struct ieee80211_key *k, struct sk_buff *skb, int hdrlen, int force_sw)
 {
 	return 1;
 }

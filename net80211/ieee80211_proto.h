@@ -90,6 +90,7 @@ int ieee80211_iserp_rateset(struct ieee80211com *, struct ieee80211_rateset *);
 void ieee80211_set11gbasicrates(struct ieee80211_rateset *, enum ieee80211_phymode);
 enum ieee80211_phymode ieee80211_get11gbasicrates(struct ieee80211_rateset *);
 void ieee80211_send_pspoll(struct ieee80211_node *);
+void ieee80211_check_mic(struct ieee80211_node *, struct sk_buff *);
 
 /*
  * Return the size of the 802.11 header for a management or data frame.

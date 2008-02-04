@@ -196,6 +196,7 @@ print_sta_stats(FILE *fd, const u_int8_t macaddr[IEEE80211_ADDR_LEN])
 	STAT(rx_noprivacy, "%u");
 	STAT(rx_wepfail, "%u");
 	STAT(rx_demicfail, "%u");
+	STAT(rx_hwdemicerr, "%u");
 	STAT(rx_decap, "%u");
 	STAT(rx_defrag, "%u");
 	STAT(rx_disassoc, "%u");

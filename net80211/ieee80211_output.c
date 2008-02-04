@@ -1074,13 +1074,16 @@ ieee80211_encap(struct ieee80211_node *ni, struct sk_buff *skb, int *framecnt)
 			cip = (struct ieee80211_cipher *) key->wk_cipher;
 			ciphdrsize = cip->ic_header;
 			tailsize += (cip->ic_trailer + cip->ic_miclen);
+
+			/* Add the 8 bytes MIC length. */
+			if (cip->ic_cipher == IEEE80211_CIPHER_TKIP)
+				pktlen += IEEE80211_WEP_MICLEN;
 		}
 
 		pdusize = vap->iv_fragthreshold - (hdrsize_nopad + ciphdrsize);
 		fragcnt = *framecnt =
-			((pktlen - (hdrsize_nopad + ciphdrsize)) / pdusize) +
-			(((pktlen - (hdrsize_nopad + ciphdrsize)) %
-				pdusize == 0) ? 0 : 1);
+			((pktlen - hdrsize_nopad) / pdusize) +
+			(((pktlen - hdrsize_nopad) % pdusize == 0) ? 0 : 1);
 
 		/*
 		 * Allocate sk_buff for each subsequent fragment; First fragment

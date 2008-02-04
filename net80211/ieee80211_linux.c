@@ -334,8 +334,8 @@ ieee80211_notify_replay_failure(struct ieee80211vap *vap,
 	/* TODO: needed parameters: count, keyid, key type, src address, TSC */
 	snprintf(buf, sizeof(buf), "%s(keyid=%d %scast addr=" MAC_FMT ")", tag,
 		k->wk_keyix,
-		IEEE80211_IS_MULTICAST(wh->i_addr1) ?  "broad" : "uni",
-		MAC_ADDR(wh->i_addr1));
+		IEEE80211_IS_MULTICAST(wh->i_addr2) ?  "broad" : "uni",
+		MAC_ADDR(wh->i_addr2));
 	memset(&wrqu, 0, sizeof(wrqu));
 	wrqu.data.length = strlen(buf);
 	wireless_send_event(dev, IWEVCUSTOM, &wrqu, buf);

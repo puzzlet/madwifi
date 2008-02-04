@@ -145,7 +145,7 @@ struct ieee80211_cipher {
 	int (*ic_encap)(struct ieee80211_key *, struct sk_buff *, u_int8_t);
 	int (*ic_decap)(struct ieee80211_key *, struct sk_buff *, int);
 	int (*ic_enmic)(struct ieee80211_key *, struct sk_buff *, int);
-	int (*ic_demic)(struct ieee80211_key *, struct sk_buff *, int);
+	int (*ic_demic)(struct ieee80211_key *, struct sk_buff *, int, int);
 };
 extern const struct ieee80211_cipher ieee80211_cipher_none;
 
@@ -163,10 +163,10 @@ struct ieee80211_key *ieee80211_crypto_decap(struct ieee80211_node *,
  */
 static __inline int
 ieee80211_crypto_demic(struct ieee80211vap *vap, struct ieee80211_key *k,
-	struct sk_buff *skb, int hdrlen)
+	struct sk_buff *skb, int hdrlen, int force_sw)
 {
 	const struct ieee80211_cipher *cip = k->wk_cipher;
-	return (cip->ic_miclen > 0 ? cip->ic_demic(k, skb, hdrlen) : 1);
+	return (cip->ic_miclen > 0 ? cip->ic_demic(k, skb, hdrlen, force_sw) : 1);
 }
 
 /*
@@ -174,10 +174,10 @@ ieee80211_crypto_demic(struct ieee80211vap *vap, struct ieee80211_key *k,
  */
 static __inline int
 ieee80211_crypto_enmic(struct ieee80211vap *vap, struct ieee80211_key *k,
-	struct sk_buff *skb, int force)
+	struct sk_buff *skb, int force_sw)
 {
 	const struct ieee80211_cipher *cip = k->wk_cipher;
-	return (cip->ic_miclen > 0 ? cip->ic_enmic(k, skb, force) : 1);
+	return (cip->ic_miclen > 0 ? cip->ic_enmic(k, skb, force_sw) : 1);
 }
 
 /* 

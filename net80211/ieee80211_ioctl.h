@@ -51,13 +51,14 @@ struct ieee80211_nodestats {
 	u_int32_t ns_rx_ucast;		/* rx unicast frames */
 	u_int32_t ns_rx_mcast;		/* rx multi/broadcast frames */
 	u_int64_t ns_rx_bytes;		/* rx data count (bytes) */
-	u_int64_t ns_rx_beacons;		/* rx beacon frames */
+	u_int64_t ns_rx_beacons;	/* rx beacon frames */
 	u_int32_t ns_rx_proberesp;	/* rx probe response frames */
 
 	u_int32_t ns_rx_dup;		/* rx discard because it's a dup */
 	u_int32_t ns_rx_noprivacy;	/* rx w/ wep but privacy off */
-	u_int32_t ns_rx_wepfail;		/* rx wep processing failed */
+	u_int32_t ns_rx_wepfail;	/* rx wep processing failed */
 	u_int32_t ns_rx_demicfail;	/* rx demic failed */
+	u_int32_t ns_rx_hwdemicerr;	/* RX HW demic spurious failure */
 	u_int32_t ns_rx_decap;		/* rx decapsulation failed */
 	u_int32_t ns_rx_defrag;		/* rx defragmentation failed */
 	u_int32_t ns_rx_disassoc;	/* rx disassociation */
@@ -79,7 +80,7 @@ struct ieee80211_nodestats {
 
 	u_int32_t ns_tx_eosplost;	/* uapsd EOSP retried out */
 
-	u_int32_t ns_ps_discard;		/* ps discard due to of age */
+	u_int32_t ns_ps_discard;	/* ps discard due to of age */
 
 	u_int32_t ns_uapsd_triggers;	/* uapsd triggers */
 

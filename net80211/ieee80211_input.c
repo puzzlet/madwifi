@@ -672,7 +672,7 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 		 * Next strip any MSDU crypto bits.
 		 */
 		if (key != NULL &&
-		    !ieee80211_crypto_demic(vap, key, skb, hdrspace)) {
+		    !ieee80211_crypto_demic(vap, key, skb, hdrspace, 0)) {
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
 				ni->ni_macaddr, "data", "%s", "demic error");
 			IEEE80211_NODE_STAT(ni, rx_demicfail);
@@ -4276,6 +4276,43 @@ ath_eth_type_trans(struct sk_buff *skb, struct net_device *dev)
 	return eth->h_proto;
 }
 #endif
+
+/* Re-process a frame w/ HW detected MIC failure, as it may be a false 
+ * negative. The frame will be dropped in any case. */
+void
+ieee80211_check_mic(struct ieee80211_node *ni, struct sk_buff *skb)
+{
+	struct ieee80211vap *vap = ni->ni_vap;
+	struct ieee80211_frame *wh;
+	struct ieee80211_key *key;
+	int hdrspace;
+	struct ieee80211com *ic = vap->iv_ic;
+
+	if (skb->len < sizeof(struct ieee80211_frame_min)) {
+		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY, 
+				ni->ni_macaddr, NULL, 
+				"too short (1): len %u", skb->len);
+		vap->iv_stats.is_rx_tooshort++;
+		return;
+	}
+
+	wh = (struct ieee80211_frame *)skb->data;
+	hdrspace = ieee80211_hdrspace(ic, wh);
+
+	key = ieee80211_crypto_decap(ni, skb, hdrspace);
+	if (key == NULL) {
+		/* NB: stats+msgs handled in crypto_decap */
+		IEEE80211_NODE_STAT(ni, rx_wepfail);
+	} else if (!ieee80211_crypto_demic(vap, key, skb, hdrspace, 1)) {
+		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
+				ni->ni_macaddr, "data", "%s", "demic error");
+		IEEE80211_NODE_STAT(ni, rx_demicfail);
+	} else
+		IEEE80211_NODE_STAT(ni, rx_hwdemicerr);
+
+	return;
+}
+EXPORT_SYMBOL(ieee80211_check_mic);
 
 #ifdef IEEE80211_DEBUG
 /*
