@@ -2859,7 +2859,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	struct ath_softc *sc = dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 	struct ieee80211_phy_params *ph = (struct ieee80211_phy_params *)
-		(SKB_CB(skb) + sizeof(struct ieee80211_cb));
+		(SKB_CB(skb) + 1); /* NB: SKB_CB casts to CB struct*. */
 	const HAL_RATE_TABLE *rt;
 	unsigned int pktlen, hdrlen, try0, power;
 	HAL_PKT_TYPE atype;
