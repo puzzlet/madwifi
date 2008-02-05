@@ -107,7 +107,7 @@ fi
 
 
 # ask developer about the version of the new release
-reproot=$(svn info | grep URL | cut -d" " -f2 | cut -d"/" -f1-3)
+reproot=$(svn info | grep URL | cut -d" " -f2 | cut -d"/" -f1-4)
 latest=$(svn list $reproot/tags | grep -e "^release-" | cut -d"-" -f2 | cut -d"/" -f1 | sort | tail -n 1)
 
 echo
@@ -115,11 +115,17 @@ if [[ ! -z "$latest" ]]; then
     major=$(echo $latest | cut -d"." -f1)
     minor=$(echo $latest | cut -d"." -f2)
     point=$(echo $latest | cut -d"." -f3)
+    micro=$(echo $latest | cut -d"." -f4)
 
-    echo "The latest release is: $major.$minor.$point"
+    if [ -n "$micro" ]; then
+	echo "The latest release is: $major.$minor.$point.$micro"
+    else
+	micro="0"
+	echo "The latest release is: $major.$minor.$point"
+    fi
 else
     latest="0.0.0"
-    major="0"; minor="0"; point="0"
+    major="0"; minor="0"; point="0"; micro="0"
     
     echo "No releases yet."
 fi
@@ -131,25 +137,35 @@ while ! ((valid)); do
     echo " 1: major release (new version will be $((major+1)).0.0)"
     echo " 2: minor release (new version will be $major.$((minor+1)).0)"
     echo " 3: point release (new version will be $major.$minor.$((point+1)))"
-    echo " 4: other (enter new version manually)"
+    echo " 4: micro release (new version will be $major.$minor.$point.$((micro+1))"
+    echo " 5: other (enter new version manually)"
     echo " 0: abort"
     echo
 
     read -n1 -p "Your choice: " choice
     case "$choice" in
-    1) newmajor=$((major+1)); newminor=0; newpoint=0; valid=1 ;;
-    2) newmajor=$major; newminor=$((minor+1)); newpoint=0; valid=1 ;;
-    3) newmajor=$major; newminor=$minor; newpoint=$((point+1)); valid=1 ;;
-    4)
+    1) newmajor=$((major+1)); newminor=0; newpoint=0; newmicro=0; valid=1 ;;
+    2) newmajor=$major; newminor=$((minor+1)); newpoint=0; newmicro=0; valid=1 ;;
+    3) newmajor=$major; newminor=$minor; newpoint=$((point+1)); newmicro=0; valid=1 ;;
+    4) newmajor=$major; newminor=$minor; newpoint=$point; newmicro=$((micro+1)); valid=1 ;;
+    5)
 	echo
-	read -p "Enter release number (x.y.z): " newrelease
-	if [[ "$(echo $newrelease | grep -c '^[0-9]*\.[0-9]*\.[0-9]*$')" == "1" ]]; then
+	read -p "Enter release number (a.b.c.d): " newrelease
+	if [[ "$(echo $newrelease | grep -c '^[0-9]*\.[0-9]*\.[0-9]*\(\.[0-9]\)\?$')" == "1" ]]; then
 	    newmajor=$(echo $newrelease | cut -d"." -f1)
 	    newminor=$(echo $newrelease | cut -d"." -f2)
 	    newpoint=$(echo $newrelease | cut -d"." -f3)
+	    newmicro=$(echo $newrelease | cut -d"." -f4)
 	    
-	    if [[ "$(svn list $reproot/tags | grep -c ^release-$newmajor.$newminor.$newpoint)" != "0" ]]; then
-		echo "Release $newmajor.$newminor.$newpoint already exists. Try again."
+	    if [ -n "$newmicro" ]; then
+		newversion="$newmajor.$newminor.$newpoint.$newmicro"
+	    else
+		newversion="$newmajor.$newminor.$newpoint"
+		newmicro="0"
+	    fi
+	    
+	    if [[ "$(svn list $reproot/tags | grep -c ^release-$newversion)" != "0" ]]; then
+		echo "Release $newversion already exists. Try again."
 	    else
 		valid=1
 	    fi
@@ -170,8 +186,17 @@ while ! ((valid)); do
 done
 
 # reassure that everything is correct
-oldrelease="$major.$minor.$point"
-newrelease="$newmajor.$newminor.$newpoint"
+if [[ "$micro" != "0" ]]; then
+    oldrelease="$major.$minor.$point.$micro"
+else
+    oldrelease="$major.$minor.$point"
+fi
+
+if [[ "$newmicro" != "0" ]]; then
+    newrelease="$newmajor.$newminor.$newpoint.$newmicro"
+else
+    newrelease="$newmajor.$newminor.$newpoint"
+fi
 
 echo
 echo "Last release: $oldrelease"
@@ -233,7 +258,7 @@ store=$RELEASE_STORE
 }
 
 # remove old directories
-rm -r $tmp/madwifi-release/* > /dev/null
+rm -r $tmp/madwifi-release/* > /dev/null 2>&1
 
 # create tarball
 echo "exporting new release from repository..."
