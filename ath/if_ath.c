@@ -6596,7 +6596,7 @@ rx_next:
 	 *      the data used for ANI, so we will only call it for client only
 	 *      mode. 
 	 *      This may will not affect ANI problems in client only mode. */
-	if (sc->sc_opmode == HAL_M_STA)
+	if ((sc->sc_opmode == HAL_M_STA) || (sc->sc_opmode == HAL_M_IBSS))
 		ath_hal_rxmonitor(ah, &sc->sc_halstats, &sc->sc_curchan);
 #undef PA2DESC
 }
