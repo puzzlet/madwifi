@@ -5192,6 +5192,7 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 		HAL_BEACON_STATE bs;
 		int dtimperiod, dtimcount;
 		int cfpperiod, cfpcount;
+		unsigned int n;
 
 		/* Setup DTIM and CTP parameters according to last
 		 * beacon we received (which may not have
@@ -5205,19 +5206,13 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 		cfpperiod = 1;			/* NB: no PCF support yet */
 		cfpcount = 0;
 
-		/* Pull nexttbtt forward to reflect the current
-		 * TSF and calculate dtim+cfp state for the result. */
-		nexttbtt = tsftu;
-		if (nexttbtt == 0)		/* e.g. for ap mode */
-			nexttbtt = intval;
-		do {
-			nexttbtt += intval;
-			if (--dtimcount < 0) {
-				dtimcount = dtimperiod - 1;
-				if (--cfpcount < 0)
-					cfpcount = cfpperiod - 1;
-			}
-		} while (nexttbtt < hw_tsftu + FUDGE);
+		/* Pull nexttbtt forward to reflect the current TSF 
+		 * and calculate DTIM + CFP state for the result. */
+		n = howmany(hw_tsftu + FUDGE - tsftu, intval);
+		nexttbtt = tsftu + (n * intval); 
+		dtimcount = (dtimcount + n) % dtimperiod;
+		cfpcount = (cfpcount + (n / dtimperiod)) % cfpperiod;
+
 #undef FUDGE
 		memset(&bs, 0, sizeof(bs));
 		bs.bs_intval = intval;
