@@ -350,6 +350,9 @@ ieee80211_sta_pwrsave(struct ieee80211vap *vap, int enable)
 	struct ieee80211_node *ni = vap->iv_bss;
 	int qlen;
 
+	if (vap->iv_opmode != IEEE80211_M_STA)
+		return;
+
 	if (!!enable == !!IEEE80211_VAP_IS_SLEEPING(vap)) /* Bool. normalise */
 		return;
 
