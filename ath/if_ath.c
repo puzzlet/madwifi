@@ -1322,7 +1322,8 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 
 	if ((flags & IEEE80211_CLONE_BSSID) && sc->sc_hasbmask) {
 		struct ieee80211vap *v;
-		unsigned int id_mask, id;
+		uint64_t id_mask;
+		unsigned int id;
 
 		/*
 		 * Hardware supports the bssid mask and a unique
