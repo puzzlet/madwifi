@@ -1759,14 +1759,13 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 			 * may have occurred in the intervening timeframe. */
 			bf->bf_channoise = ic->ic_channoise;
 
+			if ((HAL_RXERR_PHY == rs->rs_status) &&
+			    (HAL_PHYERR_RADAR == (rs->rs_phyerr & 0x1f)) &&
+			    !(bf->bf_status & ATH_BUFSTATUS_RADAR_DONE) &&
+			    (ic->ic_flags & IEEE80211_F_DOTH))
+				check_for_radar = 1;
+
 			if (rs->rs_status) {
-				if ((HAL_RXERR_PHY == rs->rs_status) &&
-				    (HAL_PHYERR_RADAR ==
-				     (rs->rs_phyerr & 0x1f)) &&
-				    (0 == (bf->bf_status &
-					   ATH_BUFSTATUS_RADAR_DONE))) {
-					check_for_radar = 1;
-				}
 				/* Skip past the error now */
 				continue;
 			}
