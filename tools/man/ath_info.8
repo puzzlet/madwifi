@@ -49,7 +49,7 @@ Execute the commands below from a root account.
 
 Retrieve the module's PCI memory address with \fBlspci\fP:
 .LP
-.NF
+.nf
 # lspci -v
 0b:00.0 Ethernet controller: Atheros Communications, Inc. AR5211 802.11ab NIC
 (rev 01)
@@ -58,7 +58,7 @@ Retrieve the module's PCI memory address with \fBlspci\fP:
         Memory at 6c000000 (32-bit, non-prefetchable) [size=64K]
         Capabilities: [44] Power Management version 2
 
-.FI
+.fi
 
 The above card has its memory mapped at 0x6c000000.
 .PP
@@ -67,14 +67,14 @@ driver anymore, e.g. due to wrong PCI id values (check your syslog),
 you must manually enable the PCI device with \fBsetpci\fP. The argument to "-s" comes
 from the output above:
 .LP
-.NF
+.nf
 setpci -s 0b:00.0 command=0x41f cache_line_size=0x10
 
 
 .PP
 Retrieve some information of the module:
 .LP
-.NF
+.nf
 # ./ath_info 0x6c000000
  \-==Device Information==\-
 .br
@@ -105,13 +105,13 @@ Regulatory Domain:  0x20
 |  RFKill  Support: no   |
 .br
  ========================
-.FI
+.fi
 .PP
 Set the regulatory domain to 0. You need to confirm to write with 'y' (-f turns this off).
 Check \fBhttp://madwifi.org/wiki/UserDocs/CountryCode\fP for more information on
 regdomains and country codes:
 .LP
-.NF
+.nf
 # ./ath_info -w 0x6c000000 regdomain 0   
 .br
  -==Device Information==-
@@ -157,7 +157,7 @@ Proceed on your own risk!
 Shall I write the above value(s)? (y/n)
 .br
 y
-.FI
+.fi
 
 .SH "BUGS"
 
