@@ -766,6 +766,8 @@ struct ath_softc {
 	struct ieee80211vap **sc_bslot;		/* beacon xmit slots */
 	int sc_bnext;				/* next slot for beacon xmit */
 
+	int sc_beacon_cal;			/* use beacon timer for calibration */
+	u_int64_t sc_lastcal;			/* last time the calibration was performed */
 	struct timer_list sc_cal_ch;		/* calibration timer */
 	HAL_NODE_STATS sc_halstats;		/* station-mode rssi stats */
 
