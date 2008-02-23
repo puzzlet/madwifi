@@ -3550,7 +3550,7 @@ ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 	 */
 	error = ath_tx_start(dev, SKB_CB(skb)->ni, bf, skb, 0);
 	if (error)
-		return error;
+		goto bad;
 
 	sc->sc_stats.ast_tx_mgmt++;
 	return 0;
