@@ -334,7 +334,10 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 			sn->packet_count++;
 			sn->random_n = (sn->a * sn->random_n) + sn->b;
 			offset = sn->random_n & 0xf;
-			if ((((100 * sn->sample_count) / (sn->sample_count + sn->packet_count)) < ath_lookaround_rate) && (offset < 2)) {
+
+			if ((((100 * sn->sample_count) / sn->packet_count) < 
+					 ath_lookaround_rate) && 
+					(offset < 2)) {
 				sn->sample_count++;
 				sn->is_sampling = 1;
 				if (sn->packet_count >= 10000) {
