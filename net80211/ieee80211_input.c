@@ -244,13 +244,13 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 		vap->iv_stats.is_rx_tooshort++;
 		goto out;
 	}
+
 	/* Clone the SKB... we assume somewhere in this driver that we 'own'
 	 * the skbuff passed into hard start and we do a lot of messing with it
 	 * but bridges under some cases will not clone for the first pass of skb
 	 * to a bridge port, but will then clone for subsequent ones.  This is 
 	 * odd behavior but it means that if we have trashed the skb we are given
-	 * then other ports get clones of the residual garbage.
-	 */
+	 * then other ports get clones of the residual garbage. */
 	if ((skb2 = skb_copy(skb, GFP_ATOMIC)) == NULL) {
 		vap->iv_devstats.tx_dropped++;
 		goto out;

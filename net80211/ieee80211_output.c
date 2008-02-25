@@ -324,7 +324,6 @@ void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 
 	if (dev_queue_xmit(skb) == NET_XMIT_DROP)
 		vap->iv_devstats.tx_dropped++;
-
 }
 
 /*
