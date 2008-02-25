@@ -124,7 +124,7 @@ enum {
 };
 #define	DPRINTF(sc, _fmt, ...) do {		\
 		if (sc->sc_debug & ATH_DEBUG_RATE)	\
-			printk(_fmt, __VA_ARGS__);		\
+			printk("%s: " _fmt, SC_DEV_NAME(sc), __VA_ARGS__); \
 } while (0)
 #else
 #define	DPRINTF(sc, _fmt, ...)
@@ -140,12 +140,12 @@ static char *dev_info = "ath_rate_minstrel";
 #define STALE_FAILURE_TIMEOUT_MS 10000
 #define ENABLE_MRR 1
 
-static int ath_timer_interval = (1000 / 10); /* every 1/10 second, timer runs */
-static void ath_timer_function(unsigned long data);
+/* Interval (in ms) between successive rate statistics, default to 100 ms. */
+static int ath_timer_interval = 100;
 
-/* 10% of the time, send a packet at something other than the optimal rate, which fills
- * the statistics tables nicely. This percentage is applied to the first packet of the
- * multi rate retry chain. */
+/* 10% of the time, send a packet at something other than the optimal rate,
+ * which fills the statistics tables nicely. This percentage is applied to the
+ * first packet of the multi rate retry chain. */
 static int ath_lookaround_rate = 10;
 static int ath_ewma_level      = 75;
 static int ath_segment_size    = 6000;
@@ -167,9 +167,12 @@ module_param(ath_lookaround_rate, 	int, 0600);
 module_param(ath_ewma_level, 		int, 0600);
 module_param(ath_segment_size, 		int, 0600);
 #endif
-MODULE_PARM_DESC(ath_lookaround_rate, " % of packets sent to fill statistics table (10) ");
-MODULE_PARM_DESC(ath_ewma_level, " scaling % used in ewma rolloff calculations  (75) ");
-MODULE_PARM_DESC(ath_segment_size, " max duration of time to spend in either of the first two mrr segments (6000)");
+MODULE_PARM_DESC(ath_lookaround_rate, " % of packets sent to fill statistics "
+		"table (10) ");
+MODULE_PARM_DESC(ath_ewma_level, " scaling % used in ewma rolloff "
+		"calculations (75) ");
+MODULE_PARM_DESC(ath_segment_size, " max duration of time to spend in either "
+		"of the first two mrr segments (6000)");
 
 
 static __inline int
@@ -253,10 +256,11 @@ calc_usecs_unicast_packet(struct ath_softc *sc, int length,
 
 			if (!rt->info[cix].rateKbps) {
 #if 0
-				printk(KERN_WARNING "cix %d (%d) bad ratekbps %d mode %u\n",
-				       cix, rt->info[cix].dot11Rate,
-				       rt->info[cix].rateKbps,
-				       sc->sc_curmode);
+				printk(KERN_WARNING 
+					"cix %d (%d) bad ratekbps %d mode %u\n",
+					cix, rt->info[cix].dot11Rate,
+					rt->info[cix].rateKbps,
+					sc->sc_curmode);
 #endif
 				return 0;
 			}
@@ -304,7 +308,8 @@ ath_rate_node_copy(struct ath_softc *sc,
 		struct ath_node *dst, const struct ath_node *src)
 {
 		struct minstrel_node *odst = ATH_NODE_MINSTREL(dst);
-		const struct minstrel_node *osrc = (const struct minstrel_node *)&src[1];
+		const struct minstrel_node *osrc = 
+			(const struct minstrel_node *)&src[1];
 		memcpy(odst, osrc, sizeof(struct minstrel_node));
 }
 #endif
@@ -326,7 +331,9 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 			    return;
 		}
 
-		mrr = sc->sc_mrretry && !(ic->ic_flags & IEEE80211_F_USEPROT) && ENABLE_MRR;
+		mrr = sc->sc_mrretry && 
+			!(ic->ic_flags & IEEE80211_F_USEPROT) && 
+			ENABLE_MRR;
 
 		if (sn->static_rate_ndx >= 0) {
 			    ndx = sn->static_rate_ndx;
@@ -352,7 +359,8 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 				 * link will soon be broken anyway. Indeed,
 				 * the slowest rate was used to establish the
 				 * link in the first place. */
-				ndx = sn->rs_sampleTable[sn->rs_sampleIndex][sn->rs_sampleColumn];
+				ndx = sn->rs_sampleTable[sn->rs_sampleIndex]
+					[sn->rs_sampleColumn];
 
 				sn->rs_sampleIndex++;
 				if (sn->rs_sampleIndex > (sn->num_rates - 2)) {
@@ -364,7 +372,8 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 				}
 				sn->rs_sample_rate = ndx;
 				sn->rs_sample_rate_slower =
-					sn->perfect_tx_time[ndx] >  sn->perfect_tx_time[sn->max_tp_rate];
+					(sn->perfect_tx_time[ndx] > 
+					 sn->perfect_tx_time[sn->max_tp_rate]);
 				if (sn->rs_sample_rate_slower)
 					ndx = sn->max_tp_rate;				
 			} else
@@ -394,7 +403,8 @@ ath_rate_get_mrr(struct ath_softc *sc, struct ath_node *an, int shortPreamble,
 		 size_t frame_size, u_int8_t rix, struct ieee80211_mrr *mrr)
 {
 		struct minstrel_node *sn = ATH_NODE_MINSTREL(an);
-		int rc1, rc2, rc3;         /* Index into the rate table, so for example, it is  0..11 */
+		/* Index into the rate table, so for example, it is  0..11. */
+		int rc1, rc2, rc3;
 
 		if (sn->is_sampling) {
 			sn->is_sampling = 0;
@@ -472,7 +482,7 @@ ath_rate_tx_complete(struct ath_softc *sc,
 
 		/* 'tries' is the total number of times we have endeavoured to
 		 * send this packet, and is a sum of the #attempts at each
-		 * level in the multi-rate retry chain */
+		 * level in the multi-rate retry chain. */
 		tries = ts->ts_shortretry + ts->ts_longretry + 1;
 
 		if (sn->num_rates <= 0) {
@@ -484,18 +494,23 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		if (!ts->ts_status)  /* Success when sending a packet*/
 			sn->rs_ratesuccess[final_ndx]++;
 
-		mrr = sc->sc_mrretry && !(ic->ic_flags & IEEE80211_F_USEPROT) && ENABLE_MRR;
+		mrr = sc->sc_mrretry && 
+			!(ic->ic_flags & IEEE80211_F_USEPROT) && 
+			ENABLE_MRR;
 
 		if (!mrr) {
 			if ((0 <= final_ndx) && (final_ndx < sn->num_rates)) {
-				sn->rs_rateattempts[final_ndx] += tries; /* only one rate was used */
+				/* only one rate was used */
+				sn->rs_rateattempts[final_ndx] += tries;
 			}
 			return;
 		}
 
-		/* Now, query the hal/hardware to find out the contents of the multirate retry chain.
-		 * If we have it set to 6,3,2,2, this call will always return 6,3,2,2. For some packets, we can
-		 * get a mrr of 0, -1, -1, -1, which indicates there is no chain installed for that packet */
+		/* Now, query the HAL/hardware to find out the contents of the 
+		 * multirate retry chain. If we have it set to 6, 3, 2, 2, this 
+		 * call will always return 6,3,2,2. For some packets, we can
+		 * get a mrr of 0, -1, -1, -1, which indicates there is no 
+		 * chain installed for that packet */
 		rate0 = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate0)].ieeerate;
 		tries0 = MS(ds->ds_ctl2, AR_XmitDataTries0);
 		ndx0 = rate_to_ndx(sn, rate0);
@@ -546,185 +561,186 @@ ath_rate_newassoc(struct ath_softc *sc, struct ath_node *an, int isnew)
 }
 
 static void
-ath_fill_sample_table(struct minstrel_node *sn)
+ath_fill_sample_table(struct ath_softc *sc, struct minstrel_node *sn)
 {
-		unsigned int num_sample_rates = (sn->num_rates - 1);
-		/* newIndex varies as 0 .. (num_rates - 2) 
-		 * The highest index rate is the slowest and is ignored */
-		unsigned int i, column_index, newIndex;
-		u_int8_t random_bytes[8];
+	unsigned int num_sample_rates = (sn->num_rates - 1);
+	/* newIndex varies as 0 .. (num_rates - 2) 
+	 * The highest index rate is the slowest and is ignored */
+	unsigned int i, column_index, newIndex;
+	u_int8_t random_bytes[8];
 
-		/* This should be unnecessary if we are assuming storage is provided
-		 * as zeroed */
-		memset(sn->rs_sampleTable, 0, sizeof(sn->rs_sampleTable));
+	/* This should be unnecessary if we are assuming storage is provided
+	 * as zeroed */
+	memset(sn->rs_sampleTable, 0, sizeof(sn->rs_sampleTable));
 
-		sn->rs_sampleColumn = 0;
-		sn->rs_sampleIndex = 0;
+	sn->rs_sampleColumn = 0;
+	sn->rs_sampleIndex = 0;
 
-		/* Seed value to random number generator, which determines when we
-		 * send a sample packet at some non-optimal rate
-		 * FIXME: randomise? */
-		sn->random_n = 1;
-		sn->a = 1664525;
-		sn->b = 1013904223;
+	/* Seed value to random number generator, which determines when we
+	 * send a sample packet at some non-optimal rate
+	 * FIXME: randomise? */
+	sn->random_n = 1;
+	sn->a = 1664525;
+	sn->b = 1013904223;
 
-		if (sn->num_rates > 1) {
-			for (column_index = 0; column_index < MINSTREL_COLUMNS; column_index++) {
-				for (i = 0; i < num_sample_rates; i++) {
-					get_random_bytes(random_bytes, 8);
-					newIndex = (i + random_bytes[i & 7]) % num_sample_rates;
+	if (sn->num_rates > 1) {
+		for (column_index = 0; column_index < MINSTREL_COLUMNS; column_index++) {
+			for (i = 0; i < num_sample_rates; i++) {
+				get_random_bytes(random_bytes, 8);
+				newIndex = (i + random_bytes[i & 7]) % num_sample_rates;
 
-					while (sn->rs_sampleTable[newIndex][column_index] != 0)
-						newIndex = (newIndex + 1) % num_sample_rates;
+				while (sn->rs_sampleTable[newIndex][column_index] != 0)
+					newIndex = (newIndex + 1) % num_sample_rates;
 
-					sn->rs_sampleTable[newIndex][column_index] = i + 1;
-				}
+				sn->rs_sampleTable[newIndex][column_index] = i + 1;
 			}
 		}
-
-#if 0
-		char rates[200];
-		char *p;
-		for (column_index = 0; column_index < MINSTREL_COLUMNS; column_index++) {
-			    p = rates + sprintf(rates, "rates :: %d ", column_index);
-			    for (i = 0; i < num_sample_rates; i++)
-			            p += sprintf(p, "%2u ", sn->rs_sampleTable[i][column_index]);
-			    DPRINTF(sc, "%s\n", rates);
-		};
-#endif
+	}
+	
+	for (column_index = 0; column_index < MINSTREL_COLUMNS; column_index++) {
+		for (i = 0; i < num_sample_rates && i < IEEE80211_RATE_MAXSIZE; i++) {
+			DPRINTF(sc, "rs_sampleTable[%2u][%2u] = %2u\n",
+				i, column_index, sn->rs_sampleTable[i][column_index]);
+		}
+	}
 }
 
 /* Initialize the tables for a node. */
 static void
 ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 {
-		struct ath_node *an = ATH_NODE(ni);
-		struct minstrel_node *sn = ATH_NODE_MINSTREL(an);
-		struct ieee80211vap *vap = ni->ni_vap;
-		const HAL_RATE_TABLE *rt = sc->sc_currates;
-		unsigned int x;
-		int retry_index, tx_time;
-		int srate;
-		int ndx = 0;
+	struct minstrel_node *sn = ATH_NODE_MINSTREL(ATH_NODE(ni));
+	struct ieee80211vap *vap = ni->ni_vap;
+	const HAL_RATE_TABLE *rt = sc->sc_currates;
+	unsigned int x;
+	int retry_index, tx_time;
+	int srate;
+	int ndx = 0;
 
-		sn->num_rates = 0;
-		sn->max_tp_rate = 0;
-		sn->max_tp_rate2 = 0;
-		sn->max_prob_rate = 0;
-		sn->packet_count = 0;
-		sn->sample_count = 0;
-		sn->is_sampling = 0;
+	sn->num_rates = 0;
+	sn->max_tp_rate = 0;
+	sn->max_tp_rate2 = 0;
+	sn->max_prob_rate = 0;
+	sn->packet_count = 0;
+	sn->sample_count = 0;
+	sn->is_sampling = 0;
 
-		if (rt == NULL) {
-			DPRINTF(sc, "no rates yet! mode %u\n", sc->sc_curmode);
-			return;
+	if (rt == NULL) {
+		DPRINTF(sc, "no rates yet! mode %u\n", sc->sc_curmode);
+		return;
+	}
+	sn->static_rate_ndx = -1;
+
+	sn->num_rates = ni->ni_rates.rs_nrates;
+	for (x = 0; x < ni->ni_rates.rs_nrates; x++) {
+		sn->rs_rateattempts 	[x] = 0;
+		sn->rs_thisprob 	[x] = 0;
+		sn->rs_ratesuccess 	[x] = 0;
+		sn->rs_lastrateattempts [x] = 0;
+		sn->rs_lastratesuccess	[x] = 0;
+		sn->rs_probability	[x] = 0;
+		sn->rs_succ_hist	[x] = 0;
+		sn->rs_att_hist 	[x] = 0;
+		sn->rs_this_tp 		[x] = 0;
+
+		sn->rates[x].rate = ni->ni_rates.rs_rates[x] & IEEE80211_RATE_VAL;
+		sn->rates[x].rix = sc->sc_rixmap[sn->rates[x].rate];
+		if (sn->rates[x].rix == 0xff) {
+			DPRINTF(sc, "%s: %s ignore bogus rix at %d\n",
+				dev_info, __func__, x);
+			continue;
 		}
-		sn->static_rate_ndx = -1;
+		sn->rates[x].rateCode = rt->info[sn->rates[x].rix].rateCode;
+		sn->rates[x].shortPreambleRateCode =
+			rt->info[sn->rates[x].rix].rateCode |
+			rt->info[sn->rates[x].rix].shortPreamble;
+	}
+	
+	ath_fill_sample_table(sc, sn);
+	
+	ni->ni_txrate = 0;
 
-		sn->num_rates = ni->ni_rates.rs_nrates;
-		for (x = 0; x < ni->ni_rates.rs_nrates; x++) {
-			sn->rs_rateattempts 	[x] = 0;
-			sn->rs_thisprob 	[x] = 0;
-			sn->rs_ratesuccess 	[x] = 0;
-			sn->rs_lastrateattempts [x] = 0;
-			sn->rs_lastratesuccess	[x] = 0;
-			sn->rs_probability	[x] = 0;
-			sn->rs_succ_hist	[x] = 0;
-			sn->rs_att_hist 	[x] = 0;
-			sn->rs_this_tp 		[x] = 0;
+	if (sn->num_rates <= 0) {
+		DPRINTF(sc, "%s: %s " MAC_FMT " no rates (fixed %d) \n",
+			dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
+			vap->iv_fixed_rate);
+		/* There are no rates yet; we're done */
+		return;
+	}
 
-			sn->rates[x].rate = ni->ni_rates.rs_rates[x] & IEEE80211_RATE_VAL;
-			sn->rates[x].rix = sc->sc_rixmap[sn->rates[x].rate];
-			if (sn->rates[x].rix == 0xff) {
-				DPRINTF(sc, "%s: %s ignore bogus rix at %d\n",
-					dev_info, __func__, x);
-				continue;
-			}
-			sn->rates[x].rateCode = rt->info[sn->rates[x].rix].rateCode;
-			sn->rates[x].shortPreambleRateCode =
-				rt->info[sn->rates[x].rix].rateCode |
-				rt->info[sn->rates[x].rix].shortPreamble;
+	if (vap->iv_fixed_rate != IEEE80211_FIXED_RATE_NONE) {
+		srate = sn->num_rates - 1;
+
+		/* A fixed rate is to be used; ic_fixed_rate is an
+		 * index into the supported rate set.  Convert this
+		 * to the index into the negotiated rate set for
+		 * the node.  We know the rate is there because the
+		 * rate set is checked when the station associates. */
+		/* NB: the rate set is assumed to be sorted. */
+		for (; 
+				(srate >= 0) && 
+				(ni->ni_rates.rs_rates[srate] & 
+				 IEEE80211_RATE_VAL) != vap->iv_fixed_rate;
+				srate--);
+
+		KASSERT(srate >= 0,
+			("fixed rate %d not in rate set", vap->iv_fixed_rate));
+
+		sn->static_rate_ndx = srate;
+		ni->ni_txrate = srate;
+		DPRINTF(sc, "%s: %s " MAC_FMT " fixed rate %d%sMbps\n",
+			dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
+			sn->rates[srate].rate / 2,
+			(sn->rates[srate].rate % 2) ? ".5 " : " ");
+		return;
+	}
+
+	for (x = 0; x < ni->ni_rates.rs_nrates; x++) {
+		if (sn->rates[x].rix == 0xff) {
+			DPRINTF(sc, "%s: %s ignore bogus rix at %d\n",
+				dev_info, __func__, x);
+			continue;
 		}
 
-		ath_fill_sample_table(sn);
+		sn->rs_rateattempts	[x] = 0;
+		sn->rs_thisprob		[x] = 0;
+		sn->rs_ratesuccess 	[x] = 0;
+		sn->rs_probability 	[x] = 0;
+		sn->rs_lastrateattempts [x] = 0;
+		sn->rs_lastratesuccess 	[x] = 0;
+		sn->rs_succ_hist 	[x] = 0;
+		sn->rs_att_hist 	[x] = 0;
+		sn->perfect_tx_time 	[x] =
+			calc_usecs_unicast_packet(sc, 1200,
+						  sn->rates[x].rix,
+						  0, 0);
+		sn->retry_count 	[x] = 1;
+		sn->retry_adjusted_count[x] = 1;
 
-		ni->ni_txrate = 0;
-
-		if (sn->num_rates <= 0) {
-			DPRINTF(sc, "%s: %s " MAC_FMT " no rates (fixed %d) \n",
-				dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
-				vap->iv_fixed_rate);
-			/* There are no rates yet; we're done */
-			return;
+		for (retry_index = 2; retry_index < ATH_TXMAXTRY; retry_index++) {
+			tx_time = calc_usecs_unicast_packet(sc, 1200, 
+					sn->rates[x].rix, 0, retry_index);
+			if (tx_time > ath_segment_size)
+				break;
+			sn->retry_count[x] = retry_index;
+			sn->retry_adjusted_count[x] = retry_index;
 		}
-
-		if (vap->iv_fixed_rate != IEEE80211_FIXED_RATE_NONE) {
-			srate = sn->num_rates - 1;
-
-			/* A fixed rate is to be used; ic_fixed_rate is an
-			 * index into the supported rate set.  Convert this
-			 * to the index into the negotiated rate set for
-			 * the node.  We know the rate is there because the
-			 * rate set is checked when the station associates. */
-			/* NB: the rate set is assumed sorted */
-			for (; (srate >= 0) && (ni->ni_rates.rs_rates[srate] & IEEE80211_RATE_VAL) != vap->iv_fixed_rate; srate--);
-
-			KASSERT(srate >= 0,
-				("fixed rate %d not in rate set", vap->iv_fixed_rate));
-
-			sn->static_rate_ndx = srate;
-			ni->ni_txrate = srate;
-			DPRINTF(sc, "%s: %s " MAC_FMT " fixed rate %d%sMbps\n",
-				dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
-				sn->rates[srate].rate / 2,
-				(sn->rates[srate].rate % 2) ? ".5 " : " ");
-			return;
-		}
-
-		for (x = 0; x < ni->ni_rates.rs_nrates; x++) {
-			if (sn->rates[x].rix == 0xff) {
-				DPRINTF(sc, "%s: %s ignore bogus rix at %d\n",
-					dev_info, __func__, x);
-				continue;
-			}
-
-			sn->rs_rateattempts	[x] = 0;
-			sn->rs_thisprob		[x] = 0;
-			sn->rs_ratesuccess 	[x] = 0;
-			sn->rs_probability 	[x] = 0;
-			sn->rs_lastrateattempts [x] = 0;
-			sn->rs_lastratesuccess 	[x] = 0;
-			sn->rs_succ_hist 	[x] = 0;
-			sn->rs_att_hist 	[x] = 0;
-			sn->perfect_tx_time 	[x] =
-				calc_usecs_unicast_packet(sc, 1200,
-							  sn->rates[x].rix,
-							  0, 0);
-			sn->retry_count 	[x] = 1;
-			sn->retry_adjusted_count[x] = 1;
-
-			for (retry_index = 2; retry_index < ATH_TXMAXTRY; retry_index++) {
-				tx_time = calc_usecs_unicast_packet(sc, 1200, sn->rates[x].rix, 0, retry_index);
-				if (tx_time > ath_segment_size)
-					break;
-				sn->retry_count[x] = retry_index;
-				sn->retry_adjusted_count[x] = retry_index;
-			}
-		}
+	}
 
 #if 0
-		DPRINTF(sc, "%s: Retry table for this node\n", __func__);
-		  for (x = 0; x < ni->ni_rates.rs_nrates; x++)
-			     DPRINTF(sc, "%2d  %2d %6d  \n", x, sn->retry_count[x], sn->perfect_tx_time[x]);
+	DPRINTF(sc, "%s: Retry table for this node\n", __func__);
+	for (x = 0; x < ni->ni_rates.rs_nrates; x++)
+		DPRINTF(sc, "%2d  %2d %6d  \n", x, sn->retry_count[x], 
+				sn->perfect_tx_time[x]);
 #endif
 
-		/* Set the initial rate */
-		for (ndx = sn->num_rates - 1; ndx > 0; ndx--)
-			if (sn->rates[ndx].rate <= 72)
-				break;
-		sn->current_rate = ndx;
+	/* Set the initial rate */
+	for (ndx = sn->num_rates - 1; ndx > 0; ndx--)
+		if (sn->rates[ndx].rate <= 72)
+			break;
+	sn->current_rate = ndx;
 
-		ni->ni_txrate = sn->current_rate;
+	ni->ni_txrate = sn->current_rate;
 }
 
 static void
@@ -741,170 +757,179 @@ ath_rate_newstate(struct ieee80211vap *vap, enum ieee80211_state newstate)
 
 		if (newstate == IEEE80211_S_RUN) {
 			if (ic->ic_opmode != IEEE80211_M_STA) {
-				/* Sync rates for associated stations and neighbors. */
-				ieee80211_iterate_nodes(&ic->ic_sta, ath_rate_cb, NULL);
+				/* Sync rates for associated stations and 
+				 * neighbors. */
+				ieee80211_iterate_nodes(&ic->ic_sta, 
+						ath_rate_cb, NULL);
 			}
-			ath_rate_newassoc(ic->ic_dev->priv, ATH_NODE(vap->iv_bss), 1);
+			ath_rate_newassoc(ic->ic_dev->priv, 
+					ATH_NODE(vap->iv_bss), 1);
 		}
 }
 
 static void
 ath_timer_function(unsigned long data)
 {
-		struct minstrel_softc *ssc = (struct minstrel_softc *) data;
-		struct ath_softc *sc = ssc->sc;
-		struct ieee80211com *ic;
-		struct net_device *dev = ssc->sc_dev;
-		struct timer_list *timer;
-		unsigned int interval = ath_timer_interval;
+	struct minstrel_softc *ssc = (struct minstrel_softc *) data;
+	struct ath_softc *sc = ssc->sc;
+	struct ieee80211com *ic;
+	struct net_device *dev = ssc->sc_dev;
+	struct timer_list *timer;
+	unsigned int interval = ath_timer_interval;
 
-		if (dev == NULL)
-			DPRINTF(sc, "%s: 'dev' is null in this timer \n", __func__);
+	if (dev == NULL)
+		DPRINTF(sc, "%s: 'dev' is null in this timer \n", __func__);
 
-		if (sc == NULL)
-			DPRINTF(sc, "%s: 'sc' is null in this timer\n", __func__);
+	if (sc == NULL)
+		DPRINTF(sc, "%s: 'sc' is null in this timer\n", __func__);
 
-		ic = &sc->sc_ic;
+	ic = &sc->sc_ic;
 
-		if (ssc->close_timer_now)
-			return;
+	if (ssc->close_timer_now)
+		return;
 
-		if (dev->flags & IFF_RUNNING) {
-			sc->sc_stats.ast_rate_calls++;
+	if (dev->flags & IFF_RUNNING) {
+		sc->sc_stats.ast_rate_calls++;
 
-			if (ic->ic_opmode == IEEE80211_M_STA) {
-				struct ieee80211vap *tmpvap;
-				TAILQ_FOREACH(tmpvap, &ic->ic_vaps, iv_next) {
-					ath_rate_statistics(sc, tmpvap->iv_bss);/* NB: no reference */
-				}
-			} else
-			            ieee80211_iterate_nodes(&ic->ic_sta, ath_rate_statistics, sc);
-		}
+		if (ic->ic_opmode == IEEE80211_M_STA) {
+			struct ieee80211vap *tmpvap;
+			TAILQ_FOREACH(tmpvap, &ic->ic_vaps, iv_next) {
+				/* NB: no reference */
+				ath_rate_statistics(sc, tmpvap->iv_bss);
+			}
+		} else
+			ieee80211_iterate_nodes(&ic->ic_sta, 
+					ath_rate_statistics, sc);
+	}
 
-		if (ic->ic_opmode == IEEE80211_M_STA)
-			interval = ath_timer_interval >> 1;
+	if (ic->ic_opmode == IEEE80211_M_STA)
+		interval = ath_timer_interval >> 1;
 
-		timer  = &(ssc->timer);
-		if (timer == NULL)
-			DPRINTF(sc, "%s: timer is null - leave it\n", __func__);
+	timer  = &(ssc->timer);
+	if (timer == NULL)
+		DPRINTF(sc, "%s: timer is null - leave it\n", __func__);
 
-		timer->expires = jiffies + ((HZ * interval) / 1000);
-		add_timer(timer);
+	timer->expires = jiffies + ((HZ * interval) / 1000);
+	add_timer(timer);
 }
 
 static void
 ath_rate_statistics(void *arg, struct ieee80211_node *ni)
 {
-		struct ath_node *an = (struct ath_node *) ni;
-		struct ieee80211_rateset *rs = &ni->ni_rates;
-		struct minstrel_node *rn = ATH_NODE_MINSTREL(an);
-		unsigned int i;
-		u_int32_t p;
-		u_int32_t micro_secs;
-		u_int32_t max_prob,    index_max_prob;
-		u_int32_t max_tp,      index_max_tp,      index_max_tp2;
+	struct ath_node *an = (struct ath_node *) ni;
+	struct ieee80211_rateset *rs = &ni->ni_rates;
+	struct minstrel_node *rn = ATH_NODE_MINSTREL(an);
+	unsigned int i;
+	u_int32_t p;
+	u_int32_t micro_secs;
+	u_int32_t max_prob,    index_max_prob;
+	u_int32_t max_tp,      index_max_tp,      index_max_tp2;
 
-		/* Calculate statistics for each date rate in the table */
-		/* 'micro_secs' is the time to transmit 1200 bytes, or 9600 bits. */
-		for (i = 0; i < rs->rs_nrates; i++) {
-			micro_secs = rn->perfect_tx_time[i];
-			if (micro_secs == 0)
-				micro_secs = ONE_SECOND;
+	/* Calculate statistics for each date rate in the table */
+	/* 'micro_secs' is the time to transmit 1200 bytes, or 9600 bits. */
+	for (i = 0; i < rs->rs_nrates; i++) {
+		micro_secs = rn->perfect_tx_time[i];
+		if (micro_secs == 0)
+			micro_secs = ONE_SECOND;
 
-			    if (rn->rs_rateattempts[i] != 0) {
-			            p = (rn->rs_ratesuccess[i] * 18000) / rn->rs_rateattempts[i];
-			            rn->rs_succ_hist[i] += rn->rs_ratesuccess[i];
-			            rn->rs_att_hist[i]  += rn->rs_rateattempts[i];
-				rn->rs_thisprob[i] = p;
-				p = ((p * (100 - ath_ewma_level)) + (rn->rs_probability[i] * ath_ewma_level)) / 100;
-				rn->rs_probability[i] = p;
-				rn->rs_this_tp[i] = p * (ONE_SECOND / micro_secs);
-				rn->rs_lastratesuccess[i] = rn->rs_ratesuccess[i];
-				rn->rs_lastrateattempts[i] = rn->rs_rateattempts[i];
-			            rn->rs_ratesuccess[i] = 0;
-			            rn->rs_rateattempts[i] = 0;
-			} else {
-				rn->rs_lastratesuccess[i] = 0;
-				rn->rs_lastrateattempts[i] = 0;
-			}
-
-			/* Sample less often below the 10% chance of success.
-			 * Sample less often above the 95% chance of success.
-			 * 'rn->rs_probability' has a scale of 0 (0%) to 18000 (100%), which avoids rounding issues.*/
-			if ((rn->rs_probability[i] > 17100) || (rn->rs_probability[i] < 1800)) {
-				rn->retry_adjusted_count[i] = rn->retry_count[i] >> 1;
-				if (rn->retry_adjusted_count[i] > 2)
-					rn->retry_adjusted_count[i] = 2;
-			} else
-				rn->retry_adjusted_count[i] = rn->retry_count[i];
-			if (rn->retry_adjusted_count[i] == 0)
-				rn->retry_adjusted_count[i] = 1;
+		if (rn->rs_rateattempts[i] != 0) {
+			p = (rn->rs_ratesuccess[i] * 18000) / 
+				rn->rs_rateattempts[i];
+			rn->rs_succ_hist[i] += rn->rs_ratesuccess[i];
+			rn->rs_att_hist[i]  += rn->rs_rateattempts[i];
+			rn->rs_thisprob[i] = p;
+			p = ((p * (100 - ath_ewma_level)) + 
+				(rn->rs_probability[i] * ath_ewma_level)) / 100;
+			rn->rs_probability[i] = p;
+			rn->rs_this_tp[i] = p * (ONE_SECOND / micro_secs);
+			rn->rs_lastratesuccess[i] = rn->rs_ratesuccess[i];
+			rn->rs_lastrateattempts[i] = rn->rs_rateattempts[i];
+			rn->rs_ratesuccess[i] = 0;
+			rn->rs_rateattempts[i] = 0;
+		} else {
+			rn->rs_lastratesuccess[i] = 0;
+			rn->rs_lastrateattempts[i] = 0;
 		}
 
-		/* The High speed rates (e.g 54Mbps) is checked last. If
-		 * throughput is the same for two rates, we prefer the
-		 * lower rate, as this has a better chance of success. */
-		max_prob = 0;
-		index_max_prob = 0;
-		max_tp = 0;
-		index_max_tp  = 0;
-		index_max_tp2 = 0;
+		/* Sample less often below the 10% chance of success.
+		 * Sample less often above the 95% chance of success.
+		 * 'rn->rs_probability' has a scale of 0 (0%) to 18000 (100%), 
+		 * which avoids rounding issues.*/
+		if ((rn->rs_probability[i] > 17100) || 
+				(rn->rs_probability[i] < 1800)) {
+			rn->retry_adjusted_count[i] = rn->retry_count[i] >> 1;
+			if (rn->retry_adjusted_count[i] > 2)
+				rn->retry_adjusted_count[i] = 2;
+		} else
+			rn->retry_adjusted_count[i] = rn->retry_count[i];
+		if (rn->retry_adjusted_count[i] == 0)
+			rn->retry_adjusted_count[i] = 1;
+	}
 
-		/* This code could have been moved up into the previous
-		 * loop. More readable to have it here */
-		for (i = 0; i < rs->rs_nrates; i++) {
-			if (max_tp < rn->rs_this_tp[i]) {
-				index_max_tp = i;
-				max_tp = rn->rs_this_tp[i];
-			}
+	/* The High speed rates (e.g 54Mbps) is checked last. If
+	 * throughput is the same for two rates, we prefer the
+	 * lower rate, as this has a better chance of success. */
+	max_prob = 0;
+	index_max_prob = 0;
+	max_tp = 0;
+	index_max_tp  = 0;
+	index_max_tp2 = 0;
 
-			if (max_prob <  rn->rs_probability[i]) {
-				index_max_prob = i;
-				max_prob = rn->rs_probability[i];
-			}
+	/* This code could have been moved up into the previous
+	 * loop. More readable to have it here */
+	for (i = 0; i < rs->rs_nrates; i++) {
+		if (max_tp < rn->rs_this_tp[i]) {
+			index_max_tp = i;
+			max_tp = rn->rs_this_tp[i];
 		}
 
-		max_tp = 0;
-		for (i = 0; i < rs->rs_nrates; i++) {
-			if ((i != index_max_tp) && (max_tp < rn->rs_this_tp[i])) {
-				index_max_tp2 = i;
-				max_tp = rn->rs_this_tp[i];
-			}
+		if (max_prob <  rn->rs_probability[i]) {
+			index_max_prob = i;
+			max_prob = rn->rs_probability[i];
 		}
+	}
 
-		rn->max_tp_rate   = index_max_tp;
-		rn->max_tp_rate2  = index_max_tp2;
-		rn->max_prob_rate = index_max_prob;
-		rn->current_rate  = index_max_tp;
+	max_tp = 0;
+	for (i = 0; i < rs->rs_nrates; i++) {
+		if ((i != index_max_tp) && (max_tp < rn->rs_this_tp[i])) {
+			index_max_tp2 = i;
+			max_tp = rn->rs_this_tp[i];
+		}
+	}
+
+	rn->max_tp_rate   = index_max_tp;
+	rn->max_tp_rate2  = index_max_tp2;
+	rn->max_prob_rate = index_max_prob;
+	rn->current_rate  = index_max_tp;
 }
 
 static struct ath_ratectrl *
 ath_rate_attach(struct ath_softc *sc)
 {
-		struct minstrel_softc *osc;
-		DPRINTF(sc, "%s: %s\n", dev_info, __func__);
+	struct minstrel_softc *osc;
+	DPRINTF(sc, "%s: %s\n", dev_info, __func__);
 
-		_MOD_INC_USE(THIS_MODULE, return NULL);
-		osc = kmalloc(sizeof(struct minstrel_softc), GFP_ATOMIC);
-		if (osc == NULL) {
-			    _MOD_DEC_USE(THIS_MODULE);
-			return NULL;
-		}
+	_MOD_INC_USE(THIS_MODULE, return NULL);
+	osc = kmalloc(sizeof(struct minstrel_softc), GFP_ATOMIC);
+	if (osc == NULL) {
+		_MOD_DEC_USE(THIS_MODULE);
+		return NULL;
+	}
 
-		osc->arc.arc_space = sizeof(struct minstrel_node);
-		osc->arc.arc_vap_space = 0;
+	osc->arc.arc_space = sizeof(struct minstrel_node);
+	osc->arc.arc_vap_space = 0;
 
-		osc->close_timer_now = 0;
-		init_timer(&osc->timer);
+	osc->close_timer_now = 0;
+	init_timer(&osc->timer);
  	osc->sc          = sc;
-		osc->sc_dev      = sc->sc_dev;
-		osc->timer.function = ath_timer_function;
-		osc->timer.data = (unsigned long)osc;
+	osc->sc_dev      = sc->sc_dev;
+	osc->timer.function = ath_timer_function;
+	osc->timer.data = (unsigned long)osc;
 
-		osc->timer.expires = jiffies + HZ;
-		add_timer(&osc->timer);
+	osc->timer.expires = jiffies + HZ;
+	add_timer(&osc->timer);
 
-		return &osc->arc;
+	return &osc->arc;
 }
 
 static void
@@ -921,134 +946,141 @@ ath_rate_detach(struct ath_ratectrl *arc)
 static int
 ath_proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 {
-		char *p = buf;
-		struct ieee80211_node *ni;
-		struct ath_node *an;
-		struct minstrel_node *odst;
-		struct ieee80211_node_table *nt =
-			    (struct ieee80211_node_table *) &vap->iv_ic->ic_sta;
-		unsigned int x = 0;
-		unsigned int this_tp, this_prob, this_eprob;
-			struct ath_softc *sc = vap->iv_ic->ic_dev->priv;;
+	char *p = buf;
+	struct ieee80211_node *ni;
+	struct minstrel_node *odst;
+	struct ieee80211_node_table *nt =
+		(struct ieee80211_node_table *) &vap->iv_ic->ic_sta;
+	unsigned int x = 0;
+	unsigned int this_tp, this_prob, this_eprob;
+	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;;
 
-		IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
-		TAILQ_FOREACH(ni, &nt->nt_node, ni_list) {
-			/* Assume each node needs 1500 bytes */
-			if ((buf + space) < (p + 1500)) {
-				if ((buf + space) > (p + 100)) {
-					p += sprintf(p, "out of room for node " MAC_FMT "\n\n", MAC_ADDR(ni->ni_macaddr));
-					break;
-				}
-				DPRINTF(sc, "%s: out of memeory to write tall of the nodes\n", __func__);
-			            break;
+	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
+	TAILQ_FOREACH(ni, &nt->nt_node, ni_list) {
+		/* Assume each node needs 1500 bytes */
+		if ((buf + space) < (p + 1500)) {
+			if ((buf + space) > (p + 100)) {
+				p += sprintf(p, "out of room for node " 
+						MAC_FMT "\n\n", 
+						MAC_ADDR(ni->ni_macaddr));
+				break;
 			}
-			an = ATH_NODE(ni);
-			odst = ATH_NODE_MINSTREL(an);
-			/* Skip ourself */
-			if (IEEE80211_ADDR_EQ(vap->iv_myaddr, ni->ni_macaddr))
-			        continue;
-
-			p += sprintf(p, "rate data for node: " MAC_FMT "\n", MAC_ADDR(ni->ni_macaddr));
-			p += sprintf(p, "rate     throughput  ewma prob   this prob  this succ/attempt   success    attempts\n");
-			for (x = 0; x < odst->num_rates; x++) {
-				p += sprintf(p, "%s",
-					     (x == odst->current_rate) ? "T" : " ");
-
-				p += sprintf(p, "%s",
-					     (x == odst->max_tp_rate2) ? "t" : " ");
-
-				p += sprintf(p, "%s",
-					     (x == odst->max_prob_rate) ? "P" : " ");
-
-				p += sprintf(p, "%3u%s",
-					     odst->rates[x].rate / 2,
-					     (odst->rates[x].rate & 0x1) != 0 ? ".5" : "  ");
-
-				this_tp = ((odst->rs_this_tp[x] / 18000) * 96) >> 10;
-				this_prob = odst->rs_thisprob[x] / 18;
-				this_eprob = odst->rs_probability[x] / 18;
-				p += sprintf(p, "  %6u.%1u   %6u.%1u   %6u.%1u        %3u(%3u)   %8llu    %8llu\n",
-					     this_tp / 10, this_tp % 10,
-					     this_eprob / 10, this_eprob % 10,
-					     this_prob / 10, this_prob % 10,
-					     odst->rs_lastratesuccess[x],
-					     odst->rs_lastrateattempts[x],
-					     (unsigned long long)odst->rs_succ_hist[x],
-					     (unsigned long long)odst->rs_att_hist[x]);
-			}
-			p += sprintf(p, "\n");
-
-			p += sprintf(p, "Total packet count::    ideal %d      lookaround %d\n\n", odst->packet_count, odst->sample_count);
+			DPRINTF(sc, "%s: out of memeory to write "
+					"all of the nodes\n", __func__);
+			break;
 		}
-		IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
+		odst = ATH_NODE_MINSTREL(ATH_NODE(ni));
+		/* Skip ourself */
+		if (IEEE80211_ADDR_EQ(vap->iv_myaddr, ni->ni_macaddr))
+			continue;
 
-		return (p - buf);
+		p += sprintf(p, "rate data for node: " MAC_FMT "\n", 
+				MAC_ADDR(ni->ni_macaddr));
+		p += sprintf(p, "  rate   throughput EWMA prob this prob this "
+				"succ/attempt  success attempts\n");
+		for (x = 0; x < odst->num_rates; x++) {
+			p += sprintf(p, "%c",
+				     (x == odst->current_rate) ? 'T' : ' ');
+
+			p += sprintf(p, "%c",
+				     (x == odst->max_tp_rate2) ? 't' : ' ');
+
+			p += sprintf(p, "%c",
+				     (x == odst->max_prob_rate) ? 'P' : ' ');
+
+			p += sprintf(p, " %2u%s",
+				     odst->rates[x].rate / 2,
+				     (odst->rates[x].rate & 0x1) != 0 ? 
+				      ".5" : "  ");
+
+			this_tp = ((odst->rs_this_tp[x] / 18000) * 96) >> 10;
+			this_prob = odst->rs_thisprob[x] / 18;
+			this_eprob = odst->rs_probability[x] / 18;
+			p += sprintf(p, "       %2u.%1u      %2u.%1u  %6u.%1u"
+					"        %3u(%3u)   %8llu %8llu\n",
+				     this_tp / 10, this_tp % 10,
+				     this_eprob / 10, this_eprob % 10,
+				     this_prob / 10, this_prob % 10,
+				     odst->rs_lastratesuccess[x],
+				     odst->rs_lastrateattempts[x],
+				     (unsigned long long)odst->rs_succ_hist[x],
+				     (unsigned long long)odst->rs_att_hist[x]);
+		}
+		p += sprintf(p, "\n");
+
+		p += sprintf(p, "Total packet count::    ideal %d      "
+				"lookaround %d\n\n", 
+				odst->packet_count, odst->sample_count);
+	}
+	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
+
+	return (p - buf);
 }
 
 static int
 ath_proc_ratesample_open(struct inode *inode, struct file *file)
 {
-		struct proc_ieee80211_priv *pv = NULL;
-		struct proc_dir_entry *dp = PDE(inode);
-		struct ieee80211vap *vap = dp->data;
+	struct proc_ieee80211_priv *pv = NULL;
+	struct proc_dir_entry *dp = PDE(inode);
+	struct ieee80211vap *vap = dp->data;
 
-		if (!(file->private_data = kmalloc(sizeof(struct proc_ieee80211_priv),
-			                            GFP_KERNEL)))
-			    return -ENOMEM;
+	if (!(file->private_data = kmalloc(sizeof(struct proc_ieee80211_priv),
+					   GFP_KERNEL)))
+		return -ENOMEM;
 
-		/* Initially allocate both read and write buffers */
-		pv = (struct proc_ieee80211_priv *) file->private_data;
-		memset(pv, 0, sizeof(struct proc_ieee80211_priv));
-		pv->rbuf = vmalloc(MAX_PROC_IEEE80211_SIZE);
-		if (!pv->rbuf) {
-			    kfree(pv);
-			    return -ENOMEM;
-		}
-		pv->wbuf = vmalloc(MAX_PROC_IEEE80211_SIZE);
-		if (!pv->wbuf) {
-			    vfree(pv->rbuf);
-			    kfree(pv);
-			    return -ENOMEM;
-		}
+	/* Initially allocate both read and write buffers */
+	pv = (struct proc_ieee80211_priv *) file->private_data;
+	memset(pv, 0, sizeof(struct proc_ieee80211_priv));
+	pv->rbuf = vmalloc(MAX_PROC_IEEE80211_SIZE);
+	if (!pv->rbuf) {
+		kfree(pv);
+		return -ENOMEM;
+	}
+	pv->wbuf = vmalloc(MAX_PROC_IEEE80211_SIZE);
+	if (!pv->wbuf) {
+		vfree(pv->rbuf);
+		kfree(pv);
+		return -ENOMEM;
+	}
 
-		memset(pv->wbuf, 0, MAX_PROC_IEEE80211_SIZE);
-		memset(pv->rbuf, 0, MAX_PROC_IEEE80211_SIZE);
-		pv->max_wlen = MAX_PROC_IEEE80211_SIZE;
-		pv->max_rlen = MAX_PROC_IEEE80211_SIZE;
+	memset(pv->wbuf, 0, MAX_PROC_IEEE80211_SIZE);
+	memset(pv->rbuf, 0, MAX_PROC_IEEE80211_SIZE);
+	pv->max_wlen = MAX_PROC_IEEE80211_SIZE;
+	pv->max_rlen = MAX_PROC_IEEE80211_SIZE;
 
-		/* Now read the data into the buffer */
-		pv->rlen = ath_proc_read_nodes(vap, pv->rbuf, MAX_PROC_IEEE80211_SIZE);
-		return 0;
+	/* Now read the data into the buffer */
+	pv->rlen = ath_proc_read_nodes(vap, pv->rbuf, MAX_PROC_IEEE80211_SIZE);
+	return 0;
 }
 
 static struct file_operations ath_proc_ratesample_ops = {
-		.read = NULL,
-		.write = NULL,
-		.open = ath_proc_ratesample_open,
-		.release = NULL,
+	.read = NULL,
+	.write = NULL,
+	.open = ath_proc_ratesample_open,
+	.release = NULL,
 };
 
 static void
 ath_rate_dynamic_proc_register(struct ieee80211vap *vap)
 {
-		/* Create proc entries for the rate control algorithm */
-		ieee80211_proc_vcreate(vap, &ath_proc_ratesample_ops, "rate_info");
+	/* Create proc entries for the rate control algorithm */
+	ieee80211_proc_vcreate(vap, &ath_proc_ratesample_ops, "rate_info");
 }
 
 #endif /* CONFIG_SYSCTL */
 
 static struct ieee80211_rate_ops ath_rate_ops = {
-		.ratectl_id = IEEE80211_RATE_MINSTREL,
-		.node_init = ath_rate_node_init,
-		.node_cleanup = ath_rate_node_cleanup,
-		.findrate = ath_rate_findrate,
-		.get_mrr = ath_rate_get_mrr,
-		.tx_complete = ath_rate_tx_complete,
-		.newassoc = ath_rate_newassoc,
-		.newstate = ath_rate_newstate,
-		.attach = ath_rate_attach,
-		.detach = ath_rate_detach,
-		.dynamic_proc_register = ath_rate_dynamic_proc_register,
+	.ratectl_id = IEEE80211_RATE_MINSTREL,
+	.node_init = ath_rate_node_init,
+	.node_cleanup = ath_rate_node_cleanup,
+	.findrate = ath_rate_findrate,
+	.get_mrr = ath_rate_get_mrr,
+	.tx_complete = ath_rate_tx_complete,
+	.newassoc = ath_rate_newassoc,
+	.newstate = ath_rate_newstate,
+	.attach = ath_rate_attach,
+	.detach = ath_rate_detach,
+	.dynamic_proc_register = ath_rate_dynamic_proc_register,
 };
 
 MODULE_AUTHOR("John Bicket/Derek Smithies");
@@ -1062,22 +1094,22 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 static int __init ath_rate_minstrel_init(void)
 {
-		printk(KERN_INFO "%s: Minstrel automatic rate control "
-		       "algorithm %s\n", dev_info, version);
-		printk(KERN_INFO "%s: look around rate set to %d%%\n",
-		       dev_info, ath_lookaround_rate);
-		printk(KERN_INFO "%s: EWMA rolloff level set to %d%%\n",
-		       dev_info, ath_ewma_level);
-		printk(KERN_INFO "%s: max segment size in the mrr set "
-		       "to %d us\n", dev_info, ath_segment_size);
-		return ieee80211_rate_register(&ath_rate_ops);
+	printk(KERN_INFO "%s: Minstrel automatic rate control "
+	       "algorithm %s\n", dev_info, version);
+	printk(KERN_INFO "%s: look around rate set to %d%%\n",
+	       dev_info, ath_lookaround_rate);
+	printk(KERN_INFO "%s: EWMA rolloff level set to %d%%\n",
+	       dev_info, ath_ewma_level);
+	printk(KERN_INFO "%s: max segment size in the mrr set "
+	       "to %d us\n", dev_info, ath_segment_size);
+	return ieee80211_rate_register(&ath_rate_ops);
 }
 module_init(ath_rate_minstrel_init);
 
 static void __exit ath_rate_minstrel_exit(void)
 {
-		ieee80211_rate_unregister(&ath_rate_ops);
-		printk(KERN_INFO "%s: unloaded\n", dev_info);
+	ieee80211_rate_unregister(&ath_rate_ops);
+	printk(KERN_INFO "%s: unloaded\n", dev_info);
 }
 module_exit(ath_rate_minstrel_exit);
 
