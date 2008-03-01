@@ -425,9 +425,9 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 				 * bit rates will not work.
 				 */
 				int initial_rate = 72;
-				if (an->an_avgrssi > 50) {
+				if (an->an_halstats.ns_avgrssi > 50) {
 					initial_rate = 108; /* 54 mbps */
-				} else if (an->an_avgrssi > 30) {
+				} else if (an->an_halstats.ns_avgrssi > 30) {
 					initial_rate = 72; /* 36 mbps */
 				} else {
 					initial_rate = 22; /* 11 mbps */

@@ -1110,7 +1110,11 @@ ieee80211_ioctl_getspy(struct net_device *dev, struct iw_request_info *info,
 		/* check we are associated w/ this vap */
 		if (ni) {
 			if (ni->ni_vap == vap) {
-				set_quality(&spy_stat[i], ni->ni_rssi, ic->ic_channoise);
+				set_quality(&spy_stat[i], 
+					ic->ic_rssi_ewma ? 
+					 ic->ic_node_getrssi(ni) : ni->ni_rssi,
+					ic->ic_channoise);
+
 				if (ni->ni_rtsf != vap->iv_spy.ts_rssi[i]) {
 					vap->iv_spy.ts_rssi[i] = ni->ni_rtsf;
 				} else {
@@ -2311,6 +2315,9 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		    IEEE80211_IS_CHAN_ANYG(ic->ic_bsschan))
 			retv = ENETRESET;
 		break;
+	case IEEE80211_PARAM_RSSI_EWMA:
+		ic->ic_rssi_ewma = value;
+		break;
 	case IEEE80211_PARAM_MCASTCIPHER:
 		if ((vap->iv_caps & cipher2cap(value)) == 0 &&
 		    !ieee80211_crypto_available(vap, value))
@@ -2941,6 +2948,9 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		break;
 	case IEEE80211_PARAM_PROTMODE:
 		param[0] = ic->ic_protmode;
+		break;
+	case IEEE80211_PARAM_RSSI_EWMA:
+		param[0] = ic->ic_rssi_ewma;
 		break;
 	case IEEE80211_PARAM_MCASTCIPHER:
 		param[0] = rsn->rsn_mcastcipher;
@@ -5606,6 +5616,11 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  0, IW_PRIV_TYPE_APPIEBUF, "getiebuf" },
 	{ IEEE80211_IOCTL_FILTERFRAME,
 	  IW_PRIV_TYPE_FILTER , 0, "setfilter" },
+
+	{ IEEE80211_PARAM_RSSI_EWMA,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "rssi_ewma" },
+	{ IEEE80211_PARAM_RSSI_EWMA,
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rssi_ewma" },
 
 #ifdef ATH_REVERSE_ENGINEERING
 	/*

@@ -401,6 +401,7 @@ struct ieee80211com {
 
 	/* XXX Multi-BSS: can per-VAP be done/make sense? */
 	enum ieee80211_protmode	ic_protmode;	/* 802.11g protection mode */
+	int ic_rssi_ewma;
 	u_int16_t ic_nonerpsta;			/* # non-ERP stations */
 	u_int16_t ic_longslotsta;		/* # long slot time stations */
 	u_int16_t ic_sta_assoc;			/* stations associated */

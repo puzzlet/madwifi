@@ -5508,7 +5508,6 @@ ath_node_alloc(struct ieee80211vap *vap)
 	if (an != NULL) {
 		memset(an, 0, space);
 		an->an_decomp_index = INVALID_DECOMP_INDEX;
-		an->an_avgrssi = ATH_RSSI_DUMMY_MARKER;
 		an->an_halstats.ns_avgbrssi = ATH_RSSI_DUMMY_MARKER;
 		an->an_halstats.ns_avgrssi = ATH_RSSI_DUMMY_MARKER;
 		an->an_halstats.ns_avgtxrssi = ATH_RSSI_DUMMY_MARKER;
@@ -5614,7 +5613,7 @@ ath_node_getrssi(const struct ieee80211_node *ni)
 #define	HAL_EP_RND(x, mul) \
 	((((x) % (mul)) >= ((mul) / 2)) ? ((x) + ((mul) - 1)) / 	\
 	 (mul) : (x)/(mul))
-	u_int32_t avgrssi = ATH_NODE_CONST(ni)->an_avgrssi;
+	u_int32_t avgrssi = ATH_NODE_CONST(ni)->an_halstats.ns_avgrssi;
 	int32_t rssi;
 
 	/*
@@ -6551,7 +6550,7 @@ drop_micfail:
 			/* Fast path: node is present in the key map;
 			 * grab a reference for processing the frame. */
 			ni = ieee80211_ref_node(ni);
-			ATH_RSSI_LPF(ATH_NODE(ni)->an_avgrssi, rs->rs_rssi);
+			ATH_RSSI_LPF(ATH_NODE(ni)->an_halstats.ns_avgrssi, rs->rs_rssi);
 			type = ieee80211_input(ni->ni_vap, ni, skb, rs->rs_rssi, bf->bf_tsf);
 			ieee80211_unref_node(&ni);
 		} else {
@@ -6564,7 +6563,7 @@ drop_micfail:
 			if (ni != NULL) {
 				ieee80211_keyix_t keyix;
 
-				ATH_RSSI_LPF(ATH_NODE(ni)->an_avgrssi, rs->rs_rssi);
+				ATH_RSSI_LPF(ATH_NODE(ni)->an_halstats.ns_avgrssi, rs->rs_rssi);
 				type = ieee80211_input(ni->ni_vap, ni, skb, rs->rs_rssi, bf->bf_tsf);
 				/*
 				 * If the station has a key cache slot assigned

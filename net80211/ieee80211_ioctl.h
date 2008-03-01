@@ -641,6 +641,7 @@ enum {
 							   FCC requires 30m, so that is the default. */
 	IEEE80211_PARAM_BEACON_MISS_THRESH	= 73,	/* Beacon miss threshold (in beacons) */
 	IEEE80211_PARAM_BEACON_MISS_THRESH_MS	= 74,	/* Beacon miss threshold (in ms) */
+	IEEE80211_PARAM_RSSI_EWMA               = 75,
 };
 
 #define	SIOCG80211STATS			(SIOCDEVPRIVATE+2)

@@ -100,6 +100,7 @@ ieee80211_proto_attach(struct ieee80211com *ic)
 {
 
 	ic->ic_protmode = IEEE80211_PROT_CTSONLY;
+	ic->ic_rssi_ewma = 0;
 
 	ic->ic_wme.wme_hipri_switch_hysteresis =
 		AGGRESSIVE_MODE_SWITCH_HYSTERESIS;
