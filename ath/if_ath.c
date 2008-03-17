@@ -10348,6 +10348,7 @@ ath_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
 	struct ath_softc *sc = dev->priv;
 	struct ieee80211com *ic = &sc->sc_ic;
+	struct ath_diag ad;
 	int error;
 
 	ATH_LOCK(sc);
@@ -10363,10 +10364,15 @@ ath_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			error = 0;
 		break;
 	case SIOCGATHDIAG:
+		return -EOPNOTSUPP;
+		break;
+	case SIOCGATHHALDIAG:
 		if (!capable(CAP_NET_ADMIN))
 			error = -EPERM;
+		else if (copy_from_user(&ad, ifr->ifr_data, sizeof(ad)))
+			error = -EFAULT;
 		else
-			error = ath_ioctl_diag(sc, (struct ath_diag *)ifr);
+			error = ath_ioctl_diag(sc, &ad);
 		break;
 	case SIOCETHTOOL:
 		if (copy_from_user(&cmd, ifr->ifr_data, sizeof(cmd)))
@@ -10378,7 +10384,7 @@ ath_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		error = ieee80211_ioctl_create_vap(ic, ifr, dev);
 		break;
 	default:
-		error = -EINVAL;
+		error = -EOPNOTSUPP;
 		break;
 	}
 	ATH_UNLOCK(sc);

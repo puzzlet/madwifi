@@ -101,27 +101,21 @@ struct ath_stats {
 };
 
 struct ath_diag {
-	char	ad_name[IFNAMSIZ];	/* if name, e.g. "ath0" */
-	u_int16_t ad_id;
+	u_int16_t	ad_id;
 #define	ATH_DIAG_DYN	0x8000		/* allocate buffer in caller */
 #define	ATH_DIAG_IN	0x4000		/* copy in parameters */
 #define	ATH_DIAG_OUT	0x0000		/* copy out results (always) */
 #define	ATH_DIAG_ID	0x0fff
-	u_int16_t ad_in_size;		/* pack to fit, yech */
-	void __user *ad_in_data;
-	void __user *ad_out_data;
-	u_int	ad_out_size;
-
+	void __user	*ad_in_data;
+	void __user	*ad_out_data;
+	unsigned	ad_in_size;
+	unsigned	ad_out_size;
 };
 
 #define	ATH_RADAR_MUTE_TIME	1	/* Set dfs mute time for dfs test mode */
 
-#ifdef __linux__
 #define	SIOCGATHSTATS		(SIOCDEVPRIVATE+0)
 #define	SIOCGATHDIAG		(SIOCDEVPRIVATE+1)
 #define SIOCGATHRADARSIG	(SIOCDEVPRIVATE+2)
-#else
-#define	SIOCGATHSTATS		_IOWR('i', 137, struct ifreq)
-#define	SIOCGATHDIAG		_IOWR('i', 138, struct ath_diag)
-#endif
+#define	SIOCGATHHALDIAG		(SIOCDEVPRIVATE+3)
 #endif /* _DEV_ATH_ATHIOCTL_H */
