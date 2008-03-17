@@ -2107,10 +2107,10 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 					"bf_tsf_low15:%llu rssi:%u width:%u\n",
 					sc->sc_curchan.channel,
 					jiffies, p->bf_tsf,
-					p->bf_tsf &~ TSTAMP_MASK,
+					p->bf_tsf & ~TSTAMP_MASK,
 					p->bf_tsf &  TSTAMP_MASK,
 					p->bf_tsf,
-					p->bf_tsf &~ TSTAMP_MASK,
+					p->bf_tsf & ~TSTAMP_MASK,
 					p->bf_tsf &  TSTAMP_MASK,
 					rs->rs_rssi,
 					skb->data[0]);
@@ -8932,7 +8932,7 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			/*
 			 * Disable interrupts.
 			 */
-			ath_hal_intrset(ah, sc->sc_imask &~ HAL_INT_GLOBAL);
+			ath_hal_intrset(ah, sc->sc_imask & ~HAL_INT_GLOBAL);
 			sc->sc_beacons = 0;
 		}
 		/*
