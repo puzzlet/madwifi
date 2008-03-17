@@ -10290,17 +10290,16 @@ static int
 ath_ioctl_diag(struct ath_softc *sc, struct ath_diag *ad)
 {
 	struct ath_hal *ah = sc->sc_ah;
-	u_int id = ad->ad_id & ATH_DIAG_ID;
-	void *indata = NULL;
-	void *outdata = NULL;
-	u_int32_t insize = ad->ad_in_size;
-	u_int32_t outsize = ad->ad_out_size;
+	void *indata = NULL, *outdata = NULL;
+	u_int32_t insize = ad->ad_in_size, outsize = ad->ad_out_size;
 	int error = 0;
 
 	if (ad->ad_id & ATH_DIAG_IN) {
-		/*
-		 * Copy in data.
-		 */
+		if (insize == 0) {
+			error = -EINVAL;
+			goto bad;
+		}
+
 		indata = kmalloc(insize, GFP_KERNEL);
 		if (indata == NULL) {
 			error = -ENOMEM;
@@ -10312,31 +10311,34 @@ ath_ioctl_diag(struct ath_softc *sc, struct ath_diag *ad)
 		}
 	}
 	if (ad->ad_id & ATH_DIAG_DYN) {
-		/*
-		 * Allocate a buffer for the results (otherwise the HAL
+		if (outsize == 0) {
+			error = -EINVAL;
+			goto bad;
+		}
+
+		/* Allocate a buffer for the results (otherwise the HAL
 		 * returns a pointer to a buffer where we can read the
 		 * results).  Note that we depend on the HAL leaving this
 		 * pointer for us to use below in reclaiming the buffer;
-		 * may want to be more defensive.
-		 */
+		 * may want to be more defensive. */
 		outdata = kmalloc(outsize, GFP_KERNEL);
 		if (outdata == NULL) {
 			error = -ENOMEM;
 			goto bad;
 		}
 	}
-	if (ath_hal_getdiagstate(ah, id, indata, insize, &outdata, &outsize)) {
-		if (outsize < ad->ad_out_size)
-			ad->ad_out_size = outsize;
+	if (ath_hal_getdiagstate(ah, ad->ad_id & ATH_DIAG_ID, indata, insize, 
+				&outdata, &outsize)) {
+		ad->ad_out_size = outsize;
 		if (outdata &&
 		    copy_to_user(ad->ad_out_data, outdata, ad->ad_out_size))
 			error = -EFAULT;
 	} else
 		error = -EINVAL;
 bad:
-	if ((ad->ad_id & ATH_DIAG_IN) && indata != NULL)
+	if (indata != NULL)
 		kfree(indata);
-	if ((ad->ad_id & ATH_DIAG_DYN) && outdata != NULL)
+	if (outdata != NULL)
 		kfree(outdata);
 	return error;
 }
