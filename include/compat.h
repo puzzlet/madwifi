@@ -159,6 +159,10 @@ static inline int timeval_compare(struct timeval *lhs, struct timeval *rhs)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)
+typedef unsigned long resource_size_t;
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)
 #define IRQF_SHARED SA_SHIRQ
 #endif
 
