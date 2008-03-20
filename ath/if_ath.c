@@ -3542,22 +3542,19 @@ ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 		goto bad;
 	}
 
-	/*
-	 * NB: the referenced node pointer is in the
-	 * control block of the sk_buff.  This is
-	 * placed there by ieee80211_mgmt_output because
-	 * we need to hold the reference with the frame.
-	 */
+	bf->bf_node = ieee80211_ref_node(SKB_CB(skb)->ni);
+	bf->bf_skb = skb;
+
 	error = ath_tx_start(dev, SKB_CB(skb)->ni, bf, skb, 0);
-	if (error)
-		goto bad;
+	if (error) {
+		ath_return_txbuf(sc, &bf);
+		return error;
+	}
 
 	sc->sc_stats.ast_tx_mgmt++;
 	return 0;
 bad:
-	if (skb)
-		ieee80211_dev_kfree_skb(&skb);
-	ath_return_txbuf(sc, &bf);
+	ieee80211_dev_kfree_skb(&skb);
 	return error;
 }
 
