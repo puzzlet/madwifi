@@ -510,8 +510,8 @@ ieee80211_ioctl_siwap(struct net_device *dev, struct iw_request_info *info,
 	 */
 	vap->iv_flags &= ~IEEE80211_F_DESBSSID;
 	if (!IEEE80211_ADDR_NULL(&ap_addr->sa_data)) {
-		if (!IEEE80211_ADDR_EQ(vap->iv_des_bssid, 
-				      (uint8_t[8]){0xff}))
+		if (!IEEE80211_ADDR_EQ(&ap_addr->sa_data, 
+					vap->iv_dev->broadcast))
 			vap->iv_flags |= IEEE80211_F_DESBSSID;
 
 		IEEE80211_ADDR_COPY(vap->iv_des_bssid, &ap_addr->sa_data);
@@ -3677,7 +3677,8 @@ ieee80211_ioctl_setmlme(struct net_device *dev, struct iw_request_info *info,
 			break;
 		case IEEE80211_M_HOSTAP:
 			/* NB: the broadcast address means do 'em all */
-			if (!IEEE80211_ADDR_EQ(mlme->im_macaddr, vap->iv_dev->broadcast)) {
+			if (!IEEE80211_ADDR_EQ(mlme->im_macaddr, 
+						vap->iv_dev->broadcast)) {
 				ni = ieee80211_find_node(&ic->ic_sta,
 					mlme->im_macaddr);
 				if (ni != NULL) {
@@ -5105,9 +5106,9 @@ ieee80211_ioctl_siwencodeext(struct net_device *dev,
 	 * IEEE80211_IOCTL_SETKEY and static WEP keys.  It might be worth
 	 * figuring out what their trouble was so the rest of this function
 	 * can be implemented in terms of ieee80211_ioctl_setkey */
-	if (ext->alg == IW_ENCODE_ALG_WEP &&
-	    memcmp(ext->addr.sa_data, "\xff\xff\xff\xff\xff\xff",
-		   IEEE80211_ADDR_LEN) == 0) {
+	if ((ext->alg == IW_ENCODE_ALG_WEP) && 
+			IEEE80211_ADDR_EQ(ext->addr.sa_data, 
+				vap->iv_dev->broadcast)) {
 		/* convert to the format used by SIOCSIWENCODE.  The old
 		 * format just had the key in the extra buf, whereas the
 		 * new format has the key tacked on to the end of the
