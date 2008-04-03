@@ -738,6 +738,218 @@ static void usage(const char *n)
 		"unlawful radio transmissions!\n\n");
 }
 
+u_int32_t extend_tu(u_int32_t base_tu, u_int32_t val, u_int32_t mask)
+{
+	u_int32_t result;
+
+	result = (base_tu & ~mask) | (val & mask);
+	if ((base_tu & mask)  > (val & mask))
+		result += mask+1;
+	return result;
+}
+
+void dump_timers_register(void *mem, u_int16_t mac_version)
+{
+#define AR5K_TIMER0_5210		0x802c /* next TBTT */
+#define AR5K_TIMER0_5211		0x8028
+#define AR5K_TIMER0			(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_TIMER0_5210 : AR5K_TIMER0_5211)
+
+#define AR5K_TIMER1_5210		0x8030 /* next DMA beacon */
+#define AR5K_TIMER1_5211		0x802c
+#define AR5K_TIMER1			(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_TIMER1_5210 : AR5K_TIMER1_5211)
+
+#define AR5K_TIMER2_5210		0x8034 /* next SWBA interrupt */
+#define AR5K_TIMER2_5211		0x8030
+#define AR5K_TIMER2			(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_TIMER2_5210 : AR5K_TIMER2_5211)
+
+#define AR5K_TIMER3_5210		0x8038 /* next ATIM window */
+#define AR5K_TIMER3_5211		0x8034
+#define AR5K_TIMER3			(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_TIMER3_5210 : AR5K_TIMER3_5211)
+
+#define AR5K_TSF_L32_5210		0x806c /* TSF (lower 32 bits) */
+#define AR5K_TSF_L32_5211		0x804c
+#define AR5K_TSF_L32			(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_TSF_L32_5210 : AR5K_TSF_L32_5211)
+
+#define AR5K_TSF_U32_5210		0x8070
+#define AR5K_TSF_U32_5211		0x8050
+#define AR5K_TSF_U32			(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_TSF_U32_5210 : AR5K_TSF_U32_5211)
+
+#define AR5K_BEACON_5210		0x8024
+#define AR5K_BEACON_5211		0x8020
+#define AR5K_BEACON			(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_BEACON_5210 : AR5K_BEACON_5211)
+
+#define AR5K_LAST_TSTP			0x8080
+	
+	const int timer_mask = 0xffff;
+
+	u_int32_t timer0, timer1, timer2, timer3, now_tu;
+	u_int32_t timer0_tu, timer1_tu, timer2_tu, timer3_tu;
+	u_int64_t now_tsf;
+	
+	timer0 = AR5K_REG_READ(AR5K_TIMER0);		/* 0x0000ffff */
+	timer1 = AR5K_REG_READ(AR5K_TIMER1_5211);	/* 0x0007ffff */
+	timer2 = AR5K_REG_READ(AR5K_TIMER2_5211);	/* 0x?1ffffff */
+	timer3 = AR5K_REG_READ(AR5K_TIMER3_5211);	/* 0x0000ffff */
+	
+	now_tsf = ((u_int64_t)AR5K_REG_READ(AR5K_TSF_U32_5211) << 32)
+		| (u_int64_t)AR5K_REG_READ(AR5K_TSF_L32_5211);
+	
+	now_tu = now_tsf >> 10;
+	
+	timer0_tu = extend_tu(now_tu, timer0, 0xffff);
+	printf("TIMER0 : 0x%8x TBTT : %5u TU:%8x\n", timer0,
+	       timer0 & timer_mask, timer0_tu);
+	timer1_tu = extend_tu(now_tu, timer1>>3, 0x7ffff>>3);
+	printf("TIMER1 : 0x%8x DMAb : %5u TU:%8x(%d)\n", timer1,
+	       (timer1>>3) & timer_mask, timer1_tu,
+	       timer1_tu - timer0_tu);
+	timer2_tu = extend_tu(now_tu, timer2>>3, 0x1ffffff>>3);
+	printf("TIMER2 : 0x%8x SWBA : %5u TU:%8x(%d)\n", timer2,
+	       (timer2>>3) & timer_mask, timer2_tu,
+	       timer2_tu - timer0_tu);
+	timer3_tu = extend_tu(now_tu, timer3, 0xffff);
+	printf("TIMER3 : 0x%8x ATIM : %5u TU:%8x(%d)\n", timer3,
+	       timer3 & timer_mask, timer3_tu,
+	       timer3_tu - timer0_tu);
+	printf("TSF    : 0x%8llx TSFTU: %5u TU:%8x\n", now_tsf,
+	       now_tu & timer_mask, now_tu);
+
+	printf("BEACON: %x\n", AR5K_REG_READ(AR5K_BEACON));
+	printf("LAST_TSTP: %x\n", AR5K_REG_READ(AR5K_LAST_TSTP));
+}
+
+#define AR5K_KEYTABLE_0_5210		0x9000
+#define AR5K_KEYTABLE_0_5211		0x8800
+#define AR5K_KEYTABLE_0			(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_KEYTABLE_0_5210 : \
+					AR5K_KEYTABLE_0_5211)
+
+#define AR5K_KEYTABLE(_n)		(AR5K_KEYTABLE_0_5211 + ((_n) << 5))
+#define AR5K_KEYTABLE_OFF(_n, x)	(AR5K_KEYTABLE(_n) + ((x) << 2))
+#define AR5K_KEYTABLE_VALID		0x00008000
+
+#define AR5K_KEYTABLE_SIZE_5210		64
+#define AR5K_KEYTABLE_SIZE_5211		128
+#define AR5K_KEYTABLE_SIZE		(mac_version == AR5K_SREV_VER_AR5210? \
+					AR5K_KEYTABLE_SIZE_5210 : \
+					AR5K_KEYTABLE_SIZE_5211)
+
+void keycache_dump(void *mem, u_int16_t mac_version)
+{
+	int i, keylen;
+	u_int32_t val0, val1, val2, val3, val4, keytype, ant, mac0, mac1;
+
+	/* dump all 128 entries */
+	printf("Dumping keycache entries...\n");
+	for (i=0;i<AR5K_KEYTABLE_SIZE;i++) {
+		mac1 = AR5K_REG_READ(AR5K_KEYTABLE_OFF(i,7));
+		if (mac1 & AR5K_KEYTABLE_VALID) {
+			val0    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(i,0));
+			val1    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(i,1));
+			val2    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(i,2));
+			val3    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(i,3));
+			val4    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(i,4));
+			keytype = AR5K_REG_READ(AR5K_KEYTABLE_OFF(i,5));
+			ant = keytype & 8;
+			keytype &= ~8;
+			switch (keytype) {
+			case 0: /* WEP40  */ keylen =  40 / 8; break;
+			case 1: /* WEP104 */ keylen = 104 / 8; break;
+			case 3: /* WEP128 */ keylen = 128 / 8; break;
+			case 4: /* TKIP   */ keylen = 128 / 8; break;
+			case 5: /* AES    */ keylen = 128 / 8; break;
+			case 6: /* CCM    */ keylen = 128 / 8; break;
+			default:             keylen = 0;       break;
+			}
+			mac0 = AR5K_REG_READ(AR5K_KEYTABLE_OFF(i,6));
+
+			printf("[%3u] keytype %d [%s%s%s%s%s%s%s%s] mac %02x:%02x:%02x:%02x:%02x:%02x key:%08x-%08x-%08x-%08x-%08x\n",
+			       i,
+			       keytype,
+			       keytype == 0 ? "WEP40 " : "",
+			       keytype == 1 ? "WEP104" : "",
+			       keytype == 3 ? "WEP128" : "",
+			       keytype == 4 ? "TKIP  " : "",
+			       keytype == 5 ? "AES   " : "",
+			       keytype == 6 ? "CCM   " : "",
+			       keytype == 7 ? "NULL  " : "",
+			       ant     == 8 ? "+ANT"   : "",
+			       ((mac0 <<  1) & 0xff),
+			       ((mac0 >>  7) & 0xff),
+			       ((mac0 >> 15) & 0xff),
+			       ((mac0 >> 23) & 0xff),
+			       ((mac1 <<  1) & 0xff) | (mac0 >> 31),
+			       ((mac1 >>  7) & 0xff),
+			       val0, val1, val2, val3, val4);
+		}
+	}
+}
+
+/* copy key index (0) to key index (idx) */
+
+void keycache_copy(void *mem, u_int16_t mac_version, int idx)
+{
+	u_int32_t val0, val1, val2, val3, val4, keytype, mac0, mac1;
+	
+	printf("Copying keycache entry 0 to %d\n", idx);
+	if (idx < 0 || idx >= AR5K_KEYTABLE_SIZE) {
+		printf("invalid keycache index\n");
+		return ;
+	}
+
+	val0    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(0,0));
+	val1    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(0,1));
+	val2    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(0,2));
+	val3    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(0,3));
+	val4    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(0,4));
+	keytype = AR5K_REG_READ(AR5K_KEYTABLE_OFF(0,5));
+	mac0    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(0,6));
+	mac1    = AR5K_REG_READ(AR5K_KEYTABLE_OFF(0,7));
+
+	AR5K_REG_WRITE(AR5K_KEYTABLE_OFF(idx,0), val0);
+	AR5K_REG_WRITE(AR5K_KEYTABLE_OFF(idx,1), val1);
+	AR5K_REG_WRITE(AR5K_KEYTABLE_OFF(idx,2), val2);
+	AR5K_REG_WRITE(AR5K_KEYTABLE_OFF(idx,3), val3);
+	AR5K_REG_WRITE(AR5K_KEYTABLE_OFF(idx,4), val4);
+	AR5K_REG_WRITE(AR5K_KEYTABLE_OFF(idx,5), keytype);
+	AR5K_REG_WRITE(AR5K_KEYTABLE_OFF(idx,6), mac0);
+	AR5K_REG_WRITE(AR5K_KEYTABLE_OFF(idx,7), mac1);
+}
+
+void sta_id0_id1_dump(void *mem)
+{
+#define AR5K_STA_ID0			0x8000
+#define AR5K_STA_ID1			0x8004
+#define AR5K_STA_ID1_AP                 0x00010000
+#define AR5K_STA_ID1_ADHOC              0x00020000
+#define AR5K_STA_ID1_NO_KEYSRCH		0x00080000
+
+	u_int32_t sta_id0, sta_id1;
+
+	sta_id0 = AR5K_REG_READ(AR5K_STA_ID0);
+	sta_id1 = AR5K_REG_READ(AR5K_STA_ID1);
+	printf("STA_ID0 : %02x:%02x:%02x:%02x:%02x:%02x\n",
+	       (sta_id0 >>  0) & 0xff,
+	       (sta_id0 >>  8) & 0xff,
+	       (sta_id0 >> 16) & 0xff,
+	       (sta_id0 >> 24) & 0xff,
+	       (sta_id1 >>  0) & 0xff,
+	       (sta_id1 >>  8) & 0xff);
+	printf("STA_ID1 : %08x AP:%d IBSS:%d "
+	       "KeyCache Disable:%d\n",
+	       sta_id1,
+	       sta_id1 & AR5K_STA_ID1_AP ? 1 : 0,
+	       sta_id1 & AR5K_STA_ID1_ADHOC ? 1 : 0,
+	       sta_id1 & AR5K_STA_ID1_NO_KEYSRCH ? 1 : 0);
+}
+
 int main(int argc, char *argv[])
 {
 	u_int32_t dev_addr;
@@ -750,6 +962,9 @@ int main(int argc, char *argv[])
 	int i, anr = 1;
 	int do_write = 0;	/* default: read only */
 	int do_dump = 0;
+	int timer_count = 1;
+	int do_keycache_dump = 0;
+	int keycache_copy_idx = 0;
 
 	struct {
 		int valid;
@@ -767,6 +982,15 @@ int main(int argc, char *argv[])
 
 	while (anr < argc && argv[anr][0] == '-') {
 		switch (argv[anr][1]) {
+		case 't':
+			if (++anr < argc) {
+				timer_count = atoi(argv[anr]);
+				printf("timer_count:%d\n", timer_count);
+			} else {
+				usage(argv[0]);
+				return 0;
+			}
+			break;
 		case 'w':
 			do_write = 1;
 			break;
@@ -793,6 +1017,14 @@ int main(int argc, char *argv[])
 
 		case 'd':
 			do_dump = 1;
+			break;
+
+		case 'k':
+			do_keycache_dump = 1;
+			break;
+
+		case 'K':
+			keycache_copy_idx = atoi(argv[++anr]);
 			break;
 
 		case 'h':
@@ -1109,5 +1341,17 @@ int main(int argc, char *argv[])
 
 		return rc;
 	}
+
+	sta_id0_id1_dump(mem);
+
+	for (i=0; i<timer_count; i++)
+		dump_timers_register(mem, mac_version);
+
+	if (do_keycache_dump)
+		keycache_dump(mem, mac_version);
+
+	if (keycache_copy_idx > 0)
+		keycache_copy(mem, mac_version, keycache_copy_idx);
+
 	return 0;
 }
