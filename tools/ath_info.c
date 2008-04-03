@@ -89,6 +89,9 @@
  *
  */
 
+/* Try accepting 64-bit device address even with 32-bit userspace */
+#define _FILE_OFFSET_BITS 64
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -952,7 +955,7 @@ void sta_id0_id1_dump(void *mem)
 
 int main(int argc, char *argv[])
 {
-	u_int32_t dev_addr;
+	unsigned long long dev_addr;
 	u_int16_t eeprom_header, srev, phy_rev_5ghz, phy_rev_2ghz;
 	u_int16_t eeprom_version, mac_version, regdomain, has_crystal, ee_magic;
 	u_int8_t error, has_a, has_b, has_g, has_rfkill, eeprom_size;
@@ -1046,7 +1049,7 @@ int main(int argc, char *argv[])
 		return 3;
 	}
 
-	dev_addr = strtoul(argv[anr], NULL, 16);
+	dev_addr = strtoull(argv[anr], NULL, 16);
 
 	fd = open("/dev/mem", O_RDWR);
 	if (fd < 0) {
@@ -1058,7 +1061,7 @@ int main(int argc, char *argv[])
 		   MAP_SHARED | MAP_FILE, fd, dev_addr);
 
 	if (mem == MAP_FAILED) {
-		printf("Mmap of device at 0x%08X for 0x%X bytes failed - "
+		printf("Mmap of device at 0x%08llX for 0x%X bytes failed - "
 		       "%s\n", dev_addr, AR5K_PCI_MEM_SIZE, strerror(errno));
 		return -3;
 	}
