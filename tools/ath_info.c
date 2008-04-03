@@ -818,8 +818,8 @@ void dump_timers_register(void *mem, u_int16_t mac_version)
 	printf("TIMER3 : 0x%8x ATIM : %5u TU:%8x(%d)\n", timer3,
 	       timer3 & timer_mask, timer3_tu,
 	       timer3_tu - timer0_tu);
-	printf("TSF    : 0x%8llx TSFTU: %5u TU:%8x\n", now_tsf,
-	       now_tu & timer_mask, now_tu);
+	printf("TSF    : 0x%8llx TSFTU: %5u TU:%8x\n",
+	       (unsigned long long)now_tsf, now_tu & timer_mask, now_tu);
 
 	printf("BEACON: %x\n", AR5K_REG_READ(AR5K_BEACON));
 	printf("LAST_TSTP: %x\n", AR5K_REG_READ(AR5K_LAST_TSTP));
