@@ -710,7 +710,7 @@ static void usage(const char *n)
 {
 	int i;
 
-	fprintf(stderr, "%s [-w [-g N:M]] [-v] [-f] [-d] <base_address> "
+	fprintf(stderr, "%s [-w [-g N:M]] [-v] [-f] [-d] [-R addr] [-W addr val] <base_address> "
 		"[<name1> <val1> [<name2> <val2> ...]]\n\n", n);
 	fprintf(stderr,
 		"-w      write values into EEPROM\n"
@@ -718,6 +718,8 @@ static void usage(const char *n)
 		"-v      verbose output\n"
 		"-f      force; suppress question before writing\n"
 		"-d      dump eeprom (file 'ath-eeprom-dump.bin' and screen)\n"
+		"-R <addr>       read register at <addr> (hex)\n"
+		"-W <addr> <val> write <val> (hex) into register at <addr> (hex)\n"
 		"<base_address>  device base address (see lspci output)\n\n");
 
 	fprintf(stderr,
@@ -968,6 +970,9 @@ int main(int argc, char *argv[])
 	int timer_count = 1;
 	int do_keycache_dump = 0;
 	int keycache_copy_idx = 0;
+	int reg_read = 0;
+	int reg_write = 0;
+	unsigned int reg_write_val = 0;
 
 	struct {
 		int valid;
@@ -1030,6 +1035,17 @@ int main(int argc, char *argv[])
 			keycache_copy_idx = atoi(argv[++anr]);
 			break;
 
+		case 'R':
+			anr++;
+			reg_read = strtoul(argv[anr], NULL, 16);
+			break;
+
+		case 'W':
+			anr++;
+			reg_write = strtoul(argv[anr++], NULL, 16);
+			reg_write_val = strtoul(argv[anr], NULL, 16);
+			break;
+
 		case 'h':
 			usage(argv[0]);
 			return 0;
@@ -1088,6 +1104,17 @@ int main(int argc, char *argv[])
 
 	AR5K_REG_DISABLE_BITS(AR5K_PCICFG, AR5K_PCICFG_SPWR_DN);
 	usleep(500);
+
+	if (reg_read) {
+		printf("READ %04x = %08x\n", reg_read, AR5K_REG_READ(reg_read));
+		return 0;
+	}
+
+	if (reg_write) {
+		printf("WRITE %04x = %08x\n", reg_write, reg_write_val);
+		AR5K_REG_WRITE(reg_write, reg_write_val);
+		return 0;
+	}
 
 	srev = AR5K_REG_READ(AR5K_SREV);
 	mac_version = AR5K_REG_MS(srev, AR5K_SREV_VER) << 4;
