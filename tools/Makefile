@@ -48,7 +48,7 @@ endif
 
 
 ALL=	athstats 80211stats athkey athchans athctrl \
-	athdebug 80211debug wlanconfig ath_info
+	athdebug 80211debug wlanconfig
 
 all:	$(ALL)
 
@@ -75,8 +75,6 @@ wlanconfig: wlanconfig.c
 	$(CC) -o wlanconfig $(ALL_CFLAGS) $(LDFLAGS) wlanconfig.c
 80211debug: 80211debug.c
 	$(CC) -o 80211debug $(ALL_CFLAGS) $(LDFLAGS) 80211debug.c
-ath_info: ath_info.c
-	$(CC) -o ath_info $(CFLAGS) ath_info.c
 
 
 install: $(ALL) 
