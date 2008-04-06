@@ -5255,22 +5255,18 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 		 */
 		bs.bs_timoffset = ni->ni_timoff;
 #endif
-		/*
-		 * Store the number of consecutive beacons to miss
-		 * before taking a BMISS interrupt.
-		 */
+		/* Store the number of consecutive beacons to miss
+		 * before taking a BMISS interrupt. */
 		bs.bs_bmissthreshold = 
 			IEEE80211_BMISSTHRESH_SANITISE(ic->ic_bmissthreshold);
 
-		/*
-		 * Calculate sleep duration.  The configuration is
+		/* Calculate sleep duration.  The configuration is
 		 * given in ms.  We ensure a multiple of the beacon
 		 * period is used.  Also, if the sleep duration is
 		 * greater than the DTIM period then it makes senses
 		 * to make it a multiple of that.
 		 *
-		 * XXX fixed at 100ms
-		 */
+		 * XXX: fixed at 100ms. */
 		bs.bs_sleepduration =
 			roundup(IEEE80211_MS_TO_TU(100), bs.bs_intval);
 		if (bs.bs_sleepduration > bs.bs_dtimperiod)
@@ -5308,10 +5304,8 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 		if (reset_tsf)
 			intval |= HAL_BEACON_RESET_TSF;
 		if (IEEE80211_IS_MODE_BEACON(ic->ic_opmode)) {
-			/*
-			 * In AP/IBSS mode we enable the beacon timers and
-			 * SWBA interrupts to prepare beacon frames.
-			 */
+			/* In AP/IBSS mode we enable the beacon timers and
+			 * SWBA interrupts to prepare beacon frames. */
 			intval |= HAL_BEACON_ENA;
 			sc->sc_imask |= HAL_INT_SWBA;
 			ath_set_beacon_cal(sc, 1);
@@ -5334,40 +5328,33 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 
 ath_beacon_config_debug:
 	/* We print all debug messages here, in order to preserve the
-	 * time critical aspect of this function */
+	 * time critical aspect of this function. */
 	DPRINTF(sc, ATH_DEBUG_BEACON,
 		"ni=%p tsf=%llu hw_tsf=%llu tsftu=%u hw_tsftu=%u\n",
-		ni, 
-		(unsigned long long)tsf, (unsigned long long)hw_tsf, 
+		ni,
+		(unsigned long long)tsf, (unsigned long long)hw_tsf,
 		tsftu, hw_tsftu);
 
-	if (reset_tsf) {
+	if (reset_tsf)
 		/* We just created the interface */
-		DPRINTF(sc, ATH_DEBUG_BEACON, "First beacon\n");
-	} else {
-		if (tsf == 1) {
-			/* We did not receive any beacons or probe response */
-			DPRINTF(sc, ATH_DEBUG_BEACON,
-				"No beacon received...\n");
-		} else {
-			if (tsf > hw_tsf) {
-				/* We did receive a beacon but the hw TSF has 
-				 * not been updated - must have been a 
-				 * different BSSID */
-				DPRINTF(sc, ATH_DEBUG_BEACON,
-					"Beacon received, but TSF has not "
-					"been updated\n");
-			} else {
-				/* We did receive a beacon, normal case */
-				DPRINTF(sc, ATH_DEBUG_BEACON,
-					"Beacon received, TSF and timers "
-					"synchronized\n");
-			}
-		}
-	}
+		DPRINTF(sc, ATH_DEBUG_BEACON, "%s: first beacon\n", __func__);
+	else if (tsf == 1)
+		/* We do not receive any beacons or probe response */
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+				"%s: no beacon received...\n",__func__);
+	else if (tsf > hw_tsf)
+		/* We do receive a beacon and the hw TSF has not been updated */
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+				"%s: beacon received, but TSF is incorrect\n", 
+				__func__);
+	else
+		/* We do receive a beacon in the past, normal case */
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+				"%s: beacon received, TSF is correct\n", 
+				__func__);
 
-	DPRINTF(sc, ATH_DEBUG_BEACON, 
-		"nexttbtt=%10x intval=%u%s%s imask=%s%s\n", 
+	DPRINTF(sc, ATH_DEBUG_BEACON,
+		"nexttbtt=%10x intval=%u%s%s imask=%s%s\n",
 		nexttbtt, intval & HAL_BEACON_PERIOD,
 		intval & HAL_BEACON_ENA       ? " HAL_BEACON_ENA"       : "",
 		intval & HAL_BEACON_RESET_TSF ? " HAL_BEACON_RESET_TSF" : "",
@@ -6204,13 +6191,11 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 		vap, MAC_ADDR(vap->iv_bssid),
 		ni, MAC_ADDR(wh->i_addr2));
 
-	/*Call up first so subsequent work can use information
+	/* Call up first so subsequent work can use information
 	 * potentially stored in the node (e.g. for ibss merge). */
-
 	sc->sc_recv_mgmt(vap, ni_or_null, skb, subtype, rssi, rtsf);
 
-
-	/* Lookup the new node if any (this grabs a reference to it) */
+	/* Lookup the new node if any (this grabs a reference to it). */
 	ni = ieee80211_find_rxnode(vap->iv_ic,
 	         (const struct ieee80211_frame_min *)skb->data);
 	if (ni == NULL) {
@@ -6220,12 +6205,12 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 
 	switch (subtype) {
 	case IEEE80211_FC0_SUBTYPE_BEACON:
-		/* update RSSI statistics for use by the HAL */
+		/* Update RSSI statistics for use by the HAL. */
 		ATH_RSSI_LPF(ATH_NODE(ni)->an_halstats.ns_avgbrssi, rssi);
 		if ((sc->sc_syncbeacon ||
 		    (vap->iv_flags_ext & IEEE80211_FEXT_APPIE_UPDATE)) &&
 		     ni == vap->iv_bss && vap->iv_state == IEEE80211_S_RUN) {
-			/* Resync beacon timers using the tsf of the
+			/* Resync beacon timers using the TSF of the
 			 * beacon frame we just received. */
 			vap->iv_flags_ext &= ~IEEE80211_FEXT_APPIE_UPDATE;
 			ath_beacon_config(sc, vap);
