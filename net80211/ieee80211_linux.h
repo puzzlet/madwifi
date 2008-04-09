@@ -200,6 +200,14 @@ typedef spinlock_t ieee80211_node_lock_t;
 	IEEE80211_NODE_LOCK_ASSERT(_ni); \
 	spin_unlock_irqrestore(&(_ni)->ni_nodelock, __node_lockflags); \
 } while (0)
+#define IEEE80211_NODE_LOCK_IRQ_INSIDE(_tq) do { \
+	IEEE80211_NODE_LOCK_CHECK(_ni); 	\
+	spin_lock(&(_ni)->ni_nodelock);
+} while(0)
+#define IEEE80211_NODE_UNLOCK_IRQ_INSIDE(_tq) do { \
+	IEEE80211_NODE_LOCK_ASSERT(_ni); \
+	spin_unlock(&(_ni)->ni_nodelock); \
+}while (0)
 #define	IEEE80211_NODE_UNLOCK_IRQ_EARLY(_ni)		\
 	IEEE80211_NODE_LOCK_ASSERT(_ni); \
 	spin_unlock_irqrestore(&(_ni)->ni_nodelock, __node_lockflags);
@@ -329,6 +337,14 @@ typedef spinlock_t acl_lock_t;
 	IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ni);			\
 	spin_unlock_irqrestore(&(_ni)->ni_savedq.lock, __qlockflags); \
 } while (0)
+#define IEEE80211_NODE_SAVEQ_LOCK_IRQ_INSIDE(_ni)   do { 	\
+	IEEE80211_NODE_SAVEQ_LOCK_CHECK(_ni);			\
+	spin_lock(&(_ni)->ni_savedq.lock);			\
+} while(0)
+#define IEEE80211_NODE_SAVEQ_UNLOCK_IRQ_INSIDE(_ni) do { 	\
+	IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ni);			\
+	spin_unlock(&(_ni)->ni_savedq.lock);			\
+} while(0)
 #define	IEEE80211_NODE_SAVEQ_UNLOCK_IRQ_EARLY(_ni)		\
 	IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ni);			\
 	spin_unlock_irqrestore(&(_ni)->ni_savedq.lock, __qlockflags);
@@ -394,7 +410,15 @@ typedef spinlock_t acl_lock_t;
 };
 
 
+/* SKB_XX(...) macros will blow up if _skb is NULL (detect problems early) */
 #define	SKB_CB(_skb) 		((struct ieee80211_cb *)(_skb)->cb)
+#define	SKB_NI(_skb) 		(SKB_CB(_skb)->ni)
+#define	SKB_AN(_skb) 		(ATH_NODE(SKB_NI(_skb)))
+/* BF_XX(...) macros will blow up if _bf is NULL, but not if _bf->bf_skb is
+ * null*/
+#define	BF_CB(_bf) 		(((_bf)->bf_skb) ? SKB_CB((_bf)->bf_skb) : NULL)
+#define	BF_NI(_bf) 		(((_bf)->bf_skb) ? SKB_NI((_bf)->bf_skb) : NULL)
+#define	BF_AN(_bf) 		(((_bf)->bf_skb) ? SKB_AN((_bf)->bf_skb) : NULL)
 
 #define M_FLAG_SET(_skb, _flag) \
 	(SKB_CB(_skb)->flags |= (_flag))
@@ -421,9 +445,9 @@ typedef spinlock_t acl_lock_t;
 #define skb_age csum
 #endif
 
-#define	M_AGE_SET(skb,v)	(skb->skb_age = v)
-#define	M_AGE_GET(skb)		(skb->skb_age)
-#define	M_AGE_SUB(skb,adj)	(skb->skb_age -= adj)
+#define	M_AGE_SET(skb,v)	((skb)->skb_age = (v))
+#define	M_AGE_GET(skb)		((skb)->skb_age)
+#define	M_AGE_SUB(skb,adj)	((skb)->skb_age -= (adj))
 
 struct ieee80211com;
 struct ieee80211vap;
