@@ -131,7 +131,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 	struct ieee80211_phy_params *ph = (struct ieee80211_phy_params *)
 		(SKB_CB(skb) + 1); /* NB: SKB_CB casts to CB struct*. */
 	SKB_CB(skb)->flags = M_RAW;
-	SKB_CB(skb)->ni = NULL;
+	SKB_NI(skb) = NULL;
 	SKB_CB(skb)->next = NULL;
 	memset(ph, 0, sizeof(struct ieee80211_phy_params));
 
