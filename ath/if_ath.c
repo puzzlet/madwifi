@@ -4787,7 +4787,7 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	 * capability info and arrange for a mode change
 	 * if needed.
 	 */
-	if (sc->sc_dturbo) {
+	if (sc && avp && sc->sc_dturbo && NULL != avp->av_boff.bo_tim) {
 		u_int8_t dtim;
 		dtim = ((avp->av_boff.bo_tim[2] == 1) ||
 			(avp->av_boff.bo_tim[3] == 1));
