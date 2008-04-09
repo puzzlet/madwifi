@@ -192,13 +192,17 @@ To create an access point, use:
 To create an access point and a station, use:
 
   wlanconfig ath0 create wlandev wifi0 wlanmode ap
-  wlanconfig ath1 create wlandev wifi0 wlanmode sta nosbeacon
+  wlanconfig ath1 create wlandev wifi0 wlanmode sta
 
-To create APs that share a single MAC address, use the -bssid flag when
-creating the VAPs:
+To create APs that share a single MAC address, just create the VAPs:
 
-  wlanconfig ath0 create wlandev wifi0 wlanmode ap -bssid
-  wlanconfig ath1 create wlandev wifi0 wlanmode ap -bssid
+  wlanconfig ath0 create wlandev wifi0 wlanmode ap
+  wlanconfig ath1 create wlandev wifi0 wlanmode ap
+
+To create an VAP with a unique MAC addresss, use the bssid parameter:
+
+  wlanconfig ath0 create wlandev wifi0 wlanmode ap
+  wlanconfig ath1 create wlandev wifi0 wlanmode ap bssid
 
 Finally, to destroy a VAP, issue the command:
 
