@@ -454,7 +454,7 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 	switch (opmode) {
 	case IEEE80211_M_STA:
 		/* WDS/Repeater */
-		if (flags & IEEE80211_NO_STABEACONS)
+		if (flags & IEEE80211_USE_SW_BEACON_TIMERS)
 			vap->iv_flags_ext |= IEEE80211_FEXT_SWBMISS;
 		break;
 	case IEEE80211_M_IBSS:

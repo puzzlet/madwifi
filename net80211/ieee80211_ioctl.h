@@ -658,8 +658,8 @@ struct ieee80211_clone_params {
 	char icp_name[IFNAMSIZ];		/* device name */
 	u_int16_t icp_opmode;			/* operating mode */
 	u_int16_t icp_flags;			/* see below */
-#define	IEEE80211_CLONE_BSSID	0x0001		/* allocate unique mac/bssid */
-#define	IEEE80211_NO_STABEACONS	0x0002		/* Do not setup the station beacon timers */
+#define	IEEE80211_CLONE_BSSID		0x0001	/* allocate unique mac/bssid */
+#define	IEEE80211_USE_SW_BEACON_TIMERS	0x0002	/* Do not setup the station beacon timers */
 };
 
 /* APPIEBUF related definitions */

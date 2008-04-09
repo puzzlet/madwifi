@@ -1227,13 +1227,17 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 	case IEEE80211_M_STA:	/* ap+sta for repeater application */
 		if (sc->sc_nstavaps != 0)  /* only one sta regardless */
 			return NULL;
-		if ((sc->sc_nvaps != 0) && (!(flags & IEEE80211_NO_STABEACONS)))
-			return NULL;   /* If using station beacons, must first up */
-		if (flags & IEEE80211_NO_STABEACONS) {
+		/* If we already have an AP VAP, we can still add a station VAP
+		 * but we must not attempt to re-use the hardware beacon timers
+		 * since the AP is already using them, and we must stay in AP 
+		 * opmode. */
+		if (sc->sc_nvaps != 0) {
+			flags |= IEEE80211_USE_SW_BEACON_TIMERS;
 			sc->sc_nostabeacons = 1;
 			ic_opmode = IEEE80211_M_HOSTAP;	/* Run with chip in AP mode */
-		} else
+		} else {
 			ic_opmode = opmode;
+		}
 		break;
 	case IEEE80211_M_IBSS:
 		if ((sc->sc_nvaps != 0) && (ic->ic_opmode == IEEE80211_M_STA))

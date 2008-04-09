@@ -284,7 +284,7 @@ static void
 usage(void)
 {
 	fprintf(stderr, "usage: wlanconfig athX create [nounit] wlandev wifiY\n");
-	fprintf(stderr, "            wlanmode [sta|adhoc|ap|monitor|wds|ahdemo] [bssid | -bssid] [nosbeacon]\n");
+	fprintf(stderr, "            wlanmode [sta|adhoc|ap|monitor|wds|ahdemo] [uniquebssid]\n");
 	fprintf(stderr, "usage: wlanconfig athX destroy\n");
 	fprintf(stderr, "usage: wlanconfig athX list [active|ap|caps|chan|freq|keys|scan|sta|wme]\n");
 	exit(-1);
@@ -318,10 +318,16 @@ getflag(const char  *s)
 	int flag = 0;
 
 	cp = (s[0] == '-' ? s + 1 : s);
-	if (strcmp(cp, "bssid") == 0)
+	if (strcmp(cp, "bssid") == 0) {
+		printf("WARNING: the -bssid and bssid flags are deprecated.\n");
 		flag = IEEE80211_CLONE_BSSID;
-	if (strcmp(cp, "nosbeacon") == 0)
-		flag |= IEEE80211_NO_STABEACONS;
+	}
+	if (strcmp(cp, "uniquebssid") == 0)
+		flag = IEEE80211_CLONE_BSSID;
+	if (strcmp(cp, "nosbeacon") == 0) {
+		printf("WARNING: the nosbeacon flag has been deprecated.\n");
+		return 0; /* deprecated but skip */
+	}
 	if (flag == 0)
 		errx(1, "unknown create option %s", s);
 	return (s[0] == '-' ? -flag : flag);

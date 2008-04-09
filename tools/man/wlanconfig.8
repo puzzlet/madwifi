@@ -18,7 +18,7 @@ underlying base device which is created when the driver is loaded.
 .PP
 .SH "ARGUMENTS"
 .TP
-.B <vap> create [nounit] wlandev <base device> wlanmode <mode> [bssid|-bssid] [nosbeacon]
+.B <vap> create [nounit] wlandev <base device> wlanmode <mode> [uniquebssid]
 Create the interface <vap> using the specified <base device> and <mode>. <vap> can either be a full interface name (e.g. 'ath0'), or just the suffix (e.g. 'ath'), in which case, the kernel will automatically append the next vacant integer. [nounit] will turn off the automatic integer increments.
 .TP
 .B <vap> destroy
@@ -49,14 +49,17 @@ Create the station in WDS mode.
 .PP
 .SH "OPTIONS"
 .TP
+.B uniquebssid
+Create the VAP using a new unique MAC address, different from the underlying device.
+.TP
 .B bssid
-Create the VAP using a different MAC address from the underlying device.
+Synonym for uniquebssid, for backward compatibility.
 .TP
 .B \-bssid
-Create the VAP using the MAC address of the underlying device.
-.TP 
+Ignored for backward compatibility.
+.TP
 .B nosbeacon
-When both station VAPS and AP VAPs coexist, the station should be created with the nosbeacon flag set in order to disable the use of hardware beacon times for the station.
+Ignored for backward compatibility.
 .PP
 .SH "LIST ITEMS"
 .TP
