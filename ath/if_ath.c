@@ -8357,8 +8357,17 @@ ath_tx_tasklet_q0123(TQUEUE_ARG data)
 		ath_tx_processq(sc, &sc->sc_txq[2]);
 	if (txqactive(sc->sc_ah, 3))
 		ath_tx_processq(sc, &sc->sc_txq[3]);
-	if (txqactive(sc->sc_ah, sc->sc_cabq->axq_qnum))
+	if (ATH_TXQ_SETUP(sc, sc->sc_cabq->axq_qnum)
+	    && sc->sc_cabq->axq_depth) {
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+			"Processing CABQ... it is active in HAL.\n");
 		ath_tx_processq(sc, sc->sc_cabq);
+	}
+	else {
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+			"NOT processing CABQ... it is %s.\n",
+			sc->sc_cabq->axq_depth ? "not setup" : "empty");
+	}
 #ifdef ATH_SUPERG_XR
 	if (sc->sc_xrtxq && txqactive(sc->sc_ah, sc->sc_xrtxq->axq_qnum))
 		ath_tx_processq(sc, sc->sc_xrtxq);
@@ -8384,10 +8393,20 @@ ath_tx_tasklet(TQUEUE_ARG data)
 
 	/* Process each active queue. This includes sc_cabq, sc_xrtq and
 	 * sc_uapsdq */
-	for (i = 0; i < HAL_NUM_TX_QUEUES; i++)
-		if (ATH_TXQ_SETUP(sc, i) && txqactive(sc->sc_ah, i))
+	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
+		if (ATH_TXQ_SETUP(sc, i) && (txqactive(sc->sc_ah, i) ||
+					    (sc->sc_cabq->axq_qnum == i))) {
+			if (sc->sc_cabq->axq_qnum == i)
+				DPRINTF(sc, ATH_DEBUG_BEACON,
+					"Processing CABQ... it is setup and active in HAL.\n");
 			ath_tx_processq(sc, &sc->sc_txq[i]);
-
+		}
+		else if (sc->sc_cabq->axq_qnum == i) { /* is CABQ */
+			DPRINTF(sc, ATH_DEBUG_BEACON,
+				"NOT processing CABQ... it is %s.\n",
+				sc->sc_cabq->axq_depth ? "not setup" : "empty");
+		}
+	}
 	netif_wake_queue(dev);
 
 	if (sc->sc_softled)
