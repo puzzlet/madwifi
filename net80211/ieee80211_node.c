@@ -654,7 +654,7 @@ ieee80211_sta_join1(struct ieee80211_node *selbs)
 		 */
 		if (canreassoc) {
 			vap->iv_nsparams.newstate = IEEE80211_S_ASSOC;
-			vap->iv_nsparams.arg = 0;
+			vap->iv_nsparams.arg = IEEE80211_FC0_SUBTYPE_REASSOC_REQ;
 			IEEE80211_SCHEDULE_TQUEUE(&vap->iv_stajoin1tq);
 		} else {
 			vap->iv_nsparams.newstate = IEEE80211_S_AUTH;
