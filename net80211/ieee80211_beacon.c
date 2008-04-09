@@ -251,7 +251,7 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 		return NULL;
 	}
 
-	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
+	SKB_NI(skb) = ieee80211_ref_node(ni);
 
 	frm = ieee80211_beacon_init(ni, bo, frm);
 
@@ -280,7 +280,8 @@ EXPORT_SYMBOL(ieee80211_beacon_alloc);
  */
 int
 ieee80211_beacon_update(struct ieee80211_node *ni,
-	struct ieee80211_beacon_offsets *bo, struct sk_buff *skb, int mcast)
+	struct ieee80211_beacon_offsets *bo, struct sk_buff *skb, 
+	int mcast, int *is_dtim)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
@@ -476,6 +477,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 			tie->tim_bitctl |= BITCTL_BUFD_MCAST;
 		else
 			tie->tim_bitctl &= ~BITCTL_BUFD_MCAST;
+		*is_dtim = (tie->tim_count == 0);
 	}
 
 	/* Whenever we want to switch to a new channel, we need to follow the

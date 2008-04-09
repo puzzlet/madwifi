@@ -281,7 +281,7 @@ struct ieee80211_beacon_offsets {
 struct sk_buff *ieee80211_beacon_alloc(struct ieee80211_node *,
 	struct ieee80211_beacon_offsets *);
 int ieee80211_beacon_update(struct ieee80211_node *,
-	struct ieee80211_beacon_offsets *, struct sk_buff *, int);
+	struct ieee80211_beacon_offsets *, struct sk_buff *, int, int*);
 
 /* XXX exposed due to of beacon code botch */
 u_int8_t *ieee80211_add_rates(u_int8_t *, const struct ieee80211_rateset *);

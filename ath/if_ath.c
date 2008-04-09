@@ -4747,8 +4747,9 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	struct ath_buf *bf;
 	struct ath_vap *avp;
 	struct sk_buff *skb;
-	unsigned int curlen, ncabq;
+	unsigned int curlen;
 	u_int8_t tim_bitctl;
+	int is_dtim = 0;
 
 	if (vap->iv_state != IEEE80211_S_RUN) {
 		DPRINTF(sc, ATH_DEBUG_BEACON_PROC, 
@@ -4810,8 +4811,9 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	 */
 	skb = bf->bf_skb;
 	curlen = skb->len;
-	ncabq = avp->av_mcastq.axq_depth;
-	if (ieee80211_beacon_update(bf->bf_node, &avp->av_boff, skb, ncabq)) {
+	DPRINTF(sc, ATH_DEBUG_BEACON,
+		"Updating beacon - mcast pending=%d.\n", avp->av_mcastq.axq_depth);
+	if (ieee80211_beacon_update(SKB_NI(bf->bf_skb), &avp->av_boff, skb, !!avp->av_mcastq.axq_depth, &is_dtim)) {
 		bus_unmap_single(sc->sc_bdev,
 			bf->bf_skbaddr, curlen, BUS_DMA_TODEVICE);
 		bf->bf_skbaddr = 0;
@@ -4830,12 +4832,31 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	 * XXX: Need to handle the last MORE_DATA bit here.
 	 */
 	tim_bitctl = ((struct ieee80211_tim_ie *)avp->av_boff.bo_tim)->tim_bitctl;
-	if (ncabq && (tim_bitctl & BITCTL_BUFD_MCAST) && sc->sc_cabq->axq_depth) {
-		if (sc->sc_nvaps > 1 && sc->sc_stagbeacons) {
+	if ((tim_bitctl & BITCTL_BUFD_MCAST) && 
+	    (avp->av_mcastq.axq_depth) && 
+	    (sc->sc_cabq->axq_depth) &&
+	    (sc->sc_nvaps > 1) && 
+	    (sc->sc_stagbeacons)) {
+		ath_tx_draintxq(sc, sc->sc_cabq);
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+			"Drained previous cabq transmit traffic to make room for next VAP.\n");
+	} else if ((sc->sc_cabq->axq_depth) &&
+		 ATH_TXQ_SETUP(sc, sc->sc_cabq->axq_qnum) &&
+                 (!txqactive(sc->sc_ah,  sc->sc_cabq->axq_qnum))) {
+			DPRINTF(sc, 
+				ATH_DEBUG_BEACON,
+				"Draining %d stalled CABQ transmit buffers.\n",
+				sc->sc_cabq->axq_depth);
 			ath_tx_draintxq(sc, sc->sc_cabq);
-			DPRINTF(sc, ATH_DEBUG_BEACON,
-				"Drained previous cabq transmit traffic.\n");
-		}
+	} else {
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+			"No need to drain previous CABQ transmit traffic.\n");
+		DPRINTF(sc, ATH_DEBUG_BEACON,"[dtim=%d mcast=%d cabq=%d nvaps=%d staggered=%d]\n", 
+			!!(tim_bitctl & BITCTL_BUFD_MCAST),
+			avp->av_mcastq.axq_depth,
+			sc->sc_cabq->axq_depth,
+			sc->sc_nvaps,
+			sc->sc_stagbeacons);
 	}
 
 	/*
@@ -4850,9 +4871,11 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	 * Enable the CAB queue before the beacon queue to
 	 * ensure cab frames are triggered by this beacon.
 	 * We only set BITCTL_BUFD_MCAST bit when its DTIM */
-	if (tim_bitctl & BITCTL_BUFD_MCAST) {
+	if (is_dtim) {
 		struct ath_txq *cabq = sc->sc_cabq;
 		struct ath_buf *bfmcast;
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+			"Checking CABQ - It's DTIM.\n");
 		/*
 		 * Move everything from the VAPs mcast queue
 		 * to the hardware cab queue.
@@ -4861,39 +4884,58 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 		ATH_TXQ_LOCK_IRQ_INSIDE(cabq);
 		bfmcast = STAILQ_FIRST(&avp->av_mcastq.axq_q);
 		if (bfmcast != NULL) {
+			DPRINTF(sc, ATH_DEBUG_BEACON,
+				"Multicast pending.  "
+				"Linking CABQ to avp->av_mcastq.axq_q.\n");
 			/* link the descriptors */
 			if (cabq->axq_link == NULL) {
 				ath_hal_puttxbuf(ah, cabq->axq_qnum,
 						 bfmcast->bf_daddr);
 			} else {
 #ifdef AH_NEED_DESC_SWAP
-			*cabq->axq_link = cpu_to_le32(bfmcast->bf_daddr);
+				*cabq->axq_link = cpu_to_le32(bfmcast->bf_daddr);
 #else
-			*cabq->axq_link = bfmcast->bf_daddr;
+				*cabq->axq_link = bfmcast->bf_daddr;
 #endif
 			}
+			/* Set the MORE_DATA bit for each packet except the last one */
+			STAILQ_FOREACH(bfmcast, &avp->av_mcastq.axq_q, bf_list) {
+				if (bfmcast != STAILQ_LAST(&avp->av_mcastq.axq_q, 
+							ath_buf, bf_list))
+					((struct ieee80211_frame *)
+					 bfmcast->bf_skb->data)->i_fc[1] |= 
+						IEEE80211_FC1_MORE_DATA;
+			}
+
+			/* append the private VAP mcast list to the cabq */
+			ATH_TXQ_MOVE_MCASTQ(&avp->av_mcastq, cabq);
+		}
+		else {
+			DPRINTF(sc, ATH_DEBUG_BEACON,
+				"Not Linking CABQ to avp->av_mcastq.axq_q."
+				"sc_stagbeacons=%d bfmcast=%d\n", 
+				!!sc->sc_stagbeacons, !!bfmcast);
 		}
 
-		/* Set the MORE_DATA bit for each packet except the last one */
-		STAILQ_FOREACH(bfmcast, &avp->av_mcastq.axq_q, bf_list) {
-			if (bfmcast != STAILQ_LAST(&avp->av_mcastq.axq_q, 
-						ath_buf, bf_list))
-				((struct ieee80211_frame *)
-				 bfmcast->bf_skb->data)->i_fc[1] |= 
-					IEEE80211_FC1_MORE_DATA;
-		}
-
-		/* append the private VAP mcast list to the cabq */
-		ATH_TXQ_MOVE_MCASTQ(&avp->av_mcastq, cabq);
 		/* NB: gated by beacon so safe to start here */
 		if (cabq->axq_depth > 0) {
+			DPRINTF(sc, ATH_DEBUG_BEACON,
+				"Checking CABQ - CABQ being started.\n");
 			if (!ath_hal_txstart(ah, cabq->axq_qnum)) {
 				DPRINTF(sc, ATH_DEBUG_TX_PROC,
 					"Failed to start CABQ\n");
 			}
 		}
+		else {
+			DPRINTF(sc, ATH_DEBUG_BEACON,
+				"Checking CABQ - CABQ is empty!!\n");
+		}
 		ATH_TXQ_UNLOCK_IRQ_INSIDE(cabq);
 		ATH_TXQ_UNLOCK_IRQ(&avp->av_mcastq);
+	}
+	else {
+		DPRINTF(sc, ATH_DEBUG_BEACON,
+			"Not checking CABQ - NOT DTIM.\n");
 	}
 
 	return bf;
