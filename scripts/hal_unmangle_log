@@ -36,22 +36,6 @@
 #
 # $Id: foo $
 #
-# This script assumes that ath0 exists, but that's it.
-# 
-# XXX: Must get chip suffix/prefix to the function names, rather than hardcoded
-CHIP=ar5212
-# 
-function uniq() {
-	sort -u "$1" >"$1.tmp"
-	cp "$1.tmp" "$1"
-	rm "$1.tmp"
-}
-dmesg -c &>/dev/null && iwpriv ath0 dump_hal_map && dmesg | \
-	sed -n -r -e "/zz[0-9a-f]{8}/ { s~^([^+]*)[^=]*=(.*)~s/\1\/\2 (\1)/g~; s/ah_/${CHIP}_/; p; } " \
-        >>hal_unmangle.sed
-uniq hal_unmangle.sed
-dmesg -c &>/dev/null && iwpriv ath0 dump_hal_map && dmesg | \
-	sed -n -r -e "/zz[0-9a-f]{8}/ { s~^([^+]*)[^=]*=(.*)~--redefine-sym \1=\2~; s/ah_/${CHIP}_/; p; } " \
-       >>hal_unmangle.objcopy
-uniq hal_unmangle.objcopy
-
+INPUT="$1"
+[ -n "$INPUT" ] || INPUT="-"
+cat $1 | sed -f hal_unmangle.sed
