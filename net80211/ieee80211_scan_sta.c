@@ -293,7 +293,8 @@ found:
 	saveie(&ise->se_ath_ie, sp->ath);
 
 	/* clear failure count after STA_FAIL_AGE passes */
-	if (se->se_fails && (jiffies - se->se_lastfail) > STA_FAILS_AGE*HZ) {
+	if (se->se_fails && 
+	    time_after(jiffies, se->se_lastfail + (STA_FAILS_AGE * HZ))) {
 		se->se_fails = 0;
 		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_SCAN, macaddr,
 			"%s: fails %u", __func__, se->se_fails);
@@ -1067,8 +1068,8 @@ sta_age(struct ieee80211_scan_state *ss)
 	 */
 	KASSERT(vap->iv_opmode == IEEE80211_M_STA,
 		("wrong mode %u", vap->iv_opmode));
-	/* XXX turn this off until the ap release is cut */
-	if (0 && vap->iv_ic->ic_roaming == IEEE80211_ROAMING_AUTO &&
+	if (vap->iv_opmode == IEEE80211_M_STA &&
+	    vap->iv_ic->ic_roaming == IEEE80211_ROAMING_AUTO &&
 	    vap->iv_state >= IEEE80211_S_RUN)
 		/* XXX vap is implicit */
 		sta_roam_check(ss, vap);
@@ -1122,6 +1123,9 @@ sta_assoc_fail(struct ieee80211_scan_state *ss,
 {
 	struct sta_table *st = ss->ss_priv;
 	struct sta_entry *se;
+
+	if (ss->ss_vap->iv_ic->ic_roaming == IEEE80211_ROAMING_MANUAL)
+		return;
 
 	se = sta_lookup(st, macaddr);
 	if (se != NULL) {
