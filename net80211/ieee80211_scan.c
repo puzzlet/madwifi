@@ -87,9 +87,9 @@ struct scan_state {
  * .5M units).
  */
 #define	SCAN_VALID_DEFAULT		60	/* scan cache valid age (secs) */
-#define	ROAM_RSSI_11A_DEFAULT		24	/* rssi threshold for 11a bss */
-#define	ROAM_RSSI_11B_DEFAULT		24	/* rssi threshold for 11b bss */
-#define	ROAM_RSSI_11BONLY_DEFAULT	24	/* rssi threshold for 11b-only bss */
+#define	ROAM_RSSI_11A_DEFAULT		9	/* rssi threshold for 11a bss */
+#define	ROAM_RSSI_11B_DEFAULT		9	/* rssi threshold for 11b bss */
+#define	ROAM_RSSI_11BONLY_DEFAULT	9	/* rssi threshold for 11b-only bss */
 #define	ROAM_RATE_11A_DEFAULT		2*24	/* tx rate threshold for 11a bss */
 #define	ROAM_RATE_11B_DEFAULT		2*9	/* tx rate threshold for 11b bss */
 #define	ROAM_RATE_11BONLY_DEFAULT	2*5	/* tx rate threshold for 11b-only bss */
