@@ -1543,6 +1543,8 @@ ieee80211_find_rxnode(struct ieee80211com *ic,
 	((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_CTL)
 #define	IS_PSPOLL(wh) \
 	((wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK) == IEEE80211_FC0_SUBTYPE_PS_POLL)
+#define	IS_RTS(wh) \
+	((wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK) == IEEE80211_FC0_SUBTYPE_RTS)
 	struct ieee80211_node_table *nt;
 	struct ieee80211_node *ni;
 
@@ -1550,7 +1552,9 @@ ieee80211_find_rxnode(struct ieee80211com *ic,
 	/* XXX 4-address frames? */
 	nt = &ic->ic_sta;
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
-	if (IS_CTL(wh) && !IS_PSPOLL(wh) /*&& !IS_RTS(ah)*/)
+	/* NB: Control frames typically have one address, except
+	 * for RTS and PSPOLL */
+	if (IS_CTL(wh) && !IS_PSPOLL(wh) && !IS_RTS(wh)) 
 #ifdef IEEE80211_DEBUG_REFCNT
 		ni = ieee80211_find_node_locked_debug(nt, wh->i_addr1, func, line);
 #else
@@ -1567,6 +1571,7 @@ ieee80211_find_rxnode(struct ieee80211com *ic,
 	return ni;
 #undef IS_PSPOLL
 #undef IS_CTL
+#undef IS_RTS
 }
 #ifdef IEEE80211_DEBUG_REFCNT
 EXPORT_SYMBOL(ieee80211_find_rxnode_debug);
@@ -1770,7 +1775,7 @@ restart:
 		 * XXX doesn't belong here
 		 */
 		if (ni->ni_rxfrag != NULL &&
-		    jiffies > ni->ni_rxfragstamp + HZ) {
+		    time_after(jiffies, ni->ni_rxfragstamp + HZ)) {
 			ieee80211_dev_kfree_skb(&ni->ni_rxfrag);
 		}
 		/*
@@ -1921,7 +1926,7 @@ ieee80211_dump_node(struct ieee80211_node_table *nt, struct ieee80211_node *ni)
 		ni->ni_scangen, ni->ni_authmode, ni->ni_flags);
 	printk("\tassocid 0x%x txpower %u vlan %u\n",
 		ni->ni_associd, ni->ni_txpower, ni->ni_vlan);
-	printk ("rxfragstamp %u\n", ni->ni_rxfragstamp);
+	printk ("rxfragstamp %lu\n", ni->ni_rxfragstamp);
 	for (i = 0; i < 17; i++) {
 		printk("\t%d: txseq %u rxseq %u fragno %u\n", i,
 		       ni->ni_txseqs[i],
