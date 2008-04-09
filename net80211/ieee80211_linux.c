@@ -156,7 +156,7 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 		if (off != 0)
 			skb_reserve(skb, align - off);
 
-		SKB_CB(skb)->ni = NULL;
+		SKB_NI(skb) = NULL;
 		SKB_CB(skb)->flags = 0;
 		SKB_CB(skb)->next = NULL;
 
