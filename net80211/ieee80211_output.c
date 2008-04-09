@@ -261,7 +261,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		goto bad;
 	}
 
-	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
+	SKB_NI(skb) = ieee80211_ref_node(ni);
 
 	/* power-save checks */
 	if (WME_UAPSD_AC_CAN_TRIGGER(skb->priority, ni)) {
@@ -406,7 +406,7 @@ ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type)
 
 	KASSERT(ni != NULL, ("null node"));
 
-	SKB_CB(skb)->ni = ni;
+	SKB_NI(skb) = ni;
 
 	wh = (struct ieee80211_frame *)
 		skb_push(skb, sizeof(struct ieee80211_frame));
@@ -485,7 +485,7 @@ ieee80211_send_nulldata(struct ieee80211_node *ni)
 
 	/* XXX assign some priority; this probably is wrong */
 	skb->priority = WME_AC_BE;
-	SKB_CB(skb)->ni = PASS_NODE(ni);
+	SKB_NI(skb) = PASS_NODE(ni);
 
 	(void) ic->ic_mgtstart(ic, skb);	/* cheat */
 
@@ -512,7 +512,7 @@ ieee80211_send_qosnulldata(struct ieee80211_node *ni, int ac)
 		vap->iv_stats.is_tx_nobuf++;
 		return -ENOMEM;
 	}
-	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
+	SKB_NI(skb) = ieee80211_ref_node(ni);
 
 	skb->priority = ac;
 	qwh = (struct ieee80211_qosframe *)skb_push(skb, sizeof(struct ieee80211_qosframe));
@@ -609,7 +609,7 @@ ieee80211_skbhdr_adjust(struct ieee80211vap *vap, int hdrsize,
 
 	if (skb_shared(skb)) {
 		/* Take our own reference to the node in the clone */
-		ieee80211_ref_node(SKB_CB(skb)->ni);
+		ieee80211_ref_node(SKB_NI(skb));
 		/* Unshare the node, decrementing users in the old skb */
 		skb = skb_unshare(skb, GFP_ATOMIC);
 	}
@@ -1729,7 +1729,7 @@ ieee80211_send_probereq(struct ieee80211_node *ni,
 
 	skb_trim(skb, frm - skb->data);
 
-	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
+	SKB_NI(skb) = ieee80211_ref_node(ni);
 
 	wh = (struct ieee80211_frame *)
 		skb_push(skb, sizeof(struct ieee80211_frame));
@@ -2208,7 +2208,7 @@ ieee80211_send_pspoll(struct ieee80211_node *ni)
 	skb = ieee80211_dev_alloc_skb(sizeof(struct ieee80211_ctlframe_addr2));
 	if (skb == NULL) return;
 
-	SKB_CB(skb)->ni = ieee80211_ref_node(ni);
+	SKB_NI(skb) = ieee80211_ref_node(ni);
 	skb->priority = WME_AC_VO;
 
 	wh = (struct ieee80211_ctlframe_addr2 *) skb_put(skb, sizeof(struct ieee80211_ctlframe_addr2));
