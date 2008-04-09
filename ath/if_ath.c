@@ -4797,11 +4797,11 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)
-		if (atomic_add_unless(&avp->av_beacon_alloc, -1, 0))
+	if (atomic_add_unless(&avp->av_beacon_alloc, -1, 0))
 #else
-		if (test_and_clear_bit(0, &avp->av_beacon_alloc))
+	if (test_and_clear_bit(0, &avp->av_beacon_alloc))
 #endif
-			ath_beacon_alloc_internal(sc, vap->iv_bss);
+		ath_beacon_alloc_internal(sc, vap->iv_bss);
 
 	/*
 	 * Update dynamic beacon contents.  If this returns
@@ -6382,7 +6382,7 @@ ath_rx_tasklet(TQUEUE_ARG data)
 	struct sk_buff *skb = NULL;
 	struct ieee80211_node *ni;
 	unsigned int len, phyerr, mic_fail = 0;
-	int type;
+	int type = -1; /* undefined */
 
 	DPRINTF(sc, ATH_DEBUG_RX_PROC, "invoked\n");
 	do {
@@ -6579,6 +6579,12 @@ drop_micfail:
 			}
 		}
 
+		/* Update station stats/global stats for received frame if we 
+		 * are on-channel. */
+		if (!sc->sc_scanning && !(ic->ic_flags & IEEE80211_F_SCAN))
+			ATH_RSSI_LPF(sc->sc_halstats.ns_avgrssi, rs->rs_rssi);
+		KASSERT((atomic_read(&skb->users) == 1), 
+			("BAD starting skb reference count!"));
 		/*
 		 * Locate the node for sender, track state, and then
 		 * pass the (referenced) node up to the 802.11 layer
@@ -6614,9 +6620,15 @@ drop_micfail:
 				    sc->sc_keyixmap[keyix] == NULL)
 					sc->sc_keyixmap[keyix] = ieee80211_ref_node(ni);
 				ieee80211_unref_node(&ni);
-			} else
-				type = ieee80211_input_all(ic, skb, rs->rs_rssi, bf->bf_tsf);
+			} else {
+				struct ieee80211vap * vap;
+				TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
+					type = ieee80211_input(vap, NULL, skb, rs->rs_rssi, bf->bf_tsf);
+				}
+			}
 		}
+		KASSERT((atomic_read(&skb->users) == 1), 
+			("ieee80211_input changed skb reference count!"));
 
 		if (sc->sc_diversity) {
 			/*
@@ -6640,10 +6652,12 @@ drop_micfail:
 			if (type == IEEE80211_FC0_TYPE_DATA) {
 				sc->sc_rxrate = rs->rs_rate;
 				ath_led_event(sc, ATH_LED_RX);
-			} else if (jiffies - sc->sc_ledevent >= sc->sc_ledidle)
+			} else if (time_after(jiffies, sc->sc_ledevent + sc->sc_ledidle))
 				ath_led_event(sc, ATH_LED_POLL);
 		}
 rx_next:
+		KASSERT(bf != NULL, ("null bf"));
+		KASSERT(bf->bf_skb != NULL, ("null bf->bf_skb"));
 		ATH_RXBUF_LOCK_IRQ(sc);
 		STAILQ_REMOVE_HEAD(&sc->sc_rxbuf, bf_list);
 		ATH_RXBUF_RESET(bf);

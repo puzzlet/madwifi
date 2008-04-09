@@ -195,7 +195,7 @@ iwspy_event(struct ieee80211vap *vap, struct ieee80211_node *ni, u_int rssi)
  */
 int
 ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
-	struct sk_buff *skb, int rssi, u_int64_t rtsf)
+	struct sk_buff *original_skb, int rssi, u_int64_t rtsf)
 {
 #define	HAS_SEQ(type)	((type & 0x4) == 0)
 	struct ieee80211_node * ni = ni_or_null;
@@ -204,7 +204,7 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	struct ieee80211_frame *wh;
 	struct ieee80211_key *key;
 	struct ether_header *eh;
-	struct sk_buff *skb2;
+	struct sk_buff *skb = NULL;
 #ifdef ATH_SUPERG_FF
 	struct llc *llc;
 #endif
@@ -220,14 +220,9 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
                 * briefly grab our own reference. */
 		ni = ieee80211_ref_node(vap->iv_bss);
 	}
+	KASSERT(original_skb != NULL, ("null skb"));
 	KASSERT(ni != NULL, ("null node"));
 	ni->ni_inact = ni->ni_inact_reload;
-
-	KASSERT(skb->len >= sizeof(struct ieee80211_frame_min),
-		("frame length too short: %u", skb->len));
-
-	/* XXX adjust device in sk_buff? */
-
 	type = -1;			/* undefined */
 	/*
 	 * In monitor mode, send everything directly to bpf.
@@ -236,28 +231,27 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	 */
 	if (vap->iv_opmode == IEEE80211_M_MONITOR)
 		goto out;
-
-	if (skb->len < sizeof(struct ieee80211_frame_min)) {
+	if (original_skb->len < sizeof(struct ieee80211_frame_min)) {
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY,
 			ni->ni_macaddr, NULL,
-			"too short (1): len %u", skb->len);
+			"too short (1): len %u", original_skb->len);
 		vap->iv_stats.is_rx_tooshort++;
 		goto out;
 	}
-
 	/* Clone the SKB... we assume somewhere in this driver that we 'own'
 	 * the skbuff passed into hard start and we do a lot of messing with it
 	 * but bridges under some cases will not clone for the first pass of skb
 	 * to a bridge port, but will then clone for subsequent ones.  This is 
 	 * odd behavior but it means that if we have trashed the skb we are given
-	 * then other ports get clones of the residual garbage. */
-	if ((skb2 = skb_copy(skb, GFP_ATOMIC)) == NULL) {
+	 * then other ports get clones of the residual garbage.
+	 */
+	if ((skb = skb_copy(original_skb, GFP_ATOMIC)) == NULL) {
 		vap->iv_devstats.tx_dropped++;
+		original_skb = NULL; /* protect caller's skb */
 		goto out;
 	}
-	ieee80211_skb_copy_noderef(skb, skb2);
-	ieee80211_dev_kfree_skb(&skb);
-	skb = skb2;
+	ieee80211_skb_copy_noderef(original_skb, skb);
+	original_skb = NULL; /* protect caller's skb */
 
 	/*
 	 * Bit of a cheat here, we use a pointer for a 3-address
@@ -409,10 +403,10 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 			/* XXX catch bad values */
 			goto out;
 		}
-		/* since ieee80211_input() can be called by
-		 * ieee80211_input_all(), we need to check that we are not
-		 * updating for unknown nodes. FIXME : such check might be
-		 * needed at other places */
+		/* since ieee80211_input() can be called multiple times for
+		 * flooding VAPs when we don't know which VAP needs the packet -
+		 * we don't want to update the wrong state when ni is assigned
+		 * to the bss node to accomodate this case. */
 		if (IEEE80211_ADDR_EQ(wh->i_addr2, ni->ni_macaddr)) {
 			ni->ni_rssi = rssi;
 			ni->ni_rtsf = rtsf;
@@ -762,7 +756,7 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 						ni->ni_macaddr, "data", "%s", "Decapsulation error");
 				vap->iv_stats.is_rx_decap++;
 				IEEE80211_NODE_STAT(ni, rx_decap);
-				ieee80211_dev_kfree_skb(&skb1);
+				ieee80211_dev_kfree_skb(&skb1); /* This is a copy! */
 				goto err;
 			}
 
@@ -778,8 +772,10 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 #endif
 		if (ni_or_null == NULL)
 			ieee80211_unref_node(&ni);
+		/* XXX: Why doesn't this use goto out? 
+		 *      If I do, we access skb after we have given it to
+		 *       ieee80211_deliver_data and we get crashes/errors. */
 		return IEEE80211_FC0_TYPE_DATA;
-
 	case IEEE80211_FC0_TYPE_MGT:
 		/*
 		 * WDS opmode do not support management frames
@@ -862,7 +858,7 @@ err:
 	vap->iv_devstats.rx_errors++;
 out:
 	if (skb != NULL)
-		ieee80211_dev_kfree_skb(&skb);
+		ieee80211_dev_kfree_skb(&skb); /* This is a copy! */
 	if (ni_or_null == NULL)
 		ieee80211_unref_node(&ni);
 	return type;
@@ -937,40 +933,6 @@ static int accept_data_frame(struct ieee80211vap *vap,
 #undef IS_EAPOL
 #undef PAIRWISE_SET
 }
-
-
-/*
- * Context: softIRQ (tasklet)
- */
-int
-ieee80211_input_all(struct ieee80211com *ic,
-	struct sk_buff *skb, int rssi, u_int64_t rtsf)
-{
-	struct ieee80211vap *vap;
-	int type = -1;
-
-	/* XXX locking */
-	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
-		struct sk_buff *skb1;
-
-		if (TAILQ_NEXT(vap, iv_next) != NULL) {
-			skb1 = skb_copy(skb, GFP_ATOMIC);
-			if (skb1 == NULL) {
-				continue;
-			}
-			/* We duplicate the reference after skb_copy */
-			ieee80211_skb_copy_noderef(skb, skb1);
-		} else {
-			skb1 = skb;
-			skb = NULL;
-		}
-		type = ieee80211_input(vap, NULL, skb1, rssi, rtsf);
-	}
-	if (skb != NULL)		/* no vaps, reclaim skb */
-		ieee80211_dev_kfree_skb(&skb);
-	return type;
-}
-EXPORT_SYMBOL(ieee80211_input_all);
 
 /*
  * This function reassemble fragments using the skb of the 1st fragment,
@@ -1196,7 +1158,7 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 		vap->iv_devstats.rx_bytes += skb->len;
 		if (ni->ni_vlan != 0 && vap->iv_vlgrp != NULL) {
 			/* attach vlan tag */
-			struct ieee80211_node *ni_tmp = SKB_CB(skb)->ni;
+			struct ieee80211_node *ni_tmp = SKB_NI(skb);
 			if (vlan_hwaccel_receive_skb(skb, vap->iv_vlgrp, ni->ni_vlan) == NET_RX_DROP) {
 				/* If netif_rx dropped the packet because 
 				 * device was too busy */
@@ -1208,7 +1170,7 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 			}
 			skb = NULL; /* SKB is no longer ours */
 		} else {
-			struct ieee80211_node *ni_tmp = SKB_CB(skb)->ni;
+			struct ieee80211_node *ni_tmp = SKB_NI(skb);
 			if (netif_rx(skb) == NET_RX_DROP) {
 				/* If netif_rx dropped the packet because 
 				 * device was too busy */
@@ -1719,10 +1681,10 @@ static void
 ieee80211_ssid_mismatch(struct ieee80211vap *vap, const char *tag,
 	u_int8_t mac[IEEE80211_ADDR_LEN], u_int8_t *ssid)
 {
-	printk(KERN_ERR "[" MAC_FMT "] discard %s frame, ssid mismatch: ",
+	printk("[" MAC_FMT "] discard %s frame, ssid mismatch: ",
 		MAC_ADDR(mac), tag);
 	ieee80211_print_essid(ssid + 2, ssid[1]);
-	printk(KERN_ERR "\n");
+	printk("\n");
 }
 
 #define	IEEE80211_VERIFY_SSID(_ni, _ssid) do {				\
