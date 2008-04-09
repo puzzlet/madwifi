@@ -384,6 +384,14 @@ struct ath_node {
 	spin_unlock_irqrestore(&(_an)->an_uapsd_lock, __an_uapsd_lockflags); \
 } while (0)
 
+#define ATH_NODE_UAPSD_LOCK_IRQ_INSIDE(_an)	do {			     \
+	ATH_NODE_UAPSD_LOCK_CHECK(_an);				     	     \
+	spin_lock(&(_an)->an_uapsd_lock);				     \
+} while(0)
+#define ATH_NODE_UAPSD_UNLOCK_IRQ_INSIDE(_an) do {			     \
+	ATH_NODE_UAPSD_LOCK_ASSERT(_an);				     \
+	spin_unlock(&(_an)->an_uapsd_lock); 				     \
+} while (0)
 #define ATH_NODE_UAPSD_UNLOCK_IRQ_EARLY(_an) 		     \
 	ATH_NODE_UAPSD_LOCK_ASSERT(_an);				     \
 	spin_unlock_irqrestore(&(_an)->an_uapsd_lock, __an_uapsd_lockflags);
@@ -881,8 +889,70 @@ typedef void (*ath_callback) (struct ath_softc *);
 #define	ATH_RXBUF_LOCK_CHECK(_sc)
 #endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #else
-#define	ATH_RXBUF_LOCK_ASSERT(_sc)
-#define	ATH_RXBUF_LOCK_CHECK(_sc)
+#define ATH_RXBUF_LOCK_ASSERT(_sc)
+#define ATH_RXBUF_LOCK_CHECK(_sc)
+#endif
+
+#define ATH_BBUF_LOCK_INIT(_sc)	spin_lock_init(&(_sc)->sc_bbuflock)
+#define ATH_BBUF_LOCK_DESTROY(_sc)
+#define ATH_BBUF_LOCK_IRQ(_sc)		do {	\
+	unsigned long __bbuflockflags;		\
+	ATH_BBUF_LOCK_CHECK(_sc); 		\
+	spin_lock_irqsave(&(_sc)->sc_bbuflock, __bbuflockflags);
+#define ATH_BBUF_UNLOCK_IRQ(_sc)		\
+	ATH_BBUF_LOCK_ASSERT(_sc); 		\
+	spin_unlock_irqrestore(&(_sc)->sc_bbuflock, __bbuflockflags); \
+} while (0)
+#define ATH_BBUF_UNLOCK_IRQ_EARLY(_sc)		\
+	ATH_BBUF_LOCK_ASSERT(_sc); 		\
+	spin_unlock_irqrestore(&(_sc)->sc_bbuflock, __bbuflockflags);
+
+#if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
+#define ATH_BBUF_LOCK_ASSERT(_sc) \
+	KASSERT(spin_is_locked(&(_sc)->sc_bbuflock), ("bbuf not locked!"))
+#if (defined(ATH_DEBUG_SPINLOCKS))
+#define ATH_BBUF_LOCK_CHECK(_sc) do { \
+	if (spin_is_locked(&(_sc)->sc_bbuflock)) \
+		printk(KERN_DEBUG "%s:%d - about to block on bbuf lock!\n", __func__, __LINE__); \
+} while(0)
+#else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#define ATH_BBUF_LOCK_CHECK(_sc)
+#endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#else
+#define ATH_BBUF_LOCK_ASSERT(_sc)
+#define ATH_BBUF_LOCK_CHECK(_sc)
+#endif
+
+
+
+#define ATH_GBUF_LOCK_INIT(_sc)	spin_lock_init(&(_sc)->sc_grppollbuflock)
+#define ATH_GBUF_LOCK_DESTROY(_sc)
+#define ATH_GBUF_LOCK_IRQ(_sc)		do {	\
+	unsigned long __grppollbuflockflags;		\
+	ATH_GBUF_LOCK_CHECK(_sc); 		\
+	spin_lock_irqsave(&(_sc)->sc_grppollbuflock, __grppollbuflockflags);
+#define ATH_GBUF_UNLOCK_IRQ(_sc)		\
+	ATH_GBUF_LOCK_ASSERT(_sc); 		\
+	spin_unlock_irqrestore(&(_sc)->sc_grppollbuflock, __grppollbuflockflags); \
+} while (0)
+#define ATH_GBUF_UNLOCK_IRQ_EARLY(_sc)		\
+	ATH_GBUF_LOCK_ASSERT(_sc); 		\
+	spin_unlock_irqrestore(&(_sc)->sc_grppollbuflock, __grppollbuflockflags);
+
+#if (defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK)) && defined(spin_is_locked)
+#define ATH_GBUF_LOCK_ASSERT(_sc) \
+	KASSERT(spin_is_locked(&(_sc)->sc_grppollbuflock), ("grppollbuf not locked!"))
+#if (defined(ATH_DEBUG_SPINLOCKS))
+#define ATH_GBUF_LOCK_CHECK(_sc) do { \
+	if (spin_is_locked(&(_sc)->sc_grppollbuflock)) \
+		printk(KERN_DEBUG "%s:%d - about to block on grppollbuf lock!\n", __func__, __LINE__); \
+} while(0)
+#else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#define ATH_GBUF_LOCK_CHECK(_sc)
+#endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
+#else
+#define ATH_GBUF_LOCK_ASSERT(_sc)
+#define ATH_GBUF_LOCK_CHECK(_sc)
 #endif
 
 /* Protects the device from concurrent accesses */
