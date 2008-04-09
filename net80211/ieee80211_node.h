@@ -135,7 +135,7 @@ struct ieee80211_node {
 	u_int8_t ni_n_needed_chans;		/* size of ni_needed_chans list */
 	u_int16_t ni_txseqs[17];		/* tx seq per-tid */
 	u_int16_t ni_rxseqs[17];		/* rx seq previous per-tid*/
-	u_int32_t ni_rxfragstamp;		/* time stamp of last rx frag */
+	long unsigned int ni_rxfragstamp;	/* time stamp of last rx frag */
 	struct sk_buff *ni_rxfrag;		/* rx frag reassembly */
 	struct ieee80211_rsnparms ni_rsn;	/* RSN/WPA parameters */
 	struct ieee80211_key ni_ucastkey;	/* unicast key */
