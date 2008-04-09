@@ -1360,7 +1360,7 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 			ieee80211_reset_bss(vap);
 			break;
 		}
-		if (vap->iv_auth->ia_detach != NULL)
+		if (vap->iv_auth != NULL && vap->iv_auth->ia_detach != NULL)
 			vap->iv_auth->ia_detach(vap);
 		break;
 	case IEEE80211_S_SCAN:
