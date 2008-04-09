@@ -3082,8 +3082,6 @@ _take_txbuf_locked(struct ath_softc *sc, int for_management)
 					    "buffers.\n");
 		sc->sc_stats.ast_tx_qstop++;
 		netif_stop_queue(sc->sc_dev);
-		sc->sc_devstopped = 1;
-		ATH_SCHEDULE_TQUEUE(&sc->sc_txtq, NULL);
 	}
 
 	/* Only let us go further if management frame, or there are enough */
@@ -3276,11 +3274,6 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 	txq = sc->sc_ac2q[skb->priority];
 
-	if (txq->axq_depth > TAIL_DROP_COUNT) {
-		/* Wish to reserve some DMA buffers, try again later. */ 
-		requeue = 1;
-		goto hardstart_fail;
-	}
 #endif
 
 	/* If the skb data is shared, we will copy it so we can strip padding
@@ -3511,7 +3504,6 @@ hardstart_fail:
 	if (requeue) {
 		/* Queue is full, let the kernel backlog the skb */
 		netif_stop_queue(dev);
-		sc->sc_devstopped = 1;
 		/* Stop tracking again we are giving it back*/
 		ieee80211_skb_untrack(skb);
 		return NETDEV_TX_BUSY;
@@ -12176,6 +12168,7 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **bf)
 	cleanup_ath_buf(sc, (*bf), BUS_DMA_TODEVICE);
 #endif
 	STAILQ_INSERT_TAIL(&sc->sc_txbuf, (*bf), bf_list);
+	*bf = NULL;
 	atomic_dec(&sc->sc_txbuf_counter);
 #ifdef IEEE80211_DEBUG_REFCNT
 	DPRINTF(sc, ATH_DEBUG_TXBUF, 
@@ -12183,22 +12176,22 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **bf)
 		ath_get_buffer_count(sc), ATH_TXBUF,
 		func, line, bfaddr);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
-	if (sc->sc_devstopped) {
-		++sc->sc_reapcount;
-		if (sc->sc_reapcount > ATH_TXBUF_FREE_THRESHOLD) {
-			if (!ath_chan_unavail(sc)) {
-				netif_wake_queue(sc->sc_dev);
-				DPRINTF(sc, ATH_DEBUG_ANY,
-				    "Restarting queue.\n");
-			}
-			sc->sc_reapcount = 0;
-			sc->sc_devstopped = 0;
-		}
-		else if (!ath_chan_unavail(sc))
-			ATH_SCHEDULE_TQUEUE(&sc->sc_txtq, NULL);
+	if (netif_queue_stopped(sc->sc_dev) && 
+	    (ath_get_buffers_available(sc) > ATH_TXBUF_MGT_RESERVED) && 
+	    (!ath_chan_unavail(sc))) {
+		DPRINTF(sc, ATH_DEBUG_TXBUF | ATH_DEBUG_RESET, 
+		       "Waking device queue with %d available buffers.\n", 
+		       ath_get_buffers_available(sc));
+		netif_wake_queue(sc->sc_dev);
 	}
-
-	*bf = NULL;
+#if 0
+	else if (ath_chan_unavail(sc)) {
+		DPRINTF(sc, (ATH_DEBUG_TXBUF | ATH_DEBUG_RESET | 
+			       ATH_DEBUG_DOTH), 
+			       "Not waking device queue.  Channel "
+			       "is not available.\n");
+	}
+#endif
 }
 
 /* Takes the TXBUF_LOCK */
