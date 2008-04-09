@@ -452,6 +452,8 @@ struct ath_buf {
 	u_int32_t bf_queueage;				/* "age" of txq when this buffer placed on stageq */
 	dma_addr_t bf_skbaddrff[ATH_TXDESC - 1]; 	/* extra addrs for FF */
 #endif
+	int bf_taken_at_line; 				/* XXX: Want full alloc backtrace */
+	const char* bf_taken_at_func;			
 };
 
 /*
@@ -477,6 +479,8 @@ struct ath_descdma {
 	struct ath_desc	*dd_desc;	/* descriptors */
 	dma_addr_t dd_desc_paddr;	/* physical addr of dd_desc */
 	size_t dd_desc_len;		/* size of dd_desc */
+	unsigned int dd_ndesc;
+	unsigned int dd_nbuf;
 	struct ath_buf *dd_bufptr;	/* associated buffers */
 };
 
@@ -718,7 +722,7 @@ struct ath_softc {
 	u_int sc_ledpin;			/* GPIO pin for driving LED */
 	u_int sc_ledon;				/* pin setting for LED on */
 	u_int sc_ledidle;			/* idle polling interval */
-	int sc_ledevent;			/* time of last LED event */
+	long unsigned int sc_ledevent;		/* time of last LED event */
 	u_int8_t sc_rxrate;			/* current rx rate for LED */
 	u_int8_t sc_txrate;			/* current tx rate for LED */
 	u_int16_t sc_ledoff;			/* off time for current blink */
@@ -751,6 +755,7 @@ struct ath_softc {
 	u_int8_t sc_grppoll_str[GRPPOLL_RATE_STR_LEN];
 	struct ath_descdma sc_bdma;		/* beacon descriptors */
 	ath_bufhead sc_bbuf;			/* beacon buffers */
+	spinlock_t sc_bbuflock;			/* beacon buffers lock */
 	u_int sc_bhalq;				/* HAL q for outgoing beacons */
 	u_int sc_bmisscount;			/* missed beacon transmits */
 	u_int32_t sc_ant_tx[8];			/* recent tx frames/antenna */
@@ -759,6 +764,7 @@ struct ath_softc {
 	struct ath_txq *sc_xrtxq;		/* tx q for XR data */
 	struct ath_descdma sc_grppolldma;	/* TX descriptors for grppoll */
 	ath_bufhead sc_grppollbuf;		/* transmit buffers for grouppoll  */
+	spinlock_t sc_grppollbuflock;		/* grouppoll lock  */
 	u_int16_t sc_xrpollint;			/* xr poll interval */
 	u_int16_t sc_xrpollcount;		/* xr poll count */
 	struct ath_txq *sc_uapsdq;		/* tx q for uapsd */

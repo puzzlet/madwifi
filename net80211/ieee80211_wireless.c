@@ -372,6 +372,9 @@ ieee80211_ioctl_siwrate(struct net_device *dev, struct iw_request_info *info,
 	retv = ifmedia_ioctl(vap->iv_dev, &ifr, &vap->iv_media, SIOCSIFMEDIA);
 	if (retv == -ENETRESET)
 		retv = IS_UP_AUTO(vap) ? ieee80211_open(vap->iv_dev) : 0;
+	if (retv)
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DEBUG, "%s returns %d\n", 
+				  __func__, retv);
 	return retv;
 }
 
@@ -767,7 +770,8 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 		 * effect when we are transitioned to RUN state later. */
 		if (IS_UP(vap->iv_dev) &&
 		    (0 == (vap->iv_des_chan->ic_flags & CHANNEL_DFS))) {
-			pre_announced_chanswitch(dev, ieee80211_chan2ieee(ic, vap->iv_des_chan),
+			pre_announced_chanswitch(dev, 
+				ieee80211_chan2ieee(ic, vap->iv_des_chan),
 				IEEE80211_DEFAULT_CHANCHANGE_TBTT_COUNT);
 		}
 		else if (vap->iv_state == IEEE80211_S_RUN) {
@@ -2575,6 +2579,16 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		} else
 			retv = EINVAL;
 		break;
+	case IEEE80211_PARAM_DRAINTXQ:        	/* fallthrough */
+	case IEEE80211_PARAM_STOP_QUEUE:        /* fallthrough */
+	case IEEE80211_PARAM_ATHRESET:        	/* fallthrough */
+	case IEEE80211_PARAM_TXTIMEOUT:         /* fallthrough */
+	case IEEE80211_PARAM_RESETTXBUFS:       /* fallthrough */
+	case IEEE80211_PARAM_SCANBUFS: 	/* fallthrough */
+	case IEEE80211_PARAM_LEAKTXBUFS: 	/* fallthrough */
+		retv = ic->ic_debug_ath_iwpriv(ic, param, value);
+		break;
+
 	case IEEE80211_PARAM_BEACON_MISS_THRESH_MS:
 		if ((vap->iv_opmode != IEEE80211_M_IBSS) &&
 		    (vap->iv_opmode != IEEE80211_M_STA))
@@ -5582,12 +5596,25 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  0, IW_PRIV_TYPE_APPIEBUF, "getiebuf" },
 	{ IEEE80211_IOCTL_FILTERFRAME,
 	  IW_PRIV_TYPE_FILTER , 0, "setfilter" },
-
 	{ IEEE80211_PARAM_RSSI_EWMA,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "rssi_ewma" },
 	{ IEEE80211_PARAM_RSSI_EWMA,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rssi_ewma" },
-
+	{ IEEE80211_PARAM_DRAINTXQ,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_draintxq" },
+	{ IEEE80211_PARAM_STOP_QUEUE,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_stopq" },
+	{ IEEE80211_PARAM_TXTIMEOUT,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_txtimeout" },
+	{ IEEE80211_PARAM_ATHRESET,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_athreset" },
+	{ IEEE80211_PARAM_RESETTXBUFS,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_newtxbufs" },
+	{ IEEE80211_PARAM_SCANBUFS,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_scanbufs" },
+	{ IEEE80211_PARAM_LEAKTXBUFS,
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_leaktxbufs" },
+	
 #ifdef ATH_REVERSE_ENGINEERING
 	/*
 	Diagnostic dump of device registers

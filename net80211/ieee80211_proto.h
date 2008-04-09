@@ -55,6 +55,7 @@ extern const char *ieee80211_ctl_subtype_name[];
 extern const char *ieee80211_state_name[IEEE80211_S_MAX];
 extern const char *ieee80211_wme_acnames[];
 extern const char *ieee80211_phymode_name[];
+extern const char *ieee80211_opmode_name[];
 
 void ieee80211_proto_attach(struct ieee80211com *);
 void ieee80211_proto_detach(struct ieee80211com *);

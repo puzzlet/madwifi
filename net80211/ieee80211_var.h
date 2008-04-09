@@ -518,6 +518,7 @@ struct ieee80211com {
 	unsigned int (*ic_write_register)(struct ieee80211com *, unsigned int, unsigned int);
 	unsigned int (*ic_read_register)(struct ieee80211com *, unsigned int, unsigned int*);
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
+	int (*ic_debug_ath_iwpriv)(struct ieee80211com *, unsigned int param, unsigned int value);
 };
 
 #define MAX_PROC_IEEE80211_SIZE 16383
