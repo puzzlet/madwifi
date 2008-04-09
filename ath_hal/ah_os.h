@@ -96,21 +96,17 @@ typedef unsigned int		u_int;
 typedef	void*			va_list;
 #endif				/* !_LINUX_TYPES_H */
 
-/*
- * Linux/BSD gcc compatibility shims.
- */
-#define	__printflike(_a,_b) \
-	__attribute__((__format__ (__printf__, _a, _b)))
-#define	__va_list	va_list
-#define	OS_INLINE	__inline
-
 extern int ath_hal_dma_beacon_response_time;
 extern int ath_hal_sw_beacon_response_time;
 extern int ath_hal_additional_swba_backoff;
 
-void __ahdecl ath_hal_vprintf(struct ath_hal *ah, const char *fmt, va_list ap);
-void __ahdecl ath_hal_printf(struct ath_hal *ah, const char *fmt, ...);
-const char *__ahdecl ath_hal_ether_sprintf(const u_int8_t *mac);
+void __ahdecl ath_hal_printf(struct ath_hal *ah, HAL_BOOL prefer_alq, const char *fmt, ...)
+	__attribute__ ((__format__ (__printf__, 3, 4)));
+#ifdef AH_DEBUG_ALQ
+void __ahdecl ath_hal_logprintf(struct ath_hal *ah, const char *fmt, ...)
+	__attribute__ ((__format__ (__printf__, 2, 3)));
+#endif
+
 int __ahdecl ath_hal_memcmp(const void *a, const void *b, size_t n);
 void *__ahdecl ath_hal_malloc(size_t size);
 void __ahdecl ath_hal_free(void *p);
@@ -194,6 +190,10 @@ extern u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
  */
 #if (AH_BYTE_ORDER == AH_BIG_ENDIAN)
 #define is_reg_le(__reg) ((0x4000 <= (__reg) && (__reg) < 0x5000))
+#else
+#define is_reg_le(__reg) 1
+#endif
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
 #define _OS_REG_WRITE(_ah, _reg, _val) do {			\
 	 is_reg_le(_reg) ?					\
@@ -215,21 +215,16 @@ extern u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
 	 readl((_ah)->ah_sh + (_reg)) :				\
 	 cpu_to_le32(readl((_ah)->ah_sh + (_reg))))
 #endif				/* KERNEL_VERSION(2,6,12) */
-#else				/* AH_BYTE_ORDER != AH_BIG_ENDIAN */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
-#define _OS_REG_WRITE(_ah, _reg, _val) do {			\
-	 iowrite32((_val), (_ah)->ah_sh + (_reg));		\
-	} while (0)
-#define _OS_REG_READ(_ah, _reg)					\
-	ioread32((_ah)->ah_sh + (_reg))
-#else
-#define _OS_REG_WRITE(_ah, _reg, _val) do {			\
-	 writel((_val), (_ah)->ah_sh + (_reg));			\
-	} while (0)
-#define _OS_REG_READ(_ah, _reg)					\
-	readl((_ah)->ah_sh + (_reg))
-#endif				/* KERNEL_VERSION(2,6,12) */
-#endif				/* AH_BYTE_ORDER != AH_BIG_ENDIAN */
+
+#define HAL_DEBUG_OFF			0
+/* Show register accesses */
+#define HAL_DEBUG_REGOPS 		1
+/* Show decoded register dump (include name, etc) */
+#define HAL_DEBUG_REGOPS_DECODED 	2
+/* Show bit-fields where we put decode logic in */
+#define HAL_DEBUG_REGOPS_BITFIELDS    	3
+/* Add a read before a write to show 'changes', may have side-effects */
+#define HAL_DEBUG_REGOPS_DELTAS	 	4
 
 /*
  * The functions in this section are not intended to be invoked by MadWifi
@@ -247,11 +242,20 @@ extern u_int32_t __ahdecl ath_hal_reg_read(struct ath_hal *ah, u_int reg);
 #define OS_REG_READ(_ah, _reg)		_OS_REG_READ(_ah, _reg)
 #endif				/* AH_DEBUG || AH_REGFUNC || AH_DEBUG_ALQ */
 
-extern char *ath_hal_func;
+/* XXX: This should be stored per-device for proper multi-radio support */
+extern const char *ath_hal_func;
+extern const char *ath_hal_device;
+extern int ath_hal_debug;
 static inline void ath_hal_set_function(const char *name)
 {
 #ifdef AH_DEBUG
-	ath_hal_func = (char *)name;
+	ath_hal_func = name;
+#endif
+}
+static inline void ath_hal_set_device(const char *name)
+{
+#ifdef AH_DEBUG
+	ath_hal_device = name;
 #endif
 }
 
@@ -273,4 +277,19 @@ extern struct ath_hal *_ath_hal_attach(u_int16_t devid, HAL_SOFTC,
 				       HAL_STATUS *);
 extern void _ath_hal_detach(struct ath_hal *);
 
+void
+ath_hal_print_decoded_register(struct ath_hal *ah, 
+			       const char* device_name,
+			       u_int32_t address, u_int32_t oldval, 
+			       u_int32_t newval, HAL_BOOL bitfields);
+void
+ath_hal_print_register(struct ath_hal *ah, 
+			       const char* device_name,
+			       u_int32_t address, u_int32_t value);
+
+HAL_BOOL
+ath_hal_lookup_register_name(struct ath_hal *ah, char* buf, int buflen, 
+		u_int32_t address);
+
 #endif				/* _ATH_AH_OSDEP_H_ */
+

@@ -81,5 +81,4 @@
 #define	ATH_HAL_LOCK_CHECK(_sc)
 #endif
 
-
 #endif /* #ifndef _IF_ATH_HAL_MACROS_H_ */

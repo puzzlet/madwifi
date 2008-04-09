@@ -161,12 +161,49 @@ TARGETS=$(basename $(notdir $(wildcard $(HAL)/public/*.inc)))
 $(error TARGET $(TARGET) is invalid, valid targets are: $(TARGETS))
 endif
 
+ifndef ATH_DEBUG_SPINLOCKS
+export ATH_DEBUG_SPINLOCKS=0
+endif
+
+ifndef IEEE80211_DEBUG_REFCNT
+export IEEE80211_DEBUG_REFCNT=0
+endif
+
+ifndef HAL_DEBUG
+export HAL_DEBUG=0
+endif
+
+ifndef ALQ
+ALQ=0
+endif
+
+ifndef MMIOTRACE
+MMIOTRACE=0
+endif
+
+ifneq ($(strip $(MMIOTRACE)),0)
+EXTRA_CFLAGS += -DMMIOTRACE=1
+endif
+
+ifneq ($(strip $(ATH_DEBUG_SPINLOCKS)),0)
+COPTS+= -DATH_DEBUG_SPINLOCKS=1
+endif
+
+ifneq ($(strip $(IEEE80211_DEBUG_REFCNT)),0)
+COPTS+= -DIEEE80211_DEBUG_REFCNT=1
+endif
+
 # HAL_DEBUG enables HAL debugging code
 # At the moment this consists of wrappers around HAL functions so that 
 # stack traces are more decipherable.
+ifneq ($(strip $(HAL_DEBUG)),0)
+COPTS+= -fno-inline -DAH_DEBUG=1
+endif
 
-ifdef HAL_DEBUG
-COPTS+= -fno-inline
+ifneq ($(strip $(ALQ)),0)
+obj-m += alq.o
+alq-objs := kern_alq.o
+EXTRA_CFLAGS += -DAH_DEBUG_ALQ -DAH_DEBUG
 endif
 
 # Don't let HAL mess with the toolchain - save toolchain variables
@@ -186,6 +223,23 @@ OBJCOPY := $(save_OBJCOPY)
 NM := $(save_NM)
 
 include $(TOP)/BuildCaps.inc
+
+# At present, these are defined all over the sources but it will not build without it
+ifndef ATH_DEBUG
+export ATH_DEBUG=1
+endif
+
+ifneq ($(strip $(ATH_DEBUG)),0)
+CFLAGS += -DAR_DEBUG -DIEEE80211_DEBUG -DIEEE80211_DEBUG 
+endif
+
+ifneq ($(strip $(ATH_DEBUG_SPINLOCKS)),0)
+CFLAGS += -DATH_DEBUG_SPINLOCKS
+endif
+
+ifneq ($(strip $(IEEE80211_DEBUG_REFCNT)),0)
+CFLAGS += -DIEEE80211_DEBUG_REFCNT
+endif
 
 # Ensure correct endianess
 LDFLAGS += $(LDOPTS)

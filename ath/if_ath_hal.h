@@ -40,7 +40,7 @@
 #include "if_ath_hal_macros.h"
 #ifdef CONFIG_KALLSYMS
 #include "linux/kallsyms.h"
-#endif				/* #ifdef CONFIG_KALLSYMS */
+#endif				/* CONFIG_KALLSYMS */
 
 #ifndef _IF_ATH_HAL_H_
 #define _IF_ATH_HAL_H_
@@ -49,8 +49,10 @@ static inline void ath_hal_getmac(struct ath_hal *ah, u_int8_t *a1)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_getMacAddress(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -59,8 +61,10 @@ static inline HAL_POWER_MODE ath_hal_getPowerMode(struct ath_hal *ah)
 	HAL_POWER_MODE ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getPowerMode(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -73,10 +77,12 @@ static inline HAL_BOOL ath_hal_getdiagstate(struct ath_hal *ah, int request,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret =
 	    ah->ah_getDiagState(ah, request, args, argsize, *result,
 				resultsize);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -85,8 +91,10 @@ static inline void ath_hal_beaconreset(struct ath_hal *ah)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_resetStationBeaconTimers(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -95,8 +103,10 @@ static inline void ath_hal_setcoverageclass(struct ath_hal *ah, u_int8_t a1,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setCoverageClass(ah, a1, a2);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -105,8 +115,10 @@ static inline u_int64_t ath_hal_gettsf64(struct ath_hal *ah)
 	u_int64_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getTsf64(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -115,8 +127,10 @@ static inline void ath_hal_rxena(struct ath_hal *ah)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_enableReceive(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -125,8 +139,10 @@ static inline HAL_ANT_SETTING ath_hal_getantennaswitch(struct ath_hal *ah)
 	HAL_ANT_SETTING ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getAntennaSwitch(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -137,8 +153,10 @@ static inline HAL_BOOL ath_hal_gpioset(struct ath_hal *ah, u_int32_t gpio,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_gpioSet(ah, gpio, val);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -148,8 +166,10 @@ static inline HAL_BOOL ath_hal_gpioCfgOutput(struct ath_hal *ah, u_int32_t gpio)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_gpioCfgOutput(ah, gpio);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -160,8 +180,10 @@ static inline HAL_BOOL ath_hal_clearmcastfilter(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_clrMulticastFilterIndex(ah, index);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -171,8 +193,10 @@ static inline void ath_hal_txreqintrdesc(struct ath_hal *ah,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_reqTxIntrDesc(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -181,8 +205,10 @@ static inline void ath_hal_rxmonitor(struct ath_hal *ah,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_rxMonitor(ah, a1, a2);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -192,8 +218,10 @@ static inline HAL_BOOL ath_hal_puttxbuf(struct ath_hal *ah, u_int a1,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setTxDP(ah, a1, txdp);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -205,8 +233,10 @@ static inline HAL_BOOL ath_hal_keyset(struct ath_hal *ah, u_int16_t a1,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setKeyCacheEntry(ah, a1, a2, a3, a4);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -215,8 +245,10 @@ static inline void ath_hal_setopmode(struct ath_hal *ah)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setPCUConfig(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -225,8 +257,10 @@ static inline HAL_RFGAIN ath_hal_getrfgain(struct ath_hal *ah)
 	HAL_RFGAIN ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getRfGain(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -236,8 +270,10 @@ static inline void ath_hal_setmcastfilter(struct ath_hal *ah, u_int32_t filter0,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setMulticastFilter(ah, filter0, filter1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -246,8 +282,10 @@ static inline u_int ath_hal_getacktimeout(struct ath_hal *ah)
 	u_int ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getAckTimeout(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -257,8 +295,10 @@ static inline void ath_hal_beacontimers(struct ath_hal *ah,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setStationBeaconTimers(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -267,8 +307,10 @@ static inline HAL_BOOL ath_hal_detectcardpresent(struct ath_hal *ah)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_detectCardPresent(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -278,8 +320,10 @@ static inline u_int ath_hal_getslottime(struct ath_hal *ah)
 	u_int ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getSlotTime(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -289,8 +333,10 @@ static inline void ath_hal_beaconinit(struct ath_hal *ah, u_int32_t nexttbtt,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_beaconInit(ah, nexttbtt, intval);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -299,8 +345,10 @@ static inline void ath_hal_gpiosetintr(struct ath_hal *ah, u_int a1,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_gpioSetIntr(ah, a1, a2);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -309,8 +357,10 @@ static inline HAL_BOOL ath_hal_releasetxqueue(struct ath_hal *ah, u_int q)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_releaseTxQueue(ah, q);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -321,8 +371,10 @@ static inline HAL_BOOL ath_hal_keysetmac(struct ath_hal *ah, u_int16_t a1,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setKeyCacheEntryMac(ah, a1, a2);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -334,8 +386,10 @@ static inline HAL_STATUS ath_hal_txprocdesc(struct ath_hal *ah,
 	HAL_STATUS ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_procTxDesc(ah, a1, a2);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -345,8 +399,10 @@ static inline HAL_INT ath_hal_intrget(struct ath_hal *ah)
 	HAL_INT ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getInterrupts(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -356,8 +412,10 @@ static inline HAL_BOOL ath_hal_setacktimeout(struct ath_hal *ah, u_int a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setAckTimeout(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -368,8 +426,10 @@ static inline HAL_BOOL ath_hal_setbssidmask(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setBssIdMask(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -379,8 +439,10 @@ static inline HAL_BOOL ath_hal_setackctsrate(struct ath_hal *ah, u_int a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setAckCTSRate(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -390,8 +452,10 @@ static inline u_int32_t ath_hal_getrxfilter(struct ath_hal *ah)
 	u_int32_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getRxFilter(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -402,8 +466,10 @@ static inline int16_t ath_hal_get_channel_noise(struct ath_hal *ah,
 	int16_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getChanNoise(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -413,8 +479,10 @@ static inline HAL_BOOL ath_hal_keyreset(struct ath_hal *ah, u_int16_t a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_resetKeyCacheEntry(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -425,8 +493,10 @@ static inline HAL_BOOL ath_hal_setantennaswitch(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setAntennaSwitch(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -437,8 +507,10 @@ static inline HAL_BOOL ath_hal_settxqueueprops(struct ath_hal *ah, int q,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setTxQueueProps(ah, q, qInfo);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -447,8 +519,10 @@ static inline void ath_hal_putrxbuf(struct ath_hal *ah, u_int32_t rxdp)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setRxDP(ah, rxdp);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -459,8 +533,10 @@ static inline HAL_BOOL ath_hal_reset(struct ath_hal *ah, HAL_OPMODE a1,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_reset(ah, a1, a2, bChannelChange, status);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -471,8 +547,10 @@ static inline HAL_BOOL ath_hal_setdecompmask(struct ath_hal *ah, u_int16_t a1,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setDecompMask(ah, a1, a2);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -483,8 +561,10 @@ static inline HAL_BOOL ath_hal_gettxqueueprops(struct ath_hal *ah, int q,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getTxQueueProps(ah, q, qInfo);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -497,8 +577,10 @@ static inline HAL_BOOL ath_hal_filltxdesc(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_fillTxDesc(ah, a1, segLen, firstSeg, lastSeg, a5);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -508,8 +590,10 @@ static inline u_int32_t ath_hal_numtxpending(struct ath_hal *ah, u_int q)
 	u_int32_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_numTxPending(ah, q);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -518,8 +602,10 @@ static inline void ath_hal_startpcurecv(struct ath_hal *ah)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_startPcuReceive(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -527,8 +613,10 @@ static inline void ath_hal_setdefantenna(struct ath_hal *ah, u_int a1)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setDefAntenna(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -538,8 +626,10 @@ static inline HAL_BOOL ath_hal_setpower(struct ath_hal *ah, HAL_POWER_MODE mode,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setPowerMode(ah, mode, setChip);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -554,8 +644,10 @@ static inline HAL_STATUS ath_hal_rxprocdesc(struct ath_hal *ah,
 	HAL_STATUS ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_procRxDesc(ah, a1, phyAddr, next, tsf, a5);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -565,8 +657,10 @@ static inline u_int ath_hal_getackctsrate(struct ath_hal *ah)
 	u_int ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getAckCTSRate(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -576,8 +670,10 @@ static inline u_int32_t ath_hal_keycachesize(struct ath_hal *ah)
 	u_int32_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getKeyCacheSize(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -591,10 +687,12 @@ static inline HAL_BOOL ath_hal_setupxtxdesc(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret =
 	    ah->ah_setupXTxDesc(ah, a1, txRate1, txTries1, txRate2, txTries2,
 				txRate3, txTries3);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -604,8 +702,10 @@ static inline HAL_INT ath_hal_intrset(struct ath_hal *ah, HAL_INT a1)
 	HAL_INT ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setInterrupts(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -615,8 +715,10 @@ static inline u_int ath_hal_getctstimeout(struct ath_hal *ah)
 	u_int ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getCTSTimeout(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -626,8 +728,10 @@ static inline void ath_hal_updatemibcounters(struct ath_hal *ah,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_updateMibCounters(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -637,8 +741,10 @@ static inline HAL_BOOL ath_hal_calibrate(struct ath_hal *ah, HAL_CHANNEL *a1,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_perCalibration(ah, a1, a2);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -648,8 +754,10 @@ static inline u_int32_t ath_hal_getrxbuf(struct ath_hal *ah)
 	u_int32_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getRxDP(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -659,8 +767,10 @@ static inline HAL_BOOL ath_hal_settxpowlimit(struct ath_hal *ah, u_int32_t a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setTxPowerLimit(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -670,8 +780,10 @@ static inline HAL_BOOL ath_hal_getisr(struct ath_hal *ah, HAL_INT *a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getPendingInterrupts(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -682,8 +794,10 @@ static inline HAL_BOOL ath_hal_updatetxtriglevel(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_updateTxTrigLevel(ah, incTrigLevel);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -693,8 +807,10 @@ static inline HAL_BOOL ath_hal_resettxqueue(struct ath_hal *ah, u_int q)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_resetTxQueue(ah, q);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -704,8 +820,10 @@ static inline HAL_BOOL ath_hal_setmac(struct ath_hal *ah, const u_int8_t *a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setMacAddress(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -715,8 +833,10 @@ static inline HAL_BOOL ath_hal_setctstimeout(struct ath_hal *ah, u_int a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setCTSTimeout(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -727,8 +847,10 @@ static inline const HAL_RATE_TABLE *ath_hal_getratetable(struct ath_hal *ah,
 	const HAL_RATE_TABLE *ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getRateTable(ah, mode);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -738,8 +860,10 @@ static inline u_int32_t ath_hal_gettsf32(struct ath_hal *ah)
 	u_int32_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getTsf32(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -749,8 +873,10 @@ static inline void ath_hal_mibevent(struct ath_hal *ah,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_procMibEvent(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -759,8 +885,10 @@ static inline void ath_hal_setbeacontimers(struct ath_hal *ah,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setBeaconTimers(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -772,8 +900,10 @@ static inline HAL_STATUS ath_hal_getcapability(struct ath_hal *ah,
 	HAL_STATUS ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getCapability(ah, a1, capability, result);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -783,8 +913,10 @@ static inline HAL_BOOL ath_hal_radar_wait(struct ath_hal *ah, HAL_CHANNEL *a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_radarWait(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -795,8 +927,10 @@ static inline HAL_BOOL ath_hal_setmcastfilterindex(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setMulticastFilterIndex(ah, index);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -805,8 +939,10 @@ static inline void ath_hal_getbssidmask(struct ath_hal *ah, u_int8_t *a1)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_getBssIdMask(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -815,8 +951,10 @@ static inline HAL_BOOL ath_hal_intrpend(struct ath_hal *ah)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_isInterruptPending(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -826,8 +964,10 @@ static inline HAL_BOOL ath_hal_txstart(struct ath_hal *ah, u_int a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_startTxDma(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -836,8 +976,10 @@ static inline void ath_hal_gettxintrtxqs(struct ath_hal *ah, u_int32_t *a1)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_getTxIntrQueue(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -846,8 +988,10 @@ static inline HAL_BOOL ath_hal_setslottime(struct ath_hal *ah, u_int a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setSlotTime(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -856,8 +1000,10 @@ static inline void ath_hal_setledstate(struct ath_hal *ah, HAL_LED_STATE a1)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setLedState(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -866,8 +1012,10 @@ static inline void ath_hal_setassocid(struct ath_hal *ah, const u_int8_t *bssid,
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_writeAssocid(ah, bssid, assocId);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -875,8 +1023,10 @@ static inline void ath_hal_resettsf(struct ath_hal *ah)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_resetTsf(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -887,8 +1037,10 @@ static inline HAL_BOOL ath_hal_setuprxdesc(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setupRxDesc(ah, a1, size, flags);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -897,8 +1049,10 @@ static inline void ath_hal_setrxfilter(struct ath_hal *ah, u_int32_t a1)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_setRxFilter(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -907,8 +1061,10 @@ static inline HAL_BOOL ath_hal_keyisvalid(struct ath_hal *ah, u_int16_t a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_isKeyCacheEntryValid(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -917,8 +1073,10 @@ static inline void ath_hal_stoppcurecv(struct ath_hal *ah)
 {
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ah->ah_stopPcuReceive(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 }
 
@@ -927,8 +1085,10 @@ static inline HAL_BOOL ath_hal_stoptxdma(struct ath_hal *ah, u_int a1)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_stopTxDma(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -941,8 +1101,10 @@ static inline HAL_BOOL ath_hal_setcapability(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setCapability(ah, a1, capability, setting, a4);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -952,8 +1114,10 @@ static inline HAL_BOOL ath_hal_stopdmarecv(struct ath_hal *ah)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_stopDmaReceive(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -963,8 +1127,10 @@ static inline u_int32_t ath_hal_gettxbuf(struct ath_hal *ah, u_int a1)
 	u_int32_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getTxDP(ah, a1);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -975,8 +1141,10 @@ static inline int ath_hal_setuptxqueue(struct ath_hal *ah, HAL_TX_QUEUE a1,
 	int ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setupTxQueue(ah, a1, qInfo);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -986,8 +1154,10 @@ static inline u_int ath_hal_getdefantenna(struct ath_hal *ah)
 	u_int ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_getDefAntenna(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -997,8 +1167,10 @@ static inline HAL_BOOL ath_hal_phydisable(struct ath_hal *ah)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_phyDisable(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -1009,8 +1181,10 @@ static inline HAL_BOOL ath_hal_setregulatorydomain(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_setRegulatoryDomain(ah, a1, a2);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -1029,11 +1203,13 @@ static inline HAL_BOOL ath_hal_setuptxdesc(struct ath_hal *ah,
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret =
 	    ah->ah_setupTxDesc(ah, a1, pktLen, hdrLen, type, txPower, txRate0,
 			       txTries0, keyIx, antMode, flags, rtsctsRate,
 			       rtsctsDuration, compicvLen, compivLen, comp);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -1043,8 +1219,10 @@ static inline HAL_BOOL ath_hal_gpiCfgInput(struct ath_hal *ah, u_int32_t gpio)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_gpioCfgInput(ah, gpio);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -1054,8 +1232,10 @@ static inline u_int32_t ath_hal_gpioget(struct ath_hal *ah, u_int32_t gpio)
 	u_int32_t ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_gpioGet(ah, gpio);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -1065,8 +1245,10 @@ static inline HAL_BOOL ath_hal_disable(struct ath_hal *ah)
 	HAL_BOOL ret;
 	ATH_HAL_LOCK_IRQ(ah->ah_sc);
 	ath_hal_set_function(__func__);
+	ath_hal_set_device(SC_DEV_NAME(ah->ah_sc));
 	ret = ah->ah_disable(ah);
 	ath_hal_set_function(NULL);
+	ath_hal_set_device(NULL);
 	ATH_HAL_UNLOCK_IRQ(ah->ah_sc);
 	return ret;
 }
@@ -1340,7 +1522,7 @@ static inline void ath_hal_dump_map(struct ath_hal *ah)
 #else				/* #ifdef CONFIG_KALLSYMS */
 
 	printk
-	    (KERN_ERR "To use this feature you must enable CONFIG_KALLSYMS in your kernel.");
+	    ("To use this feature you must enable CONFIG_KALLSYMS in your kernel.");
 
 #endif				/* #ifndef CONFIG_KALLSYMS */
 

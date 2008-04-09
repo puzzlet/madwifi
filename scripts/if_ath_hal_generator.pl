@@ -194,7 +194,7 @@ my $header = <<EOF
 #include "if_ath_hal_macros.h"
 #ifdef CONFIG_KALLSYMS
 #include "linux/kallsyms.h"
-#endif /* #ifdef CONFIG_KALLSYMS */
+#endif /* CONFIG_KALLSYMS */
 
 #ifndef _IF_ATH_HAL_H_
 #define _IF_ATH_HAL_H_
@@ -333,6 +333,7 @@ sub generate_output() {
         }
         print OUTPUT "\n\tATH_HAL_LOCK_IRQ(ah->ah_sc);";
         print OUTPUT "\n\tath_hal_set_function(__func__);";
+        print OUTPUT "\n\tath_hal_set_device(SC_DEV_NAME(ah->ah_sc));";
         print OUTPUT "\n\t";
         if ( !$ret_void ) {
             print OUTPUT "ret = ";
@@ -347,6 +348,7 @@ sub generate_output() {
         }
         print OUTPUT ");";
         print OUTPUT "\n\tath_hal_set_function(NULL);";
+        print OUTPUT "\n\tath_hal_set_device(NULL);";
         print OUTPUT "\n\tATH_HAL_UNLOCK_IRQ(ah->ah_sc);";
         if ( !$ret_void ) {
             print OUTPUT "\n\treturn ret;";
@@ -381,7 +383,7 @@ sub generate_output() {
 	    print OUTPUT format_type( $types[$i] ) . $names[$i];
 	}
 	print OUTPUT ") */";
-	print OUTPUT "\n\t\t__print_symbol(\"%s=" . $member_name 
+	print OUTPUT "\n\t__print_symbol(\"%s=" . $member_name 
 	   . "\\n\", (unsigned long)ah->"
 	   . $member_name . ");";
     }
@@ -416,6 +418,7 @@ sub main () {
     }
     generate_output();
     close OUTPUT;
+    exec "./madwifi-indent $output_header";
 }
 
 main();

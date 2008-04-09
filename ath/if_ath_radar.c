@@ -20,7 +20,6 @@
  */
 #include "opt_ah.h"
 
-#define	AR_DEBUG
 #include "if_ath_debug.h"
 
 #ifndef AUTOCONF_INCLUDED
@@ -55,8 +54,6 @@
 #ifdef USE_HEADERLEN_RESV
 #include <net80211/if_llc.h>
 #endif
-
-#define	AR_DEBUG
 
 #include "net80211/if_athproto.h"
 #include "if_athvar.h"

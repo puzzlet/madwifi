@@ -42,7 +42,6 @@
  * This software is derived from work of Atsushi Onoe; his contribution
  * is greatly appreciated.
  */
-#define	AR_DEBUG
 #include "if_ath_debug.h"
 #include "opt_ah.h"
 

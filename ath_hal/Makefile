@@ -87,10 +87,18 @@ ifdef LINUX24
 else
 	$(call if_changed,uudecode)
 endif
+	# Replace as many hashed names as possible with meaningful
+	# ones in the symbol table of the binary kernel module for HAL.
+	$(OBJCOPY) \
+		`cat $(shell dirname $(obj))/scripts/hal_unmangle.objcopy` \
+		$(obj)/$(TARGET).hal.o
 
 install:
 	test -d $(DESTDIR)/$(KMODPATH) || mkdir -p $(DESTDIR)/$(KMODPATH)
 	install -m 0644 ath_hal.$(KMODSUF) $(DESTDIR)/$(KMODPATH)
+ifneq ($(strip $(ALQ)),0)
+	install -m 0644 alq.$(KMODSUF) $(DESTDIR)/$(KMODPATH)
+endif
 
 clean:
 	rm -f *~ *.o *.ko *.mod.c uudecode .*.cmd
@@ -99,3 +107,4 @@ clean:
 
 ath_hal.o: $(ath_hal-objs)
 	$(LD) $(LDFLAGS) -o ath_hal.$(KMODSUF) -r $(ath_hal-objs)
+
