@@ -63,7 +63,7 @@ struct onoe_node {
 	u_int8_t	on_tx_rate1sp;		/* series 1 short preamble h/w rate */
 	u_int8_t	on_tx_rate2sp;		/* series 2 short preamble h/w rate */
 	u_int8_t	on_tx_rate3sp;		/* series 3 short preamble h/w rate */
-	int on_nextcheck;		/* time of next check for rate drop */
+	long unsigned int on_nextcheck;		/* time of next check for rate drop */
 };
 #define	ATH_NODE_ONOE(an)	((struct onoe_node *)&an[1])
 #endif /* _DEV_ATH_RATE_ONOE_H */

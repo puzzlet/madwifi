@@ -160,7 +160,7 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		on->on_tx_err++;
 	on->on_tx_retr += ts->ts_shortretry
 			+ ts->ts_longretry;
-	if (jiffies >= on->on_nextcheck) {
+	if (time_after(jiffies, on->on_nextcheck)) {
 		ath_rate_ctl(sc, &an->an_node);
 		/* XXX halve rate for station mode */
 		on->on_nextcheck = jiffies + (ath_rateinterval * HZ) / 1000;
