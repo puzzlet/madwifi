@@ -64,6 +64,20 @@ const char *ieee80211_phymode_name[] = {
 };
 EXPORT_SYMBOL(ieee80211_phymode_name);
 
+const char* ieee80211_opmode_name[] = {
+	"ibss", 	/* IEEE80211_M_IBSS     = 0 - IBSS (adhoc) station */            
+	"station", 	/* IEEE80211_M_STA      = 1 - infrastructure station */          
+	"wds", 		/* IEEE80211_M_WDS      = 2 - WDS link */                        
+	"ahdemo", 	/* IEEE80211_M_AHDEMO   = 3 - Old lucent compatible adhoc demo */
+	"opmode4", 	/* invalid              = 4 - invalid */                         
+	"opmode5", 	/* invalid              = 5 - invalid */                         
+	"hostap", 	/* IEEE80211_M_HOSTAP   = 6 - Software Access Point */           
+	"opmode7",	/* invalid              = 7 - invalid */                         
+	"monitor"	/* IEEE80211_M_MONITOR  = 8 - Monitor mode */                    
+};
+EXPORT_SYMBOL(ieee80211_opmode_name);
+
+
 static void ieee80211com_media_status(struct net_device*, struct ifmediareq *);
 static int ieee80211com_media_change(struct net_device *);
 static struct net_device_stats *ieee80211_getstats(struct net_device *);
@@ -329,9 +343,9 @@ ieee80211_ifattach(struct ieee80211com *ic)
 	/* We store the beacon miss threshold in integral number of beacons,
 	 * to keep the calculations on the critical path simple. */
 	if (ic->ic_bmissthreshold == 0) {
-		ic->ic_bmissthreshold = howmany(IEEE80211_MS_TO_TU(
-					IEEE80211_BMISSTHRESH_DEFAULT_MS),
-				ic->ic_lintval);
+		ic->ic_bmissthreshold = howmany(roundup(
+			IEEE80211_MS_TO_TU(IEEE80211_BMISSTHRESH_DEFAULT_MS), 
+			ic->ic_lintval), ic->ic_lintval);
 	}
 		
 	IEEE80211_LOCK_INIT(ic, "ieee80211com");
@@ -357,7 +371,6 @@ ieee80211_ifattach(struct ieee80211com *ic)
 		ieee80211com_media_change, ieee80211com_media_status);
 	ieee80211com_media_status(dev, &imr);
 	ifmedia_set(&ic->ic_media, imr.ifm_active);
-
 	return 0;
 }
 EXPORT_SYMBOL(ieee80211_ifattach);
@@ -528,7 +541,6 @@ ieee80211_vap_attach(struct ieee80211vap *vap,
 	struct net_device *dev = vap->iv_dev;
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ifmediareq imr;
-
 	ieee80211_node_latevattach(vap);	/* XXX: move into vattach */
 	ieee80211_power_latevattach(vap);	/* XXX: move into vattach */
 
@@ -538,7 +550,6 @@ ieee80211_vap_attach(struct ieee80211vap *vap,
 				     media_change, media_status);
 	ieee80211_media_status(dev, &imr);
 	ifmedia_set(&vap->iv_media, imr.ifm_active);
-
 	IEEE80211_LOCK_IRQ(ic);
 	TAILQ_INSERT_TAIL(&ic->ic_vaps, vap, iv_next);
 	IEEE80211_UNLOCK_IRQ(ic);
