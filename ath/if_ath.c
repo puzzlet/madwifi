@@ -381,15 +381,15 @@ static int ath_countrycode = CTRY_DEFAULT;	/* country code */
 static int ath_outdoor = AH_FALSE;		/* enable outdoor use */
 static int ath_xchanmode = AH_TRUE;		/* enable extended channels */
 static int ath_maxvaps = ATH_MAXVAPS_DEFAULT;   /* set default maximum vaps */
-static char *autocreate = NULL;
+static char *autocreate = "sta";
 static char *ratectl = DEF_RATE_CTL;
 static int rfkill = 0;
-static int tpc = 0;
+static int hal_tpc = 0;
 static int intmit = 0;
-static int countrycode = -1;
-static int maxvaps = -1;
-static int outdoor = -1;
-static int xchanmode = -1;
+static int countrycode = CTRY_DEFAULT;
+static int maxvaps = ATH_MAXVAPS_DEFAULT;
+static int outdoor = 0;
+static int xchanmode = 0;
 static int beacon_cal = 1;
 
 static const char *hal_status_desc[] = {
@@ -423,7 +423,7 @@ MODULE_PARM(outdoor, "i");
 MODULE_PARM(xchanmode, "i");
 MODULE_PARM(rfkill, "i");
 #ifdef ATH_CAP_TPC
-MODULE_PARM(tpc, "i");
+MODULE_PARM(hal_tpc, "i");
 #endif
 MODULE_PARM(autocreate, "s");
 MODULE_PARM(ratectl, "s");
@@ -437,20 +437,20 @@ module_param(outdoor, int, 0600);
 module_param(xchanmode, int, 0600);
 module_param(rfkill, int, 0600);
 #ifdef ATH_CAP_TPC
-module_param(tpc, int, 0600);
+module_param(hal_tpc, int, 0600);
 #endif
 module_param(autocreate, charp, 0600);
 module_param(ratectl, charp, 0600);
 module_param(intmit, int, 0600);
 #endif
-MODULE_PARM_DESC(countrycode, "Override default country code");
-MODULE_PARM_DESC(maxvaps, "Maximum VAPs");
-MODULE_PARM_DESC(outdoor, "Enable/disable outdoor use");
-MODULE_PARM_DESC(xchanmode, "Enable/disable extended channel mode");
-MODULE_PARM_DESC(rfkill, "Enable/disable RFKILL capability");
+MODULE_PARM_DESC(countrycode, "Override default country code.  Default is 0.");
+MODULE_PARM_DESC(maxvaps, "Maximum VAPs.  Default is 4.");
+MODULE_PARM_DESC(outdoor, "Enable/disable outdoor use.  Default is 0.");
+MODULE_PARM_DESC(xchanmode, "Enable/disable extended channel mode.");
+MODULE_PARM_DESC(rfkill, "Enable/disable RFKILL capability.  Default is 0.");
 #ifdef ATH_CAP_TPC
-MODULE_PARM_DESC(tpc, "Enable/disable per-packet transmit power control (TPC) "
-		"capability");
+MODULE_PARM_DESC(hal_tpc, "Disables manual per-packet transmit power control and "
+		"lets this be managed by the HAL.  Default is OFF.");
 #endif
 MODULE_PARM_DESC(autocreate, "Create ath device in "
 		"[sta|ap|wds|adhoc|ahdemo|monitor] mode. defaults to sta, use "
@@ -583,11 +583,35 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	}
 	sc->sc_ah = ah;
 	/*
+	 * TPC support can be done either with a global cap or
+	 * per-packet support.  The latter is not available on
+	 * all parts.  We're a bit pedantic here as all parts
+	 * support a global cap.
+	 */
+#ifdef ATH_CAP_TPC
+	sc->sc_hastpc = ath_hal_hastpc(ah);
+	if (hal_tpc && !sc->sc_hastpc) {
+		WPRINTF(sc, "HAL managed transmit power control (TPC) "
+				"was requested, but is not "
+				"supported by the HAL.\n");
+		hal_tpc = 0;
+	}
+	IPRINTF(sc, "HAL managed transmit power control (TPC) %s.\n",
+		hal_tpc ? "enabled" : "disabled");
+	ath_hal_settpc(ah, hal_tpc);
+#else
+	sc->sc_hastpc = 0;
+	hal_tpc = 0; /* TPC is always zero, when compiled without ATH_CAP_TPC */
+#endif
+	/*
 	 * Init ic_caps prior to queue init, since WME cap setting
 	 * depends on queue setup.
 	 */
 	ic->ic_caps = 0;
 
+	if (ath_hal_hastxpowlimit(ah)) {
+		ic->ic_caps |= IEEE80211_C_TXPMGT;
+	}
 	/* Interference mitigation/ambient noise immunity (ANI).
 	 * In modes other than HAL_M_STA, it causes receive sensitivity
 	 * problems for OFDM. */
@@ -953,31 +977,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 			setbit(sc->sc_keymap, i+32+64);
 		}
 	}
-
-	/*
-	 * TPC support can be done either with a global cap or
-	 * per-packet support.  The latter is not available on
-	 * all parts.  We're a bit pedantic here as all parts
-	 * support a global cap.
-	 */
-#ifdef ATH_CAP_TPC
-	sc->sc_hastpc = ath_hal_hastpc(ah);
-	if (tpc && !sc->sc_hastpc) {
-		WPRINTF(sc, "Per-packet transmit "
-				"power control was requested, but is not "
-				"supported by the hardware.\n");
-		tpc = 0;
-	}
-	IPRINTF(sc, "Switching per-packet transmit power "
-			"control %s\n",
-		tpc ? "on" : "off");
-	ath_hal_settpc(ah, tpc);
-#else
-	sc->sc_hastpc = 0;
-	tpc = 0; /* TPC is always zero, when compiled without ATH_CAP_TPC */
-#endif
-	if (sc->sc_hastpc || ath_hal_hastxpowlimit(ah))
-		ic->ic_caps |= IEEE80211_C_TXPMGT;
 
 	/*
 	 * Default 11.h to start enabled.
@@ -2467,7 +2466,7 @@ ath_init(struct net_device *dev)
 
 #ifdef ATH_CAP_TPC
 	/* Re-enable after suspend */
-	ath_hal_settpc(ah, tpc);
+	ath_hal_settpc(ah, hal_tpc);
 #endif
 
 	/* Whether we should enable h/w TKIP MIC */
@@ -9960,7 +9959,7 @@ ath_update_txpow(struct ath_softc *sc)
 		new_clamped_maxtxpower = ic->ic_txpowlimit;
 	/* Search for the VAP that needs a txpow change, if any */
 	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
-		if (!tpc || ic->ic_newtxpowlimit != vap->iv_bss->ni_txpower) {
+		if (!hal_tpc || ic->ic_newtxpowlimit != vap->iv_bss->ni_txpower) {
 			vap->iv_bss->ni_txpower = new_clamped_maxtxpower;
 			ieee80211_iterate_nodes(&vap->iv_ic->ic_sta, 
 					set_node_txpower, 
