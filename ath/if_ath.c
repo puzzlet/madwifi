@@ -1639,6 +1639,40 @@ static inline void ath_override_intmit_if_disabled(struct ath_softc *sc) {
 	}
 }
 
+static HAL_BOOL ath_hw_reset(struct ath_softc* sc, HAL_OPMODE opmode,
+				     HAL_CHANNEL *channel, HAL_BOOL bChannelChange,
+				     HAL_STATUS *status)
+{
+	HAL_BOOL ret;
+
+	ret = ath_hal_reset(sc->sc_ah, sc->sc_opmode, channel, bChannelChange, status);
+	mdelay(5); /* extra delay to allow the hw to settle in */
+
+	if(sc->sc_hasintmit) {
+		u_int32_t intmit_on = 0;
+		ath_hal_getintmit(sc->sc_ah, &intmit_on);
+		if (intmit_on != sc->sc_useintmit) {
+			EPRINTF(sc, "ERROR: INTMIT HAL capability out of sync.  Got %d!\n", intmit);
+			ath_hal_setintmit(sc->sc_ah, (sc->sc_hasintmit && sc->sc_useintmit));
+		}
+	}
+#ifdef ATH_CAP_TPC
+	if (sc->sc_hastpc && hal_tpc != ath_hal_gettpc(sc->sc_ah)) {
+		EPRINTF(sc, "ERROR: TPC HAL capability out of sync.  Got %d!\n", ath_hal_gettpc(sc->sc_ah));
+		ath_hal_settpc(sc->sc_ah, 1);
+	}
+#endif
+/* XXX: Any other features they clobber? */
+	ath_override_intmit_if_disabled(sc);
+	if (sc->sc_softled)
+		ath_hal_gpioCfgOutput(sc->sc_ah, sc->sc_ledpin);
+	ath_update_txpow(sc);		/* update tx power state */
+	ath_radar_update(sc);
+	ath_setdefantenna(sc, sc->sc_defant);
+	ath_rp_flush(sc);
+
+	return ret;
+}
 
 /* Channel Availability Check is running, or a channel has already found to be 
  * unavailable. */
@@ -2506,7 +2540,7 @@ ath_init(struct net_device *dev)
 	 */
 	sc->sc_curchan.channel = ic->ic_curchan->ic_freq;
 	sc->sc_curchan.channelFlags = ath_chan2flags(ic->ic_curchan);
-	if (!ath_hal_reset(ah, sc->sc_opmode, &sc->sc_curchan, AH_FALSE, &status)) {
+	if (!ath_hw_reset(sc, sc->sc_opmode, &sc->sc_curchan, AH_FALSE, &status)) {
 		EPRINTF(sc, "unable to reset hardware: '%s' (HAL status %u) "
 			"(freq %u flags 0x%x)\n", 
 			ath_get_hal_status_desc(status), status,
@@ -2514,23 +2548,6 @@ ath_init(struct net_device *dev)
 		error = -EIO;
 		goto done;
 	}
-
-	if (sc->sc_softled)
-		ath_hal_gpioCfgOutput(ah, sc->sc_ledpin);
-
-	if ((sc->sc_opmode != HAL_M_STA) && sc->sc_hasintmit)
-		ath_hal_setintmit(ah, 0);
-
-	/*
-	 * This is needed only to setup initial state
-	 * but it's best done after a reset.
-	 */
-	ath_update_txpow(sc);
-	ath_radar_update(sc);
-	ath_rp_flush(sc);
-
-	/* Set the default RX antenna; it may get lost on reset. */
-	ath_setdefantenna(sc, sc->sc_defant);
 
 	/*
 	 * Setup the hardware after reset: the key cache
@@ -2795,20 +2812,12 @@ ath_reset(struct net_device *dev)
 	ath_draintxq(sc);		/* stop xmit side */
 	ath_stoprecv(sc);		/* stop recv side */
 	/* NB: indicate channel change so we do a full reset */
-	if (!ath_hal_reset(ah, sc->sc_opmode, &sc->sc_curchan, AH_TRUE, &status))
+	if (!ath_hw_reset(sc, sc->sc_opmode, &sc->sc_curchan, AH_TRUE, &status))
 		EPRINTF(sc, "Unable to reset hardware: '%s' (HAL status %u)\n",
 			ath_get_hal_status_desc(status), status);
 
-	if ((sc->sc_opmode != HAL_M_STA) && sc->sc_hasintmit)
-		ath_hal_setintmit(ah, 0);
-
-	ath_update_txpow(sc);		/* update tx power state */
-	ath_radar_update(sc);
-	ath_setdefantenna(sc, sc->sc_defant);
 	if (ath_startrecv(sc) != 0)	/* restart recv */
 		EPRINTF(sc, "Unable to start receive logic.\n");
-	if (sc->sc_softled)
-		ath_hal_gpioCfgOutput(ah, sc->sc_ledpin);
 
 	/*
 	 * We may be doing a reset in response to an ioctl
@@ -2821,6 +2830,8 @@ ath_reset(struct net_device *dev)
 	ath_hal_intrset(ah, sc->sc_imask);
 	ath_set_ack_bitrate(sc, sc->sc_ackrate);
 	netif_wake_queue(dev);		/* restart xmit */
+	/* Restart the reaper task, once, after each reset. */
+	ATH_SCHEDULE_TQUEUE(&sc->sc_txtq, &needmark);
 #ifdef ATH_SUPERG_XR
 	/*
 	 * restart the group polls.
@@ -8852,8 +8863,8 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 		 * needed to do the reset with chanchange = AH_FALSE in order
 		 * to receive traffic when peforming high velocity channel
 		 * changes. */
-		if (!ath_hal_reset(ah, sc->sc_opmode, &hchan, AH_TRUE, &status)   ||
-		    !ath_hal_reset(ah, sc->sc_opmode, &hchan, AH_FALSE, &status)) {
+		if (!ath_hw_reset(sc, sc->sc_opmode, &hchan, AH_TRUE, &status)   ||
+		    !ath_hw_reset(sc, sc->sc_opmode, &hchan, AH_FALSE, &status)) {
 			EPRINTF(sc, "Unable to reset channel %u (%u MHz) "
 				"flags 0x%x '%s' (HAL status %u)\n",
 				ieee80211_chan2ieee(ic, chan), chan->ic_freq,
@@ -8862,16 +8873,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 			return -EIO;
 		}
 
-		if (sc->sc_softled)
-			ath_hal_gpioCfgOutput(ah, sc->sc_ledpin);
-
-		if ((sc->sc_opmode != HAL_M_STA) && sc->sc_hasintmit)
-			ath_hal_setintmit(ah, 0);
-
 		sc->sc_curchan = hchan;
-		ath_update_txpow(sc);		/* update tx power state */
-		ath_radar_update(sc);
-		ath_rp_flush(sc);
 
 		/* Change channels and update the h/w rate map
 		 * if we're switching; e.g. 11a to 11b/g. */
@@ -11596,17 +11598,13 @@ txcont_configure_radio(struct ieee80211com *ic)
 		ieee80211_cancel_scan(vap);	/* anything current */
 		ieee80211_wme_updateparams(vap);
 		/*  reset the WNIC */
-		if (!ath_hal_reset(ah, sc->sc_opmode, 
+		if (!ath_hw_reset(sc, sc->sc_opmode,
 					&sc->sc_curchan, AH_TRUE, &status)) {
 			EPRINTF(sc, "ath_hal_reset failed: '%s' "
 					"(HAL status %u).\n",
 					ath_get_hal_status_desc(status),
 					status);
 		}
-
-		ath_update_txpow(sc);
-		ath_radar_update(sc);
-		ath_rp_flush(sc);
 
 #ifdef ATH_SUPERG_DYNTURBO
 		/*  Turn on dynamic turbo if necessary -- before we get into 
