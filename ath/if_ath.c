@@ -1730,7 +1730,7 @@ ath_extend_tsf(u_int64_t tsf, u_int32_t rstamp)
 }
 
 static void
-ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
+ath_intr_process_rx_descriptors(struct ath_softc *sc, int* pneedmark, u_int64_t hw_tsf)
 {
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_desc *ds;
@@ -1777,14 +1777,13 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 	 * get to reality.  This value is used in monitor mode and by tools like
 	 * Wireshark and Kismet.
 	 */
-	ic->ic_channoise = ath_hal_get_channel_noise(ah, &(sc->sc_curchan));
 
 	ATH_RXBUF_LOCK_IRQ(sc);
 	if (sc->sc_rxbufcur == NULL)
 		sc->sc_rxbufcur = STAILQ_FIRST(&sc->sc_rxbuf);
 
 	prev_rxbufcur = sc->sc_rxbufcur;
-	/* FIRST PASS - PROCESS UAPSD */
+	/* FIRST PASS - PROCESS DESCRIPTORS */
 	{
 		struct ath_buf *bf;
 		for (bf = prev_rxbufcur; bf; bf = STAILQ_NEXT(bf, bf_list)) {
@@ -1794,7 +1793,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 				 * the end */
 				break;
 			}
-			if (bf->bf_status & ATH_BUFSTATUS_DONE) {
+			if (bf->bf_status & ATH_BUFSTATUS_RXDESC_DONE) {
 				/* already processed this buffer (shouldn't
 				 * occur if we change code to always process
 				 * descriptors in rx intr handler - as opposed
@@ -1849,20 +1848,24 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 
 			last_rs_tstamp = rs->rs_tstamp;
 
-			/* XXX: We do not support frames spanning multiple
-			 *      descriptors */
-			bf->bf_status |= ATH_BUFSTATUS_DONE;
+			/* Do not allow negative RSSI values */
+			if (rs->rs_rssi < 0)
+				rs->rs_rssi = 0;
+
 			/* Capture noise per-interrupt, since it may change
 			 * by the time the receive queue gets around to
 			 * processing these buffers, and multiple interrupts
 			 * may have occurred in the intervening timeframe. */
 			bf->bf_channoise = ic->ic_channoise;
-
 			if ((HAL_RXERR_PHY == rs->rs_status) &&
 			    (HAL_PHYERR_RADAR == (rs->rs_phyerr & 0x1f)) &&
 			    !(bf->bf_status & ATH_BUFSTATUS_RADAR_DONE) &&
 			    (ic->ic_flags & IEEE80211_F_DOTH))
 				check_for_radar = 1;
+
+			/* XXX: We do not support frames spanning multiple
+			 *      descriptors */
+			bf->bf_status |= ATH_BUFSTATUS_RXDESC_DONE;
 
 			if (rs->rs_status) {
 				/* Skip past the error now */
@@ -2162,7 +2165,7 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 			if (ds->ds_link == p->bf_daddr)
 				break;
 			/* should have already been processed, above */
-			if (0 == (p->bf_status & ATH_BUFSTATUS_DONE))
+			if (0 == (p->bf_status & ATH_BUFSTATUS_RXDESC_DONE))
 				continue;
 			/* should not have already been processed for radar */
 			if (p->bf_status & ATH_BUFSTATUS_RADAR_DONE)
@@ -2171,11 +2174,6 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 			if (skb == NULL)
 				continue;
 			rs = &p->bf_dsstatus.ds_rxstat;
-			retval = ath_hal_rxprocdesc(ah, ds, p->bf_daddr,
-						    PA2DESC(sc, ds->ds_link),
-						    hw_tsf, rs);
-			if (HAL_EINPROGRESS == retval)
-				break;
 			if ((HAL_RXERR_PHY == rs->rs_status) &&
 			    (HAL_PHYERR_RADAR == (rs->rs_phyerr & 0x1f)) &&
 			    (0 == (p->bf_status & ATH_BUFSTATUS_RADAR_DONE))) {
@@ -2220,6 +2218,9 @@ ath_uapsd_processtriggers(struct ath_softc *sc, u_int64_t hw_tsf)
 		ATH_SCHEDULE_TQUEUE(&sc->sc_rp_tq, NULL);
 	}
 
+	/* If we got something to process, schedule rx queue to handle it */
+	if (count)
+		ATH_SCHEDULE_TQUEUE(&sc->sc_rxtq, pneedmark);
 	ATH_RXBUF_UNLOCK_IRQ(sc);
 #undef PA2DESC
 }
@@ -2365,8 +2366,8 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 			ath_hal_updatetxtriglevel(ah, AH_TRUE);
 		}
 		if (status & (HAL_INT_RX | HAL_INT_RXPHY)) {
-			ath_uapsd_processtriggers(sc, hw_tsf);
-			ATH_SCHEDULE_TQUEUE(&sc->sc_rxtq, &needmark);
+			/* NB: Will schedule rx tasklet if necessary. */
+			ath_intr_process_rx_descriptors(sc, &needmark, hw_tsf);
 		}
 		if (status & HAL_INT_TX) {
 #ifdef ATH_SUPERG_DYNTURBO
@@ -6535,7 +6536,7 @@ ath_rx_tasklet(TQUEUE_ARG data)
 		 * We check bf_status to find out if the bf's descriptors have
 		 * been processed by the HAL.
 		 */
-		if (!(bf->bf_status & ATH_BUFSTATUS_DONE))
+		if (!bf || !(bf->bf_status & ATH_BUFSTATUS_RXDESC_DONE))
 			break;
 
 		ds = bf->bf_desc;

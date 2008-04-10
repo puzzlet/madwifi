@@ -469,7 +469,7 @@ struct ath_buf {
 #define ATH_RXBUF_RESET(bf)	bf->bf_status=0
 
 /* XXX: only managed for rx at the moment */
-#define ATH_BUFSTATUS_DONE		0x00000001	/* hw processing complete, desc processed by hal */
+#define ATH_BUFSTATUS_RXDESC_DONE	0x00000001	/* rx descriptor processing complete, desc processed by hal */
 #define ATH_BUFSTATUS_RADAR_DONE	0x00000002	/* marker to indicate a PHYERR for radar pulse
 							   has already been handled.  We may receive
 							   multiple interrupts before the rx_tasklet
