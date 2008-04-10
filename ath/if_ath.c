@@ -6463,27 +6463,6 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 			}
 
 			intval = ni->ni_intval & HAL_BEACON_PERIOD;
-#if 0
-			/* This code is disabled since it would produce
-			 * unwanted merge. For instance, in a two nodes network
-			 * A & B, A can merge to B and at the same time, B will
-			 * merge to A, still having a split */
-			if (intval != 0) {
-				if ((sc->sc_nexttbtt % intval) !=
-						(beacon_tu % intval)) {
-					DPRINTF(sc, ATH_DEBUG_BEACON,
-							"ibss merge: "
-							"sc_nexttbtt %10x TU "
-							"(%3d) beacon %10x TU "
-							"(%3d)\n",
-							sc->sc_nexttbtt,
-							sc->sc_nexttbtt % intval,
-							beacon_tu,
-							beacon_tu % intval);
-					do_merge = 1;
-				}
-			}
-#endif
 			if (do_merge)
 				ieee80211_ibss_merge(ni);
 		}
@@ -11850,6 +11829,9 @@ txcont_queue_packet(struct ieee80211com *ic, struct ath_txq* txq)
 		bf->bf_desc->ds_link = bf->bf_daddr;
 		bf->bf_desc->ds_data = bf->bf_skbaddr;
 
+		/* in case of TPC, we need to set the maximum if we want < max */
+		ath_hal_settxpowlimit(ah, sc->sc_txcont_power/2);
+		ath_hal_settpc(ah, 0);
 		ath_hal_setuptxdesc(ah,
 		    bf->bf_desc,			/* the descriptor */
 		    skb->len,				/* packet length */
