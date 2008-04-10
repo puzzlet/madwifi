@@ -1646,8 +1646,6 @@ static HAL_BOOL ath_hw_reset(struct ath_softc* sc, HAL_OPMODE opmode,
 	HAL_BOOL ret;
 
 	ret = ath_hal_reset(sc->sc_ah, sc->sc_opmode, channel, bChannelChange, status);
-	mdelay(5); /* extra delay to allow the hw to settle in */
-
 	if(sc->sc_hasintmit) {
 		u_int32_t intmit_on = 0;
 		ath_hal_getintmit(sc->sc_ah, &intmit_on);
