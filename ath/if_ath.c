@@ -5705,9 +5705,7 @@ ath_node_alloc(struct ieee80211vap *vap)
 	if (an != NULL) {
 		memset(an, 0, space);
 		an->an_decomp_index = INVALID_DECOMP_INDEX;
-		an->an_halstats.ns_avgbrssi = ATH_RSSI_DUMMY_MARKER;
-		an->an_halstats.ns_avgrssi = ATH_RSSI_DUMMY_MARKER;
-		an->an_halstats.ns_avgtxrssi = ATH_RSSI_DUMMY_MARKER;
+		an->an_avgrssi = ATH_RSSI_DUMMY_MARKER;
 		/*
 		 * ath_rate_node_init needs a vap pointer in node
 		 * to decide which mgt rate to use
@@ -5810,7 +5808,7 @@ ath_node_getrssi(const struct ieee80211_node *ni)
 #define	HAL_EP_RND(x, mul) \
 	((((x) % (mul)) >= ((mul) / 2)) ? ((x) + ((mul) - 1)) / 	\
 	 (mul) : (x)/(mul))
-	u_int32_t avgrssi = ATH_NODE_CONST(ni)->an_halstats.ns_avgrssi;
+	u_int32_t avgrssi = ATH_NODE_CONST(ni)->an_avgrssi;
 	int32_t rssi;
 
 	/*
@@ -6420,8 +6418,12 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 
 	switch (subtype) {
 	case IEEE80211_FC0_SUBTYPE_BEACON:
-		/* Update RSSI statistics for use by the HAL. */
-		ATH_RSSI_LPF(ATH_NODE(ni)->an_halstats.ns_avgbrssi, rssi);
+		/* Update beacon RSSI statistics, (apply to "pure" STA only)
+		 * AND only for our AP's beacons */
+		if(vap->iv_opmode == IEEE80211_M_STA && 
+		   sc->sc_ic.ic_opmode == IEEE80211_M_STA && 
+		   ni == vap->iv_bss) 
+			ATH_RSSI_LPF(sc->sc_halstats.ns_avgbrssi, rssi);
 		if ((sc->sc_syncbeacon ||
 		    (vap->iv_flags_ext & IEEE80211_FEXT_APPIE_UPDATE)) &&
 		     ni == vap->iv_bss && vap->iv_state == IEEE80211_S_RUN) {
@@ -6732,7 +6734,6 @@ drop_micfail:
 			/* Fast path: node is present in the key map;
 			 * grab a reference for processing the frame. */
 			ni = ieee80211_ref_node(ni);
-			ATH_RSSI_LPF(ATH_NODE(ni)->an_halstats.ns_avgrssi, rs->rs_rssi);
 			type = ieee80211_input(ni->ni_vap, ni, skb, rs->rs_rssi, bf->bf_tsf);
 			ieee80211_unref_node(&ni);
 		} else {
@@ -6744,8 +6745,6 @@ drop_micfail:
 				(const struct ieee80211_frame_min *)skb->data);
 			if (ni != NULL) {
 				ieee80211_keyix_t keyix;
-
-				ATH_RSSI_LPF(ATH_NODE(ni)->an_halstats.ns_avgrssi, rs->rs_rssi);
 				type = ieee80211_input(ni->ni_vap, ni, skb, rs->rs_rssi, bf->bf_tsf);
 				/*
 				 * If the station has a key cache slot assigned
@@ -8290,8 +8289,11 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 				if (ts->ts_rate & HAL_TXSTAT_ALTRATE)
 					sc->sc_stats.ast_tx_altrate++;
 				sc->sc_stats.ast_tx_rssi = ts->ts_rssi;
-				ATH_RSSI_LPF(an->an_halstats.ns_avgtxrssi,
-					ts->ts_rssi);
+				/* Update HAL stats for ANI, only when on-channel */
+				if (!sc->sc_scanning && 
+				    !(sc->sc_ic.ic_flags & IEEE80211_F_SCAN))
+					ATH_RSSI_LPF(sc->sc_halstats.ns_avgtxrssi,
+						ts->ts_rssi);
 				if (bf->bf_skb->priority == WME_AC_VO ||
 				    bf->bf_skb->priority == WME_AC_VI)
 					ni->ni_ic->ic_wme.wme_hipri_traffic++;
@@ -9181,6 +9183,13 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 	if (vap->iv_opmode == IEEE80211_M_MONITOR) {
 		/* nothing to do */;
 	} else if (nstate == IEEE80211_S_RUN) {
+		/*
+		 * Reset RSSI stats (regardless of mode)...
+		 */
+		sc->sc_halstats.ns_avgbrssi = ATH_RSSI_DUMMY_MARKER;
+		sc->sc_halstats.ns_avgrssi = ATH_RSSI_DUMMY_MARKER;
+		sc->sc_halstats.ns_avgtxrssi = ATH_RSSI_DUMMY_MARKER;
+
 		DPRINTF(sc, ATH_DEBUG_STATE,
 			"%s->%s: ic_flags=0x%08x iv=%d BSSID=" MAC_FMT
 			" capinfo=0x%04x chan=%d\n",
@@ -9313,12 +9322,6 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			break;
 		}
 
-		/*
-		 * Reset rssi stats; maybe not the best place...
-		 */
-		sc->sc_halstats.ns_avgbrssi = ATH_RSSI_DUMMY_MARKER;
-		sc->sc_halstats.ns_avgrssi = ATH_RSSI_DUMMY_MARKER;
-		sc->sc_halstats.ns_avgtxrssi = ATH_RSSI_DUMMY_MARKER;
 		/* if it is a DFS channel and has not been checked for radar
 		 * do not let the 80211 state machine to go to RUN state. */
 		if (sc->sc_dfs_cac && 
@@ -9370,6 +9373,10 @@ done:
 	/* Invoke the parent method to complete the work. */
 	error = avp->av_newstate(vap, nstate, arg);
 
+	/* Reset halstats on state change (per freebsd sources) */
+	sc->sc_halstats.ns_avgbrssi = ATH_RSSI_DUMMY_MARKER;
+	sc->sc_halstats.ns_avgrssi = ATH_RSSI_DUMMY_MARKER;
+	sc->sc_halstats.ns_avgtxrssi = ATH_RSSI_DUMMY_MARKER; 
   	/* Finally, start any timers. */
 	if ((nstate == IEEE80211_S_RUN) && !sc->sc_beacon_cal) {
 		/* start periodic recalibration timer */

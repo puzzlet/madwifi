@@ -362,9 +362,9 @@ typedef STAILQ_HEAD(, ath_buf) ath_bufhead;
 struct ath_node {
 	struct ieee80211_node an_node;		/* base class */
 	u_int16_t an_decomp_index; 		/* decompression mask index */
+	u_int32_t an_avgrssi;			/* average rssi over all rx frames */
 	u_int8_t  an_prevdatarix;		/* rate ix of last data frame */
 	u_int16_t an_minffrate;			/* min rate in kbps for ff to aggregate */
-	HAL_NODE_STATS an_halstats;		/* rssi statistics used by hal */
 	
 	struct ath_buf *an_tx_ffbuf[WME_NUM_AC]; /* ff staging area */
 
