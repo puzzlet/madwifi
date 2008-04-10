@@ -12885,7 +12885,7 @@ ath_scanbufs(struct ath_softc *sc)
 	ATH_BBUF_LOCK_IRQ(sc);
 	ATH_TXBUF_LOCK_IRQ(sc);
 	ATH_RXBUF_LOCK_IRQ(sc);
-	while (qnum++ < HAL_NUM_TX_QUEUES) {
+	for (qnum = 0; qnum < HAL_NUM_TX_QUEUES; qnum++) {
 		if (ATH_TXQ_SETUP(sc, qnum)) { 
 			ATH_TXQ_LOCK_IRQ_INSIDE(&sc->sc_txq[qnum]);
 		}
@@ -12941,9 +12941,10 @@ ath_scanbufs(struct ath_softc *sc)
 		IEEE80211_NODE_SAVEQ_UNLOCK_IRQ_INSIDE(ni);
 		ATH_NODE_UAPSD_UNLOCK_IRQ_INSIDE(ATH_NODE(ni));
 	}
-	while (--qnum >= 0)
-		if (ATH_TXQ_SETUP(sc, qnum)) 
+	for (qnum = HAL_NUM_TX_QUEUES - 1; qnum >= 0; qnum--) {
+		if (ATH_TXQ_SETUP(sc, qnum))
 			ATH_TXQ_UNLOCK_IRQ_INSIDE(&sc->sc_txq[qnum]);
+	}
 	ATH_RXBUF_UNLOCK_IRQ(sc);
 	ATH_TXBUF_UNLOCK_IRQ(sc);
 	ATH_BBUF_UNLOCK_IRQ(sc);
