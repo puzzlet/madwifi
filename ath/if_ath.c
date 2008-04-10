@@ -548,6 +548,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ATH_HAL_LOCK_INIT(sc);
 	ATH_TXBUF_LOCK_INIT(sc);
 	ATH_RXBUF_LOCK_INIT(sc);
+	ATH_BBUF_LOCK_INIT(sc);
+	ATH_GBUF_LOCK_INIT(sc);
 
 	atomic_set(&sc->sc_txbuf_counter, 0);
 
@@ -1154,6 +1156,9 @@ bad:
 	if (ah)
 		_ath_hal_detach(ah);
 	ATH_TXBUF_LOCK_DESTROY(sc);
+	ATH_RXBUF_LOCK_DESTROY(sc);
+	ATH_BBUF_LOCK_DESTROY(sc);
+	ATH_GBUF_LOCK_DESTROY(sc);
 	ATH_LOCK_DESTROY(sc);
 	ATH_HAL_LOCK_DESTROY(sc);
 	sc->sc_invalid = 1;
@@ -1214,6 +1219,10 @@ ath_detach(struct net_device *dev)
 
 	ath_dynamic_sysctl_unregister(sc);
 	ATH_LOCK_DESTROY(sc);
+	ATH_TXBUF_LOCK_DESTROY(sc);
+	ATH_RXBUF_LOCK_DESTROY(sc);
+	ATH_BBUF_LOCK_DESTROY(sc);
+	ATH_GBUF_LOCK_DESTROY(sc);
 	ATH_HAL_LOCK_DESTROY(sc);
 	dev->stop = NULL; /* prevent calling ath_stop again */
 	unregister_netdev(dev);
