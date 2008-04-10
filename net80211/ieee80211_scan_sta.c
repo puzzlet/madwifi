@@ -950,14 +950,17 @@ notfound:
  * a reference to an entry w/o holding the lock on the table.
  */
 static struct sta_entry *
-sta_lookup(struct sta_table *st, const u_int8_t macaddr[IEEE80211_ADDR_LEN])
+sta_lookup(struct sta_table *st, const u_int8_t macaddr[IEEE80211_ADDR_LEN], struct ieee80211_scan_ssid* essid)
 {
 	struct sta_entry *se;
 	int hash = STA_HASH(macaddr);
 
 	SCAN_STA_LOCK_IRQ(st);
 	LIST_FOREACH(se, &st->st_hash[hash], se_hash)
-		if (IEEE80211_ADDR_EQ(se->base.se_macaddr, macaddr))
+		if (IEEE80211_ADDR_EQ(se->base.se_macaddr, macaddr) &&
+		    (essid->len == se->base.se_ssid[1] &&
+		     !memcmp(se->base.se_ssid+2, essid->ssid,
+			     se->base.se_ssid[1])))
 			break;
 	SCAN_STA_UNLOCK_IRQ(st);
 
@@ -974,7 +977,7 @@ sta_roam_check(struct ieee80211_scan_state *ss, struct ieee80211vap *vap)
 	u_int8_t roamRate, curRate;
 	int8_t roamRssi, curRssi;
 
-	se = sta_lookup(st, ni->ni_macaddr);
+	se = sta_lookup(st, ni->ni_macaddr, ss->ss_ssid);
 	if (se == NULL) {
 		/* XXX something is wrong */
 		return;
@@ -1127,7 +1130,7 @@ sta_assoc_fail(struct ieee80211_scan_state *ss,
 	if (ss->ss_vap->iv_ic->ic_roaming == IEEE80211_ROAMING_MANUAL)
 		return;
 
-	se = sta_lookup(st, macaddr);
+	se = sta_lookup(st, macaddr, ss->ss_ssid);
 	if (se != NULL) {
 		se->se_fails++;
 		se->se_lastfail = jiffies;
@@ -1144,7 +1147,7 @@ sta_assoc_success(struct ieee80211_scan_state *ss,
 	struct sta_table *st = ss->ss_priv;
 	struct sta_entry *se;
 
-	se = sta_lookup(st, macaddr);
+	se = sta_lookup(st, macaddr, ss->ss_ssid);
 	if (se != NULL) {
 #if 0
 		se->se_fails = 0;
