@@ -287,7 +287,7 @@ int ath_radar_update(struct ath_softc *sc)
 		     (old_mask != new_mask) || 
 		     (old_ier != new_ier))) {
 			DPRINTF(sc, ATH_DEBUG_DOTH, 
-				"%s: %s: Radar detection %s.\n", DEV_NAME(dev), 
+				"%s: %s: Radar detection %s.\n", SC_DEV_NAME(sc), 
 				__func__, required ? "enabled" : "disabled");
 		}
 		ath_hal_intrset(ah, new_ier);
@@ -848,7 +848,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 				"%s: %s skipped (last pulse isn't old enough to"
 				" match this pattern).  %10llu >= %10llu.\n",
-				DEV_NAME(dev), pattern->name, 
+				SC_DEV_NAME(sc), pattern->name, 
 				(u_int64_t)(
 					pattern->min_rep_int * 
 					pattern->min_evts), 
@@ -924,7 +924,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 					"%s: %s matching stopped (pulse->rp_tsf"
 					" < t0_max).  t1=%10llu t0_max=%10llu "
 					"t_min=%10llu t_max=%10llu matched=%u "
-					"missed=%u\n", DEV_NAME(dev), 
+					"missed=%u\n", SC_DEV_NAME(sc), 
 					pattern->name, t1, t0_max, 
 					t_min, t_max, matched, missed);
 				break;
@@ -937,7 +937,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 					"%s: %s matching stopped (too many "
 					"consecutive pulses missing). %d>%d "
 					"matched=%u. missed=%u.\n",
-					DEV_NAME(dev), pattern->name, 
+					SC_DEV_NAME(sc), pattern->name, 
 					partial_miss, 
 					pattern->max_consecutive_missing, 
 					matched, missed);
@@ -954,7 +954,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 					"%3d. period: %4llu. last_period: %4llu"
 					". mean_period: %4llu. last_tsf: %10llu"
 					".\n",
-					DEV_NAME(dev),
+					SC_DEV_NAME(sc),
 					pattern->name,
 					pulse->rp_index,
 					"noise",
@@ -990,7 +990,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 						"%s: %s mean period deviated "
 						"from original range [period: "
 						"%4u, range: %4u-%4u]\n",
-						DEV_NAME(dev), 
+						SC_DEV_NAME(sc), 
 						pattern->name, 
 						mean_period, 
 						pattern->min_rep_int, 
@@ -1005,7 +1005,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 					"%3d. period: %4llu. last_period: %4llu"
 					". mean_period: %4llu. last_tsf: %10llu"
 					".\n",
-					DEV_NAME(dev),
+					SC_DEV_NAME(sc),
 					pattern->name,
 					pulse->rp_index,
 					"match",
@@ -1046,7 +1046,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 						"many total pulses missing). "
 						"%d>%d  matched=%u. missed=%u."
 						"\n",
-						DEV_NAME(dev), 
+						SC_DEV_NAME(sc), 
 						pattern->name, 
 						missed, 
 						pattern->max_missing, 
@@ -1063,7 +1063,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 					"width: ***. period: ****. last_period:"
 					" %4llu. mean_period: %4llu. last_tsf: "
 					"%10llu.\n",
-					DEV_NAME(dev),
+					SC_DEV_NAME(sc),
 					pattern->name,
 					"missed",
 					MAX(matched + missed + partial_miss - 1, 
@@ -1136,7 +1136,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 					"%s: [%02d] %13s: %-17s [match=%2u {%2u"
 					"..%2u},missed=%2u/%2u,dur=%2d {%2u.."
 					"%2u},noise=%2u/%2u,cr:%d]\n",
-					DEV_NAME(dev),
+					SC_DEV_NAME(sc),
 					last_pulse->rp_index,
 					compare_result > CR_FALLTHROUGH ? 
 						"NEW-BEST" : 
@@ -1169,7 +1169,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 					"%s: %s match not better than best so "
 					"far.  cr: %d matched: %d  missed: "
 					"%d min_evts: %d\n",
-					DEV_NAME(dev), 
+					SC_DEV_NAME(sc), 
 					pattern->name, 
 					compare_result,
 					matched, 
@@ -1183,7 +1183,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 			"%s: [%02d] %10s: %-17s [match=%2u {%2u..%2u},missed="
 			"%2u/%2u,dur=%2d {%2u..%2u},noise=%2u/%2u,cr=%2d] "
 			"RI=%-9u RF=%-4u\n",
-			DEV_NAME(sc->sc_dev),
+			SC_DEV_NAME(sc),
 			last_pulse->rp_index,
 			"BEST/PULSE",
 			best_pattern->name,
@@ -1607,20 +1607,20 @@ void ath_rp_record(struct ath_softc *sc, u_int64_t tsf, u_int8_t rssi,
 			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE, 
 				"%s: %s: ath_rp_flush: simulated tsf "
 				"reset.  tsf =%10llu, rptsf =%10llu\n", 
-				DEV_NAME(dev), __func__, tsf, pulse->rp_tsf);
+				SC_DEV_NAME(sc), __func__, tsf, pulse->rp_tsf);
 			ath_rp_flush(sc);
 		} else if ((pulse->rp_tsf - tsf) > (1 << 15)) {
 			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 				"%s: %s: ath_rp_flush: tsf reset.  "
 				"(rp_tsf - tsf > 0x8000) tsf=%10llu, rptsf="
 				"%10llu\n", 
-				DEV_NAME(dev), __func__, tsf, pulse->rp_tsf);
+				SC_DEV_NAME(sc), __func__, tsf, pulse->rp_tsf);
 			ath_rp_flush(sc);
 		} else {
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
 				"%s: %s: tsf jitter/bug detected: tsf =%10llu, "
 				"rptsf =%10llu, rp_tsf - tsf = %10llu\n", 
-				DEV_NAME(dev), __func__, tsf, pulse->rp_tsf, 
+				SC_DEV_NAME(sc), __func__, tsf, pulse->rp_tsf, 
 				pulse->rp_tsf - tsf);
 		}
 	}

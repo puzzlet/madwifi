@@ -1593,14 +1593,14 @@ ath_vap_delete(struct ieee80211vap *vap)
 void
 ath_suspend(struct net_device *dev)
 {
-	DPRINTF(dev->priv, ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
+	DPRINTF(((struct ath_softc*)dev->priv), ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
 	ath_stop(dev);
 }
 
 void
 ath_resume(struct net_device *dev)
 {
-	DPRINTF(dev->priv, ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
+	DPRINTF(((struct ath_softc*)dev->priv), ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
 	ath_init(dev);
 }
 
