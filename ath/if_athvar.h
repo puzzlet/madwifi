@@ -215,9 +215,9 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 #define ATH_MIN_MTU     32
 
 /* number of RX buffers */
-#define ATH_RXBUF			40
+#define ATH_RXBUF			100
 /* number of TX buffers */
-#define ATH_TXBUF			200
+#define ATH_TXBUF			300
 /* minimum number of beacon buffers */
 #define ATH_MAXVAPS_MIN 		2
 /* maximum number of beacon buffers */
@@ -225,7 +225,7 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 /* default number of beacon buffers */
 #define ATH_MAXVAPS_DEFAULT 		4
 /* number of TX buffers reserved for mgt frames */
-#define ATH_TXBUF_MGT_RESERVED		5
+#define ATH_TXBUF_MGT_RESERVED		20
 
 /*
  * dynamic turbo specific macros.
