@@ -434,7 +434,6 @@ struct ath_buf {
 	dma_addr_t bf_daddr;				/* physical addr of desc */
 	struct sk_buff *bf_skb;				/* skbuff for buf */
 	dma_addr_t bf_skbaddr;				/* physical addr of skb data - always used by one desc*/
-	struct ieee80211_node *bf_node;			/* pointer to the node */
 	u_int32_t bf_status;				/* status flags */
 	u_int16_t bf_flags;				/* tx descriptor flags */
 	u_int64_t bf_tsf;
