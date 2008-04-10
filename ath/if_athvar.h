@@ -203,8 +203,8 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 #define	ATH_DFS_TEST_RETURN_PERIOD	15	/* 15 seconds -- for mute test
 						 * only */
 
-#define	ATH_LONG_CALINTERVAL		30	/* 30 seconds between calibrations */
-#define	ATH_SHORT_CALINTERVAL		1	/* 1 second between calibrations */
+#define	ATH_LONG_CALINTERVAL_SECS	30	/* 30 seconds between calibrations */
+#define	ATH_SHORT_CALINTERVAL_SECS	1	/* 1 second between calibrations */
 
 /*
  * Maximum acceptable MTU
@@ -214,14 +214,18 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 #define ATH_MAX_MTU     2290
 #define ATH_MIN_MTU     32
 
-#define	ATH_RXBUF	40		/* number of RX buffers */
-#define	ATH_TXBUF	200		/* number of TX buffers */
-
-#define ATH_MAXVAPS_MIN 	2	/* minimum number of beacon buffers */
-#define ATH_MAXVAPS_MAX 	64	/* maximum number of beacon buffers */
-#define ATH_MAXVAPS_DEFAULT 	4	/* default number of beacon buffers */
+/* number of RX buffers */
+#define ATH_RXBUF			40
+/* number of TX buffers */
+#define ATH_TXBUF			200
+/* minimum number of beacon buffers */
+#define ATH_MAXVAPS_MIN 		2
+/* maximum number of beacon buffers */
+#define ATH_MAXVAPS_MAX 		64
+/* default number of beacon buffers */
+#define ATH_MAXVAPS_DEFAULT 		4
 /* number of TX buffers reserved for mgt frames */
-#define ATH_TXBUF_MGT_RESERVED	  5 	
+#define ATH_TXBUF_MGT_RESERVED		5
 
 /*
  * dynamic turbo specific macros.
@@ -779,7 +783,8 @@ struct ath_softc {
 	int sc_bnext;				/* next slot for beacon xmit */
 
 	int sc_beacon_cal;			/* use beacon timer for calibration */
-	u_int64_t sc_lastcal;			/* last time the calibration was performed */
+	long unsigned int sc_calinterval_sec;	/* current interval for calibration (in seconds) */
+	long unsigned int sc_lastcal;		/* last time the calibration was performed */
 	struct timer_list sc_cal_ch;		/* calibration timer */
 	HAL_NODE_STATS sc_halstats;		/* station-mode rssi stats */
 
