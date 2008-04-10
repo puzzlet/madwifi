@@ -174,33 +174,37 @@ export HAL_DEBUG=0
 endif
 
 ifndef ALQ
-ALQ=0
+export ALQ=0
+endif
+
+ifndef ATH_DEBUG
+export ATH_DEBUG=0
 endif
 
 ifndef MMIOTRACE
-MMIOTRACE=0
+export MMIOTRACE=0
 endif
 
-ifneq ($(strip $(MMIOTRACE)),0)
+ifeq ($(strip $(MMIOTRACE)),1)
 EXTRA_CFLAGS += -DMMIOTRACE=1
 endif
 
-ifneq ($(strip $(ATH_DEBUG_SPINLOCKS)),0)
+ifeq ($(strip $(ATH_DEBUG_SPINLOCKS)),1)
 COPTS+= -DATH_DEBUG_SPINLOCKS=1
 endif
 
-ifneq ($(strip $(IEEE80211_DEBUG_REFCNT)),0)
+ifeq ($(strip $(IEEE80211_DEBUG_REFCNT)),1)
 COPTS+= -DIEEE80211_DEBUG_REFCNT=1
 endif
 
 # HAL_DEBUG enables HAL debugging code
 # At the moment this consists of wrappers around HAL functions so that 
 # stack traces are more decipherable.
-ifneq ($(strip $(HAL_DEBUG)),0)
+ifeq ($(strip $(HAL_DEBUG)),1)
 COPTS+= -fno-inline -DAH_DEBUG=1
 endif
 
-ifneq ($(strip $(ALQ)),0)
+ifeq ($(strip $(ALQ)),1)
 obj-m += alq.o
 alq-objs := kern_alq.o
 EXTRA_CFLAGS += -DAH_DEBUG_ALQ -DAH_DEBUG
@@ -224,25 +228,23 @@ NM := $(save_NM)
 
 include $(TOP)/BuildCaps.inc
 
-# At present, these are defined all over the sources but it will not build without it
-ifndef ATH_DEBUG
-export ATH_DEBUG=1
+ifeq ($(strip $(ATH_DEBUG)),1)
+CFLAGS += -DAR_DEBUG -DIEEE80211_DEBUG 
 endif
 
-ifneq ($(strip $(ATH_DEBUG)),0)
-CFLAGS += -DAR_DEBUG -DIEEE80211_DEBUG -DIEEE80211_DEBUG 
-endif
-
-ifneq ($(strip $(ATH_DEBUG_SPINLOCKS)),0)
+ifeq ($(strip $(ATH_DEBUG_SPINLOCKS)),1)
 CFLAGS += -DATH_DEBUG_SPINLOCKS
 endif
 
-ifneq ($(strip $(IEEE80211_DEBUG_REFCNT)),0)
+ifeq ($(strip $(IEEE80211_DEBUG_REFCNT)),1)
 CFLAGS += -DIEEE80211_DEBUG_REFCNT
 endif
 
 # Ensure correct endianess
 LDFLAGS += $(LDOPTS)
+
+# Be pedantic
+CFLAGS += -Werror -Wall
 
 # Filter out compiler options that are not supported by all compilers
 # and that are not needed to ensure compatible architecture and calling
