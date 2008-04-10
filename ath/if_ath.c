@@ -6510,40 +6510,48 @@ ath_rx_tasklet(TQUEUE_ARG data)
 	struct ath_hal *ah = sc ? sc->sc_ah : NULL;
 	struct ath_desc *ds;
 	struct ath_rx_status *rs;
-	struct sk_buff *skb = NULL;
 	struct ieee80211_node *ni;
 	unsigned int len, phyerr, mic_fail = 0;
+	int is_mcast = 0;
 	int type = -1; /* undefined */
+	int init_ret = 0;
+	int bf_processed = 0;
+	int skb_accepted = 0;
+	int errors	 = 0;
 
-	DPRINTF(sc, ATH_DEBUG_RX_PROC, "invoked\n");
+	DPRINTF(sc, ATH_DEBUG_RX_PROC, "%s started...\n", __func__);
 	do {
-		bf = STAILQ_FIRST(&sc->sc_rxbuf);
-		if (bf == NULL) {		/* XXX ??? can this happen */
-			EPRINTF(sc, "Dropping; no recieve buffers available.\n");
-			break;
-		}
-
-		/*
-		 * Descriptors are now processed at in the first-level
-		 * interrupt handler to support U-APSD trigger search.
-		 * This must also be done even when U-APSD is not active to support
-		 * other error handling that requires immediate attention.
-		 * We check bf_status to find out if the bf's descriptors have
-		 * been processed by the HAL.
+		/* 
+		 * Get next rx buffer pending processing by rx tasklet...
+		 *  
+		 * Descriptors are now processed at in the first-level interrupt 
+		 * handler to support U-APSD trigger search. This must also be done 
+		 * even when U-APSD is not active to support other error handling 
+		 * that requires immediate attention. We check bf_status to find 
+		 * out if the bf's descriptors have been processed by the interrupt
+		 * handler and are ready for this tasklet to consume them.  We 
+		 * also never process/remove the self-linked entry at the end
 		 */
-		if (!bf || !(bf->bf_status & ATH_BUFSTATUS_RXDESC_DONE))
+		ATH_RXBUF_LOCK_IRQ(sc);
+		bf = STAILQ_FIRST(&sc->sc_rxbuf);
+		if (bf && (bf->bf_status & ATH_BUFSTATUS_RXDESC_DONE) &&
+		   (bf->bf_desc->ds_link != bf->bf_daddr))
+			STAILQ_REMOVE_HEAD(&sc->sc_rxbuf, bf_list);
+		else {
+			if(bf && (bf->bf_status & ATH_BUFSTATUS_RXDESC_DONE))
+				EPRINTF(sc, "Warning: %s detected a non-empty skb that is self-linked. "
+					    "This may be a driver bug.\n", 
+					__func__);
+			bf = NULL;
+		}
+		ATH_RXBUF_UNLOCK_IRQ(sc);
+		if (!bf)
 			break;
 
-		ds = bf->bf_desc;
-		if (ds->ds_link == bf->bf_daddr) {
-			/* NB: never process the self-linked entry at the end */
-			break;
-		}
-		skb = bf->bf_skb;
-		if (skb == NULL) {
-			EPRINTF(sc, "Dropping; buffer contains NULL skbuff.\n");
-			continue;
-		}
+		bf_processed++;
+		ds  = bf->bf_desc;
+		is_mcast = (((const struct ieee80211_frame*)bf->bf_skb->data)->i_addr1[0] & 0x01) ||
+			(((const struct ieee80211_frame*)bf->bf_skb->data)->i_addr3[0] & 0x01);
 
 #ifdef AR_DEBUG
 		if (sc->sc_debug & ATH_DEBUG_RECV_DESC)
@@ -6551,14 +6559,10 @@ ath_rx_tasklet(TQUEUE_ARG data)
 #endif
 		rs = &bf->bf_dsstatus.ds_rxstat;
 
-		if (rs->rs_rssi < 0)
-			rs->rs_rssi = 0;
-
 		len = rs->rs_datalen;
 		/* DMA sync. dies spectacularly if len == 0 */
 		if (len == 0)
 			goto rx_next;
-
 		if (rs->rs_more) {
 			/*
 			 * Frame spans multiple descriptors; this
@@ -6573,11 +6577,13 @@ ath_rx_tasklet(TQUEUE_ARG data)
 			 */
 			if (ic->ic_opmode != IEEE80211_M_MONITOR) {
 				sc->sc_stats.ast_rx_toobig++;
+				errors++;
 				goto rx_next;
 			}
 #endif
 			/* fall thru for monitor mode handling... */
 		} else if (rs->rs_status != 0) {
+			errors++;
 			if (rs->rs_status & HAL_RXERR_CRC)
 				sc->sc_stats.ast_rx_crcerr++;
 			if (rs->rs_status & HAL_RXERR_FIFO)
@@ -6614,6 +6620,7 @@ ath_rx_tasklet(TQUEUE_ARG data)
 				goto rx_next;
 		}
 rx_accept:
+		skb_accepted++;
 		/*
 		 * Sync and unmap the frame.  At this point we're
 		 * committed to passing the sk_buff somewhere so
@@ -6624,51 +6631,41 @@ rx_accept:
 		bus_dma_sync_single(sc->sc_bdev,
 			bf->bf_skbaddr, len, BUS_DMA_FROMDEVICE);
 
-		bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr,
-			sc->sc_rxbufsize, BUS_DMA_FROMDEVICE);
-		bf->bf_skbaddr = 0;
-
-		bf->bf_skb = NULL;
-
 		sc->sc_stats.ast_ant_rx[rs->rs_antenna]++;
 		sc->sc_devstats.rx_packets++;
 		sc->sc_devstats.rx_bytes += len;
 
-		skb_put(skb, len);
-		skb->protocol = __constant_htons(ETH_P_CONTROL);
+		skb_put(bf->bf_skb, len);
+		bf->bf_skb->protocol = __constant_htons(ETH_P_CONTROL);
 
-		ath_capture(dev, bf, skb, bf->bf_tsf, 0 /* RX */);
+		ath_capture(dev, bf, bf->bf_skb, bf->bf_tsf, 0 /* RX */);
 
 		/* Finished monitor mode handling, now reject error frames 
 		 * before passing to other VAPs. Ignore MIC failures here, as 
 		 * we need to recheck them. */
-		if (rs->rs_status & ~(HAL_RXERR_MIC | HAL_RXERR_DECRYPT)) {
-			ieee80211_dev_kfree_skb(&skb);
+		if (rs->rs_status & ~(HAL_RXERR_MIC | HAL_RXERR_DECRYPT))
 			goto rx_next;
-		}
 
 		/* remove the CRC */
-		skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
+		skb_trim(bf->bf_skb, bf->bf_skb->len - IEEE80211_CRC_LEN);
 
 		if (mic_fail) {
 			/* Ignore control frames which are reported with MIC 
 			 * error. */
-			if ((((struct ieee80211_frame *)skb->data)->i_fc[0] &
+			if ((((struct ieee80211_frame *)bf->bf_skb->data)->i_fc[0] &
 						 IEEE80211_FC0_TYPE_MASK) == 
 						IEEE80211_FC0_TYPE_CTL)
 				goto drop_micfail;
 
 			ni = ieee80211_find_rxnode(ic, (const struct 
-						ieee80211_frame_min *)skb->data);
+						ieee80211_frame_min *)bf->bf_skb->data);
 			if (ni) {
 				if (ni->ni_table)
-					ieee80211_check_mic(ni, skb);
+					ieee80211_check_mic(ni, bf->bf_skb);
 				ieee80211_unref_node(&ni);
 			}
 
 drop_micfail:
-			ieee80211_dev_kfree_skb(&skb);
-			skb = NULL;
 			mic_fail = 0;
 			goto rx_next;
 		}
@@ -6679,23 +6676,23 @@ drop_micfail:
 			DPRINTF(sc, ATH_DEBUG_RECV, "Dropping short packet; length %d.\n",
 				len);
 			sc->sc_stats.ast_rx_tooshort++;
-			ieee80211_dev_kfree_skb(&skb);
+			errors++;
 			goto rx_next;
 		}
 
 		/* Normal receive. */
 		if (IFF_DUMPPKTS(sc, ATH_DEBUG_RECV))
-			ieee80211_dump_pkt(ic, skb->data, skb->len,
+			ieee80211_dump_pkt(ic, bf->bf_skb->data, bf->bf_skb->len,
 				   sc->sc_hwmap[rs->rs_rate].ieeerate,
 				   rs->rs_rssi);
 
 		{
 			struct ieee80211_frame * wh =
-				(struct ieee80211_frame *) skb->data;
+				(struct ieee80211_frame *) bf->bf_skb->data;
 
 			/* only print beacons */
 
-			if ((skb->len >= sizeof(struct ieee80211_frame)) &&
+			if ((bf->bf_skb->len >= sizeof(struct ieee80211_frame)) &&
 			    ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK)
 			     == IEEE80211_FC0_TYPE_MGT) &&
 			    ((wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK)
@@ -6714,7 +6711,7 @@ drop_micfail:
 		 * are on-channel. */
 		if (!sc->sc_scanning && !(ic->ic_flags & IEEE80211_F_SCAN))
 			ATH_RSSI_LPF(sc->sc_halstats.ns_avgrssi, rs->rs_rssi);
-		KASSERT((atomic_read(&skb->users) == 1), 
+		KASSERT((atomic_read(&bf->bf_skb->users) == 1), 
 			("BAD starting skb reference count!"));
 		/*
 		 * Locate the node for sender, track state, and then
@@ -6727,7 +6724,7 @@ drop_micfail:
 			/* Fast path: node is present in the key map;
 			 * grab a reference for processing the frame. */
 			ni = ieee80211_ref_node(ni);
-			type = ieee80211_input(ni->ni_vap, ni, skb, rs->rs_rssi, bf->bf_tsf);
+			type = ieee80211_input(ni->ni_vap, ni, bf->bf_skb, rs->rs_rssi, bf->bf_tsf);
 			ieee80211_unref_node(&ni);
 		} else {
 			/*
@@ -6735,10 +6732,10 @@ drop_micfail:
 			 * add the node to the mapping table if possible.
 			 */
 			ni = ieee80211_find_rxnode(ic,
-				(const struct ieee80211_frame_min *)skb->data);
+				(const struct ieee80211_frame_min *)bf->bf_skb->data);
 			if (ni != NULL) {
 				ieee80211_keyix_t keyix;
-				type = ieee80211_input(ni->ni_vap, ni, skb, rs->rs_rssi, bf->bf_tsf);
+				type = ieee80211_input(ni->ni_vap, ni, bf->bf_skb, rs->rs_rssi, bf->bf_tsf);
 				/*
 				 * If the station has a key cache slot assigned
 				 * update the key->node mapping table.
@@ -6751,11 +6748,11 @@ drop_micfail:
 			} else {
 				struct ieee80211vap * vap;
 				TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
-					type = ieee80211_input(vap, NULL, skb, rs->rs_rssi, bf->bf_tsf);
+					type = ieee80211_input(vap, NULL, bf->bf_skb, rs->rs_rssi, bf->bf_tsf);
 				}
 			}
 		}
-		KASSERT((atomic_read(&skb->users) == 1), 
+		KASSERT((atomic_read(&bf->bf_skb->users) == 1), 
 			("ieee80211_input changed skb reference count!"));
 
 		if (sc->sc_diversity) {
@@ -6786,22 +6783,27 @@ drop_micfail:
 rx_next:
 		KASSERT(bf != NULL, ("null bf"));
 		KASSERT(bf->bf_skb != NULL, ("null bf->bf_skb"));
+
+		if (0 != (init_ret = ath_rxbuf_init(sc, bf))) {
+			EPRINTF(sc, "Failed to reinitialize rxbuf: %d.  Lost an RX buffer!\n", init_ret);
+			break;
+		}
+
+		/* Return the rx buffer to the queue... */
 		ATH_RXBUF_LOCK_IRQ(sc);
-		STAILQ_REMOVE_HEAD(&sc->sc_rxbuf, bf_list);
-		ATH_RXBUF_RESET(bf);
 		STAILQ_INSERT_TAIL(&sc->sc_rxbuf, bf, bf_list);
 		ATH_RXBUF_UNLOCK_IRQ(sc);
-	} while (ath_rxbuf_init(sc, bf) == 0);
-
-	/* RX signal state monitoring. 
-	 * XXX: GIANT HACK
-	 *      With 0.9.30.13 ANI control appears to be broken. ANI is designed 
-	 *      only for client (STA/AHDEMO) only mode. This function updates
-	 *      the data used for ANI, so we will only call it for client only
-	 *      mode. 
-	 *      This may will not affect ANI problems in client only mode. */
+	} while (1);
 	if (sc->sc_useintmit) 
 		ath_hal_rxmonitor(ah, &sc->sc_halstats, &sc->sc_curchan);
+	if (!bf_processed)
+		DPRINTF(sc, ATH_DEBUG_RX_PROC, 
+			"Warning: %s got scheduled when no recieve "
+			    "buffers were ready.  Were they cleared?\n", 
+			__func__);
+	DPRINTF(sc, ATH_DEBUG_RX_PROC, "%s: cycle completed.  "
+		" %d rx buf processed.  %d were errors.  %d skb accepted.\n", 
+		__func__, bf_processed, errors, skb_accepted);
 #undef PA2DESC
 }
 
@@ -8653,6 +8655,7 @@ ath_stoprecv(struct ath_softc *sc)
 
 		DPRINTF(sc, ATH_DEBUG_ANY, "receive queue buffer 0x%x, link %p\n",
 			ath_hal_getrxbuf(ah), sc->sc_rxlink);
+		ATH_RXBUF_LOCK_IRQ(sc);
 		STAILQ_FOREACH(bf, &sc->sc_rxbuf, bf_list) {
 			struct ath_desc *ds = bf->bf_desc;
 			struct ath_rx_status *rs = &bf->bf_dsstatus.ds_rxstat;
@@ -8661,6 +8664,7 @@ ath_stoprecv(struct ath_softc *sc)
 			if (status == HAL_OK || (sc->sc_debug & ATH_DEBUG_FATAL))
 				ath_printrxbuf(bf, status == HAL_OK);
 		}
+		ATH_RXBUF_UNLOCK_IRQ(sc);
 	}
 #endif
 	sc->sc_rxlink = NULL;		/* just in case */
@@ -8692,12 +8696,15 @@ ath_startrecv(struct ath_softc *sc)
 		dev->mtu, sc->sc_cachelsz, sc->sc_rxbufsize);
 
 	sc->sc_rxlink = NULL;
+	ATH_RXBUF_LOCK_IRQ(sc);
 	STAILQ_FOREACH(bf, &sc->sc_rxbuf, bf_list) {
 		int error = ath_rxbuf_init(sc, bf);
-		ATH_RXBUF_RESET(bf);
-		if (error < 0)
+		if (error < 0) {
+			ATH_RXBUF_UNLOCK_IRQ_EARLY(sc);
 			return error;
+		}
 	}
+	ATH_RXBUF_UNLOCK_IRQ(sc);
 
 	sc->sc_rxbufcur = NULL;
 
@@ -8717,8 +8724,10 @@ static void
 ath_flushrecv(struct ath_softc *sc)
 {
 	struct ath_buf *bf;
+	ATH_RXBUF_LOCK_IRQ(sc);
 	STAILQ_FOREACH(bf, &sc->sc_rxbuf, bf_list)
 		cleanup_ath_buf(sc, bf, BUS_DMA_FROMDEVICE);
+	ATH_RXBUF_UNLOCK_IRQ(sc);
 }
 
 /*

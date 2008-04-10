@@ -459,15 +459,6 @@ struct ath_buf {
 	const char* bf_taken_at_func;			
 };
 
-/*
- * reset the rx buffer.
- * any new fields added to the athbuf and require 
- * reset need to be added to this macro.
- * currently bf_status is the only one that
- * requires reset.
- */
-#define ATH_RXBUF_RESET(bf)	bf->bf_status=0
-
 /* XXX: only managed for rx at the moment */
 #define ATH_BUFSTATUS_RXDESC_DONE	0x00000001	/* rx descriptor processing complete, desc processed by hal */
 #define ATH_BUFSTATUS_RADAR_DONE	0x00000002	/* marker to indicate a PHYERR for radar pulse
