@@ -6236,74 +6236,54 @@ static int
 ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 {
 	struct ath_hal *ah = sc->sc_ah;
-	struct sk_buff *skb;
-	struct ath_desc *ds;
-
-#if 0
-	/* Free the prior skb, if present */
+	struct ath_desc *ds = NULL;
+	/* NB: Always use the same size for buffer allocations so that dynamically
+         * adding a monitor mode VAP to a running driver doesn't cause havoc. */
+	unsigned int extra = A_MAX(sizeof(struct ath_rx_radiotap_header),
+				   A_MAX(sizeof(struct wlan_ng_prism2_header),
+					 ATHDESC_HEADER_SIZE));
+	/* NB: I'm being cautious by unmapping and releasing the SKB every time.
+	 * XXX: I could probably keep rolling, but the DMA map/unmap logic doesn't
+	 * seem clean enough and cycling the skb through the free function and
+	 * slab allocator seems to scrub any un-reset values. */
 	if (bf->bf_skb != NULL) {
+		KASSERT(bf->bf_skbaddr, ("bf->bf_skbaddr is 0"));
+		bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr,
+			sc->sc_rxbufsize, BUS_DMA_FROMDEVICE);
 		ieee80211_dev_kfree_skb(&bf->bf_skb);
-		if (bf->bf_skbaddr != 0) {
-			bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr,
-				sc->sc_rxbufsize, BUS_DMA_FROMDEVICE);
-			bf->bf_skbaddr = 0;
-		}
 	}
-#endif
-
-	skb = bf->bf_skb;
-	if (skb == NULL) {
-		if (sc->sc_nmonvaps > 0) {
-			u_int off;
-			unsigned int extra = A_MAX(sizeof(struct ath_rx_radiotap_header),
-						   A_MAX(sizeof(struct wlan_ng_prism2_header),
-							 ATHDESC_HEADER_SIZE));
-
-	/*
-	 * Allocate buffer for monitor mode with space for the
-	 * physical layer header at the start and/or any monitoring headers such
-	 * as prism or radiotap.  See extra, above.
-			 */
-			skb = ieee80211_dev_alloc_skb(sc->sc_rxbufsize + 
-					extra + sc->sc_cachelsz - 1);
-			if (skb == NULL) {
-				DPRINTF(sc, ATH_DEBUG_ANY,
-					"Dropping; skbuff allocation failed; size: %u!\n",
-					sc->sc_rxbufsize + extra + sc->sc_cachelsz - 1);
-				sc->sc_stats.ast_rx_nobuf++;
-				return -ENOMEM;
-			}
-			/*
-			 * Reserve space for the Prism header.
- 			 */
- 			skb_reserve(skb, sizeof(struct wlan_ng_prism2_header));
-			/*
-			 * Align to cache line.
-			 */
-			off = ((unsigned long) skb->data) % sc->sc_cachelsz;
-			if (off != 0)
-				skb_reserve(skb, sc->sc_cachelsz - off);
-		} else {
-			/*
-			 * Cache-line-align.  This is important (for the
-			 * 5210 at least) as not doing so causes bogus data
-			 * in rx'd frames.
-			 */
-			skb = ath_alloc_skb(sc->sc_rxbufsize, sc->sc_cachelsz);
-			if (skb == NULL) {
-				DPRINTF(sc, ATH_DEBUG_ANY,
-					"Dropping; skbuff allocation failed; size: %u!\n",
-					sc->sc_rxbufsize);
-				sc->sc_stats.ast_rx_nobuf++;
-				return -ENOMEM;
-			}
+	if (!bf->bf_skb) {
+		int size = sc->sc_rxbufsize + extra + sc->sc_cachelsz - 1;
+		int offset = 0;
+		bf->bf_skb = ath_alloc_skb(size, 
+					   sc->sc_cachelsz);
+		if (!bf->bf_skb) {
+			EPRINTF(sc, "%s: ERROR: skb initialization failed; size: %u!\n",
+				__func__, size);
+			return -ENOMEM;
 		}
-		skb->dev = sc->sc_dev;
-		bf->bf_skb = skb;
-		bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
-			skb->data, sc->sc_rxbufsize, BUS_DMA_FROMDEVICE);
+		/*
+		 * Reserve space for the header.
+		 */
+		skb_reserve(bf->bf_skb, extra);
+		/*
+		 * Cache-line-align.  This is important (for the
+		 * 5210 at least) as not doing so causes bogus data
+		 * in rx'd frames.
+		 */
+		offset = ((unsigned long)bf->bf_skb->data) % sc->sc_cachelsz;
+		if (offset != 0)
+			skb_reserve(bf->bf_skb, sc->sc_cachelsz - offset);
 	}
-
+	bf->bf_skb->dev = sc->sc_dev;
+	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
+		bf->bf_skb->data, sc->sc_rxbufsize, BUS_DMA_FROMDEVICE);
+	if (!bf->bf_skbaddr) {
+		DPRINTF(sc, ATH_DEBUG_ANY,
+			"%s: ERROR: skb dma bus mapping failed!\n",
+			__func__);
+		return -ENOMEM;
+	}
 	/*
 	 * Setup descriptors.  For receive we always terminate
 	 * the descriptor list with a self-linked entry so we'll
@@ -6323,7 +6303,7 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 	ds->ds_link = bf->bf_daddr;		/* link to self */
 	ds->ds_data = bf->bf_skbaddr;
 	ath_hal_setuprxdesc(ah, ds,
-		skb_tailroom(skb),		/* buffer size */
+		skb_tailroom(bf->bf_skb),	/* buffer size */
 		0);
 	if (sc->sc_rxlink != NULL)
 		*sc->sc_rxlink = bf->bf_daddr;
