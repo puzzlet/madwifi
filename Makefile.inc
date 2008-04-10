@@ -178,7 +178,7 @@ export ALQ=0
 endif
 
 ifndef ATH_DEBUG
-export ATH_DEBUG=0
+export ATH_DEBUG=1
 endif
 
 ifndef MMIOTRACE
