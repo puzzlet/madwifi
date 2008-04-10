@@ -8908,7 +8908,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 		 * re configure beacons when it is a turbo mode switch.
 		 * HW seems to turn off beacons during turbo mode switch.
 		 */
-		if (sc->sc_beacons && tswitch && !sc->sc_dfs_cac)
+		if (sc->sc_beacons && !sc->sc_dfs_cac)
 			ath_beacon_config(sc, NULL);
 		/*
 		 * Re-enable interrupts.
