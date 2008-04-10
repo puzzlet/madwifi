@@ -3653,6 +3653,27 @@ struct scanlookup {		/* XXX: right place for declaration? */
 	const struct ieee80211_scan_entry *se;
 };
 
+/*
+ * Match mac address and any ssid.
+ */
+static int
+mlmelookup(void *arg, const struct ieee80211_scan_entry *se)
+{
+	struct scanlookup *look = arg;
+
+	if (!IEEE80211_ADDR_EQ(look->mac, se->se_macaddr))
+		return 0;
+	if (look->esslen != 0) {
+		if (se->se_ssid[1] != look->esslen)
+			return 0;
+		if (memcmp(look->essid, se->se_ssid + 2, look->esslen))
+			return 0;
+	}
+	look->se = se;
+
+	return 0;
+}
+
 static int
 ieee80211_ioctl_setmlme(struct net_device *dev, struct iw_request_info *info,
 	void *w, char *extra)
@@ -3675,10 +3696,25 @@ ieee80211_ioctl_setmlme(struct net_device *dev, struct iw_request_info *info,
 	switch (mlme->im_op) {
 	case IEEE80211_MLME_ASSOC:
 		if (vap->iv_opmode == IEEE80211_M_STA) {
-			struct sockaddr ap_addr;
-			memset(&ap_addr, 0, sizeof(ap_addr));
-			IEEE80211_ADDR_COPY(ap_addr.sa_data, mlme->im_macaddr);
-			return ieee80211_ioctl_siwap(dev, NULL, &ap_addr, NULL);
+			struct scanlookup lookup;
+
+			lookup.se = NULL;
+			lookup.mac = mlme->im_macaddr;
+			/* XXX use revised api w/ explicit ssid */
+			lookup.esslen = vap->iv_des_ssid[0].len;
+			lookup.essid = vap->iv_des_ssid[0].ssid;
+			ieee80211_scan_iterate(ic, mlmelookup, &lookup);
+			if (lookup.se != NULL) {
+				vap->iv_nsdone = 0;
+				vap->iv_nsparams.result = 0;
+				if (ieee80211_sta_join(vap, lookup.se))
+					while (!vap->iv_nsdone)
+						IEEE80211_RESCHEDULE();
+				if (!vap->iv_nsparams.result)
+					return 0;
+				return -EINVAL;
+			} else
+				return -ENOENT;
 		} else
 			return -EOPNOTSUPP;
 	case IEEE80211_MLME_DISASSOC:
