@@ -148,6 +148,8 @@ static void ath_key_update_begin(struct ieee80211vap *);
 static void ath_key_update_end(struct ieee80211vap *);
 static void ath_mode_init(struct net_device *);
 static void ath_setslottime(struct ath_softc *);
+static void ath_setctstimeout(struct ath_softc *);
+static void ath_setacktimeout(struct ath_softc *);
 static void ath_updateslot(struct net_device *);
 static int ath_beaconq_setup(struct ath_softc *);
 static int ath_beacon_alloc(struct ath_softc *, struct ieee80211_node *);
@@ -4231,10 +4233,61 @@ ath_mode_init(struct net_device *dev)
 	    rfilt, mfilt[0], mfilt[1]);
 }
 
+static inline int 
+ath_slottime2timeout(struct ath_softc *sc, int slottime)
+{
+	/* HAL seems to use a constant of 8 for OFDM overhead and 18 for 
+	 * CCK overhead.
+	 *
+	 * XXX: Update based on emperical evidence (potentially save 15us per timeout)
+	 */
+	if (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_A) == IEEE80211_CHAN_A) ||
+	    (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_108G) == IEEE80211_CHAN_108G) && 
+		 (sc->sc_ic.ic_flags & IEEE80211_F_SHSLOT)))
+	{
+		/* short slot time - 802.11a, and 802.11g turbo in turbo mode with short slot time */
+		return (slottime * 2) + 8;
+	}
+	    
+	/* constant for CCK mib processing time */
+	return (slottime * 2) + 18;
+}
+
+#ifndef MAX
+# define MAX(a, b)	(((a) > (b))? (a) : (b))
+#endif
+
+static inline int 
+ath_default_ctsack_timeout(struct ath_softc *sc)
+{
+	struct ath_hal *ah = sc->sc_ah;
+
+	int slottime = sc->sc_slottimeconf;
+	if (slottime <= 0)
+		slottime = ath_hal_getslottime(ah);
+
+	return ath_slottime2timeout(sc, slottime);
+}
+
+static inline int
+ath_getslottime(struct ath_softc *sc) {
+	return ath_hal_getslottime(sc->sc_ah);
+}
+
+static inline int
+ath_getacktimeout(struct ath_softc *sc) {
+	return ath_hal_getacktimeout(sc->sc_ah);
+}
+
+static inline int
+ath_getctstimeout(struct ath_softc *sc) {
+	return ath_hal_getctstimeout(sc->sc_ah);
+}
+
 /*
  * Set the slot time based on the current setting.
  */
-static void
+static inline void
 ath_setslottime(struct ath_softc *sc)
 {
 	struct ieee80211com *ic = &sc->sc_ic;
@@ -4242,11 +4295,43 @@ ath_setslottime(struct ath_softc *sc)
 
 	if (sc->sc_slottimeconf > 0) /* manual override */
 		ath_hal_setslottime(ah, sc->sc_slottimeconf);
+	else if (sc->sc_dturbo || (sc->sc_curchan.privFlags & CHANNEL_ST))
+		ath_hal_setslottime(ah, HAL_SLOT_TIME_6);
 	else if (ic->ic_flags & IEEE80211_F_SHSLOT)
 		ath_hal_setslottime(ah, HAL_SLOT_TIME_9);
 	else
 		ath_hal_setslottime(ah, HAL_SLOT_TIME_20);
 	sc->sc_updateslot = OK;
+	ath_setacktimeout(sc);
+	ath_setctstimeout(sc);
+}
+
+/*
+ * Set the ACK timeout based on the current setting.
+ */
+static void
+ath_setacktimeout(struct ath_softc *sc)
+{
+	struct ath_hal *ah = sc->sc_ah;
+
+	if (sc->sc_acktimeoutconf > 0) /* manual override */
+		ath_hal_setacktimeout(ah, sc->sc_acktimeoutconf);
+	else
+		ath_hal_setacktimeout(ah, ath_default_ctsack_timeout(sc));
+}
+
+/*
+ * Set the CTS timeout based on the current setting.
+ */
+static void
+ath_setctstimeout(struct ath_softc *sc)
+{
+	struct ath_hal *ah = sc->sc_ah;
+
+	if (sc->sc_ctstimeoutconf > 0) /* manual override */
+		ath_hal_setctstimeout(ah, sc->sc_ctstimeoutconf);
+	else
+		ath_hal_setctstimeout(ah, ath_default_ctsack_timeout(sc));
 }
 
 /*
@@ -10545,7 +10630,70 @@ enum {
 	ATH_RADAR_IGNORED       = 25,
 	ATH_MAXVAPS  		= 26,
         ATH_INTMIT 		= 27,
+	ATH_DISTANCE		= 28,
 };
+
+static inline int 
+ath_ccatime(struct ath_softc *sc)
+{
+	if (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_PUREG) == 
+	    IEEE80211_CHAN_PUREG) && 
+	    (sc->sc_ic.ic_flags & IEEE80211_F_SHSLOT))
+		return CCA_PUREG;
+	if ((sc->sc_curchan.channelFlags & IEEE80211_CHAN_A) == 
+	    IEEE80211_CHAN_A)
+		return CCA_A;
+
+	return CCA_BG;
+}
+
+static inline int 
+ath_estimate_max_distance(struct ath_softc *sc)
+{
+	/* Prefer overrided, ask HAL if not overridden */
+	int slottime = sc->sc_slottimeconf;
+	if (slottime <= 0)
+		slottime = ath_hal_getslottime(sc->sc_ah);
+	/* NB: We ignore MAC overhead.  this function is reverse operation of 
+	 * ath_distance2slottime, and assumes slottime is CCA + 2x air propagation. */
+	return (slottime - ath_ccatime(sc)) * 150;
+}
+
+static inline int 
+ath_distance2slottime(struct ath_softc *sc, int distance)
+{
+
+	/* Allowance for air propagation (roundtrip time) should be at least 
+	 * 5us per the standards.
+	 * 
+	 * So let's set a minimum distance to accomodate this: 
+	 * 
+	 * roundtrip time = ( ( distance / speed_of_light ) * 2 )
+	 *
+	 * distance = ( (time * 300 ) / 2) or ((5 * 300) / 2) = 750 m
+	 */
+	int rtdist = distance * 2;
+	int aAirPropagation = 	(rtdist / 300) + !!(rtdist % 300);
+	if (aAirPropagation < 5) {
+		aAirPropagation = 5;
+	}
+	/* NB: We ignore MAC processing delays... no clue */
+	return ath_ccatime(sc) + aAirPropagation;
+}
+
+static inline int 
+ath_distance2timeout(struct ath_softc *sc, int distance)
+{
+	/* HAL uses a constant of twice slot time plus 18us.
+	 * The 18us covers rxtx turnaround, MIB processing, etc.
+	 * but the athctrl used to return 2slot+3 so the extra 15us of 
+	 * timeout is probably just being very careful or taking something into
+	 * account that I can't find in the specs.
+	 *
+	 * XXX: Update based on emperical evidence (potentially save 15us per timeout)
+	 */
+	return ath_slottime2timeout(sc, ath_distance2slottime(sc, distance));
+}
 
 static int
 ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
@@ -10575,25 +10723,75 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				lenp, ppos);
 		if (ret == 0) {
 			switch ((long)ctl->extra2) {
+			case ATH_DISTANCE:
+				if(val > 0) {
+					sc->sc_slottimeconf    = ath_distance2slottime(sc, val);
+					sc->sc_acktimeoutconf  = ath_distance2timeout(sc, val);
+					sc->sc_ctstimeoutconf  = ath_distance2timeout(sc, val);
+					ath_setslottime(sc);
+				}
+				else {
+					/* disable manual overrides */
+					sc->sc_slottimeconf   = 0;
+					sc->sc_ctstimeoutconf = 0;
+					sc->sc_acktimeoutconf = 0;
+					ath_setslottime(sc);
+				}
+				/* Likely changed by the function */
+				val = ath_estimate_max_distance(sc);
+				break;
 			case ATH_SLOTTIME:
 				if (val > 0) {
 					if (!ath_hal_setslottime(ah, val))
 						ret = -EINVAL;
-					else
+					else {
+						int old = sc->sc_slottimeconf;
 						sc->sc_slottimeconf = val;
+						/* overridden slot time invalidates 
+						 * previous overridden ack/cts 
+						 * timeouts if it is longer! */
+						if (old && old < sc->sc_slottimeconf) {
+							sc->sc_ctstimeoutconf = 0;
+							sc->sc_acktimeoutconf = 0;
+							ath_setacktimeout(sc);
+							ath_setctstimeout(sc);
+						}
+					}
 				} else {
 					/* disable manual override */
 					sc->sc_slottimeconf = 0;
 					ath_setslottime(sc);
 				}
+				/* Likely changed by the function */
+				val = ath_getslottime(sc);
 				break;
 			case ATH_ACKTIMEOUT:
-				if (!ath_hal_setacktimeout(ah, val))
-					ret = -EINVAL;
+				if (val > 0) {
+					if (!ath_hal_setacktimeout(ah, val))
+						ret = -EINVAL;
+					else 
+						sc->sc_acktimeoutconf = val;
+				} else {
+					/* disable manual overrider */
+					sc->sc_acktimeoutconf = 0;
+					ath_setacktimeout(sc);
+				}
+				/* Likely changed by the function */
+				val = ath_getacktimeout(sc);
 				break;
 			case ATH_CTSTIMEOUT:
-				if (!ath_hal_setctstimeout(ah, val))
-					ret = -EINVAL;
+				if (val > 0) {
+					if (!ath_hal_setctstimeout(ah, val))
+						ret = -EINVAL;
+					else 
+						sc->sc_ctstimeoutconf = val;
+				} else {
+					/* disable manual overrides */
+					sc->sc_ctstimeoutconf = 0;
+					ath_setctstimeout(sc);
+				}
+				/* Likely changed by the function */
+				val = ath_getctstimeout(sc);
 				break;
 			case ATH_SOFTLED:
 				if (val != sc->sc_softled) {
@@ -10757,14 +10955,17 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 		}
 	} else {
 		switch ((long)ctl->extra2) {
+		case ATH_DISTANCE:
+			val = ath_estimate_max_distance(sc);
+			break;
 		case ATH_SLOTTIME:
-			val = ath_hal_getslottime(ah);
+			val = ath_getslottime(sc);
 			break;
 		case ATH_ACKTIMEOUT:
-			val = ath_hal_getacktimeout(ah);
+			val = ath_getacktimeout(sc);
 			break;
 		case ATH_CTSTIMEOUT:
-			val = ath_hal_getctstimeout(ah);
+			val = ath_getctstimeout(sc);
 			break;
 		case ATH_SOFTLED:
 			val = sc->sc_softled;
@@ -10836,6 +11037,12 @@ static int mincalibrate = 1;		/* once a second */
 static int maxint = 0x7fffffff;		/* 32-bit big */
 
 static const ctl_table ath_sysctl_template[] = {
+	{ .ctl_name	= CTL_AUTO,
+	  .procname	= "distance",
+	  .mode		= 0644,
+	  .proc_handler	= ath_sysctl_halparam,
+	  .extra2	= (void *)ATH_DISTANCE,
+	},
 	{ .ctl_name	= CTL_AUTO,
 	  .procname	= "slottime",
 	  .mode		= 0644,

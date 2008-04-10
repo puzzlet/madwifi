@@ -117,15 +117,9 @@ main(int argc, char *argv[])
 	}
 
 	if (distance >= 0) {
-	    	int slottime = 9 + (distance / 300) + ((distance % 300) ? 1 : 0);
-		int acktimeout = slottime * 2 + 3;
-		int ctstimeout = slottime * 2 + 3;
-
 		printf("Setting distance on interface %s to %i meters\n",
 			device, distance);
-		setsysctrl(device, "slottime", slottime);
-		setsysctrl(device, "acktimeout", acktimeout);
-		setsysctrl(device, "ctstimeout", ctstimeout);
+		setsysctrl(device, "distance", distance);
 	} else
 		usage();
 	return 0;

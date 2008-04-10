@@ -295,6 +295,12 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 #define GRP_POLL_PERIOD_NO_XR_STA_MAX	100
 #define GRP_POLL_PERIOD_XR_STA_MAX	30
 
+enum {
+	CCA_BG    = 15,
+	CCA_A     = 4,
+	CCA_PUREG = 4, /* pure G */
+};
+
  /*
  * Percentage of the configured poll periodicity
  */
@@ -335,7 +341,6 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 #define MIN_REGISTER_ADDRESS	0x0000		/* PCI register addresses are taken as releative to the appropriate BAR */
 #define MAX_REGISTER_ADDRESS	0xc000 		/* AR5212/AR5213 seems to have a 48k address range */
 #define MAX_REGISTER_NAME_LEN	32		/* Maximum length of register nicknames in debug output */
-#define UNKNOWN_NAME		"(unknown)"	/* Name used when reading/listing undocumented registers */
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
 /*
  * Convert from net80211 layer values to Ath layer values. Hopefully this will
@@ -800,6 +805,8 @@ struct ath_softc {
 	u_int32_t sc_dturbo_bw_turbo;		/* bandwidth threshold */
 #endif
 	u_int sc_slottimeconf;			/* manual override for slottime */
+	u_int sc_acktimeoutconf;		/* manual override for ack timeout */
+	u_int sc_ctstimeoutconf;		/* manual override for cts timeout */
 
 	struct timer_list sc_dfs_excl_timer;	/* mark expiration timer task */
 	struct timer_list sc_dfs_cac_timer;	/* dfs wait timer */
