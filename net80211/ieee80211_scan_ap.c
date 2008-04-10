@@ -802,9 +802,9 @@ pick_channel(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 
 	sort(chans, ss_last, sizeof(*chans), pc_cmp, pc_swap);
 
+#ifdef IEEE80211_DEBUG
 	for (i = 0; i < ss_last; i++) {
 		int chan = ieee80211_chan2ieee(ic, chans[i].chan);
-
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN, "%s: channel %u, "
 				"rssi %d, radar %d, cn %d, km %d\n",
 				__func__, chan, as->as_maxrssi[chan], 
@@ -813,6 +813,7 @@ pick_channel(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 				!!IEEE80211_ARE_CHANS_SAME_MODE(chans[i].chan, 
 					ic->ic_bsschan));
 	}
+#endif /* IEEE80211_DEBUG */
 
 	best = NULL;
 	best_rssi = 0xff; /* If signal is bigger than 0xff, we'd be melting. */

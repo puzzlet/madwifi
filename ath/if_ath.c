@@ -1593,18 +1593,14 @@ ath_vap_delete(struct ieee80211vap *vap)
 void
 ath_suspend(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
-
-	DPRINTF(sc, ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
+	DPRINTF(dev->priv, ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
 	ath_stop(dev);
 }
 
 void
 ath_resume(struct net_device *dev)
 {
-	struct ath_softc *sc = dev->priv;
-
-	DPRINTF(sc, ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
+	DPRINTF(dev->priv, ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
 	ath_init(dev);
 }
 
@@ -6382,7 +6378,6 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	struct sk_buff *skb, int subtype, int rssi, u_int64_t rtsf)
 {
 	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;
-        struct ieee80211_frame *wh = (struct ieee80211_frame *)skb->data;
 	struct ieee80211_node * ni = ni_or_null;
 	u_int64_t hw_tsf, beacon_tsf;
 	u_int32_t hw_tu, beacon_tu, intval;
@@ -6393,7 +6388,7 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	DPRINTF(sc, ATH_DEBUG_BEACON,
 		"vap:%p[" MAC_FMT "] ni:%p[" MAC_FMT "]\n",
 		vap, MAC_ADDR(vap->iv_bssid),
-		ni, MAC_ADDR(wh->i_addr2));
+		ni, MAC_ADDR(((struct ieee80211_frame *)skb->data)->i_addr2));
 
 	/* Call up first so subsequent work can use information
 	 * potentially stored in the node (e.g. for ibss merge). */
@@ -8567,7 +8562,6 @@ ath_tx_timeout(struct net_device *dev)
 static void
 ath_tx_draintxq(struct ath_softc *sc, struct ath_txq *txq)
 {
-	struct ath_hal *ah = sc->sc_ah;
 	struct ath_buf *bf;
 	/*
 	 * NB: this assumes output has been stopped and
@@ -8585,7 +8579,7 @@ ath_tx_draintxq(struct ath_softc *sc, struct ath_txq *txq)
 		ATH_TXQ_UNLOCK_IRQ(txq);
 #ifdef AR_DEBUG
 		if (sc->sc_debug & ATH_DEBUG_RESET)
-			ath_printtxbuf(bf, ath_hal_txprocdesc(ah, bf->bf_desc, 
+			ath_printtxbuf(bf, ath_hal_txprocdesc(sc->sc_ah, bf->bf_desc, 
 						&bf->bf_dsstatus.ds_txstat) == HAL_OK);
 #endif /* AR_DEBUG */
 

@@ -150,7 +150,9 @@ static struct radar_pattern_specification radar_patterns[] = {
 #endif
 };
 
+#ifdef AR_DEBUG
 static u_int32_t interval_to_frequency(u_int32_t pri);
+#endif /* AR_DEBUG */
 
 /* Returns true if radar detection is enabled. */
 int ath_radar_is_enabled(struct ath_softc *sc)
@@ -223,7 +225,6 @@ int ath_radar_update(struct ath_softc *sc)
 {
 
 	struct ath_hal *ah = sc->sc_ah;
-	struct net_device *dev = sc->sc_dev;
 	struct ieee80211com *ic = &sc->sc_ic;
 	int required = 0;
 
@@ -236,7 +237,7 @@ int ath_radar_update(struct ath_softc *sc)
 	if (ath_radar_correct_dfs_flags(sc, &sc->sc_curchan))
 		DPRINTF(sc, ATH_DEBUG_DOTH, "%s: %s: channel required "
 			"corrections to private flags.\n", 
-			DEV_NAME(dev), __func__);
+			SC_DEV_NAME(sc), __func__);
 	required = ath_radar_is_dfs_required(sc, &sc->sc_curchan) && 
 		    (ic->ic_flags & IEEE80211_F_DOTH);
 	/* configure radar pulse detector register using default values, but do
@@ -361,6 +362,7 @@ static struct ath_rp *pulse_prev(struct ath_rp *pulse)
 #define MR_FAIL_MIN_PERIOD	4
 #define MR_FAIL_MAX_PERIOD	5
 
+#ifdef AR_DEBUG
 static const char* get_match_result_desc(u_int32_t code) {
 	switch (code) {
 	case MR_MATCH:
@@ -379,6 +381,7 @@ static const char* get_match_result_desc(u_int32_t code) {
 		return "unknown";
 	}
 }
+#endif /* AR_DEBUG */
 
 static int32_t match_radar(
 	u_int32_t matched, 
@@ -770,7 +773,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 	struct ath_softc *sc, struct ath_rp *last_pulse, 
 	u_int32_t *index, u_int32_t *pri, u_int32_t *matching_pulses, 
 	u_int32_t *missed_pulses, u_int32_t *noise_pulses)
-{ struct net_device *dev = sc->sc_dev;
+{
 	int i;
 	int best_index = -1;
 	unsigned int best_matched = 0;
@@ -1212,6 +1215,7 @@ static HAL_BOOL rp_analyse_short_pulse(
 	return (-1 != best_index) ? AH_TRUE : AH_FALSE;
 }
 
+#ifdef AR_DEBUG
 static u_int32_t interval_to_frequency(u_int32_t interval)
 {
 	/* Calculate BRI from PRI */
@@ -1219,6 +1223,7 @@ static u_int32_t interval_to_frequency(u_int32_t interval)
 	/* Round to nearest multiple of 50 */
 	return frequency + ((frequency % 50) >= 25 ? 50 : 0) - (frequency % 50);
 }
+#endif /* AR_DEBUG */
 
 #ifdef ATH_RADAR_LONG_PULSE
 static const char* get_longpulse_desc(int lp) {
@@ -1575,12 +1580,11 @@ void ath_rp_done(struct ath_softc *sc)
 void ath_rp_record(struct ath_softc *sc, u_int64_t tsf, u_int8_t rssi, 
 			    u_int8_t width, HAL_BOOL is_simulated)
 {
-	struct net_device *dev = sc->sc_dev;
 	struct ath_rp *pulse;
 
 	DPRINTF(sc, ATH_DEBUG_DOTHPULSES, "%s: ath_rp_record: "
 		"tsf=%10llu rssi=%3u width=%3u%s\n", 
-		DEV_NAME(dev), tsf, rssi, width,
+		SC_DEV_NAME(sc), tsf, rssi, width,
 		sc->sc_rp_ignored ? " (ignored)" : "");
 
 	if (sc->sc_rp_ignored) {
