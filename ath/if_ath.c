@@ -217,7 +217,6 @@ static int ath_startrecv(struct ath_softc *);
 static void ath_flushrecv(struct ath_softc *);
 static void ath_chan_change(struct ath_softc *, struct ieee80211_channel *);
 static void ath_calibrate(unsigned long);
-static void ath_mib_enable(unsigned long);
 static int ath_newstate(struct ieee80211vap *, enum ieee80211_state, int);
 
 static void ath_scan_start(struct ieee80211com *);
@@ -386,6 +385,7 @@ static char *autocreate = NULL;
 static char *ratectl = DEF_RATE_CTL;
 static int rfkill = 0;
 static int tpc = 0;
+static int intmit = 0;
 static int countrycode = -1;
 static int maxvaps = -1;
 static int outdoor = -1;
@@ -427,6 +427,7 @@ MODULE_PARM(tpc, "i");
 #endif
 MODULE_PARM(autocreate, "s");
 MODULE_PARM(ratectl, "s");
+MODULE_PARM(intmit, "i");
 #else
 #include <linux/moduleparam.h>
 module_param(beacon_cal, int, 0600);
@@ -440,6 +441,7 @@ module_param(tpc, int, 0600);
 #endif
 module_param(autocreate, charp, 0600);
 module_param(ratectl, charp, 0600);
+module_param(intmit, int, 0600);
 #endif
 MODULE_PARM_DESC(countrycode, "Override default country code");
 MODULE_PARM_DESC(maxvaps, "Maximum VAPs");
@@ -455,6 +457,7 @@ MODULE_PARM_DESC(autocreate, "Create ath device in "
 		"'none' to disable");
 MODULE_PARM_DESC(ratectl, "Rate control algorithm [amrr|minstrel|onoe|sample], "
 		"defaults to '" DEF_RATE_CTL "'");
+MODULE_PARM_DESC(intmit, "Enable interference mitigation by default.  Default is 0.");
 
 static int	ath_debug = 0;
 #ifdef AR_DEBUG
@@ -579,7 +582,30 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 		goto bad;
 	}
 	sc->sc_ah = ah;
+	/*
+	 * Init ic_caps prior to queue init, since WME cap setting
+	 * depends on queue setup.
+	 */
+	ic->ic_caps = 0;
 
+	/* Interference mitigation/ambient noise immunity (ANI).
+	 * In modes other than HAL_M_STA, it causes receive sensitivity
+	 * problems for OFDM. */
+	sc->sc_hasintmit = ath_hal_hasintmit(ah);
+	if (!sc->sc_hasintmit) {
+		if (intmit) {
+			WPRINTF(sc, "Interference mitigation was requested, "
+				    "but is not supported by the "
+				    "HAL/hardware.\n");
+			intmit = 0;
+		}
+		sc->sc_useintmit = 0;
+	}
+	else {
+		ath_hal_setintmit(ah, (sc->sc_useintmit = intmit));
+		IPRINTF(sc, "Interference mitigation is supported.  Currently %s.\n",
+			(sc->sc_useintmit ? "enabled" : "disabled"));
+	}
 	/*
 	 * Check if the MAC has multi-rate retry support.
 	 * We do this by trying to setup a fake extended
@@ -594,8 +620,9 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	 * errors.  If so we need to enable the MIB interrupt
 	 * so we can act on stat triggers.
 	 */
-	if (ath_hal_hwphycounters(ah))
-		sc->sc_needmib = 1;
+	sc->sc_needmib = ath_hal_hwphycounters(ah) && 
+		sc->sc_hasintmit && 
+		sc->sc_useintmit;
 
 	/*
 	 * Get the hardware key cache size.
@@ -640,7 +667,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	ic->ic_country_code = ath_countrycode;
 	ic->ic_country_outdoor = ath_outdoor;
 
-	IPRINTF(sc, "Switching rfkill capability %s\n",
+	IPRINTF(sc, "Switching rfkill capability %s.\n",
 		rfkill ? "on" : "off");
 	ath_hal_setrfsilent(ah, rfkill);
 
@@ -668,12 +695,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 			error);
 		goto bad;
 	}
-
-	/*
-	 * Init ic_caps prior to queue init, since WME cap setting
-	 * depends on queue setup.
-	 */
-	ic->ic_caps = 0;
 
 	/*
 	 * Allocate hardware transmit queues: one queue for
@@ -788,10 +809,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
 	/* initialize radar stuff */
 	ath_rp_init(sc);
-
-	init_timer(&sc->sc_mib_enable);
-	sc->sc_mib_enable.function = ath_mib_enable;
-	sc->sc_mib_enable.data = (unsigned long) sc;
 
 #ifdef ATH_SUPERG_DYNTURBO
 	init_timer(&sc->sc_dturbo_switch_mode);
@@ -936,6 +953,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 			setbit(sc->sc_keymap, i+32+64);
 		}
 	}
+
 	/*
 	 * TPC support can be done either with a global cap or
 	 * per-packet support.  The latter is not available on
@@ -1000,10 +1018,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	 */
 	sc->sc_hasveol = ath_hal_hasveol(ah);
 
-	/* Interference mitigation/ambient noise immunity (ANI).
-	 * In modes other than HAL_M_STA, it causes receive sensitivity
-	 * problems for OFDM. */
-	sc->sc_hasintmit = ath_hal_hasintmit(ah);
 
 	/* get mac address from hardware */
 	ath_hal_getmac(ah, ic->ic_myaddr);
@@ -1583,6 +1597,38 @@ ath_resume(struct net_device *dev)
 	DPRINTF(sc, ATH_DEBUG_ANY, "flags=%x\n", dev->flags);
 	ath_init(dev);
 }
+
+/* NB: INTMIT was not implemented so that it could be enabled/disabled,
+ * and actually in 0.9.30.13 HAL it really can't even be disabled because
+ * it will start adjusting registers even when we turn off the capability
+ * in the HAL.
+ *
+ * NB: This helper function basically clobbers all the related registers
+ * if we have disabled INTMIT cap, allowing us to turn it on and off and
+ * work around the bug preventing it from being disabled. */
+static inline void ath_override_intmit_if_disabled(struct ath_softc *sc) {
+	/* Restore intmit registers if we turned off intmit! */
+	if (sc->sc_hasintmit && !sc->sc_useintmit)
+		ath_hal_restore_default_intmit(sc->sc_ah);
+	/* Sanity check...remove later */
+	if (!sc->sc_useintmit) {
+		ath_hal_verify_default_intmit(sc->sc_ah);
+		/* If we don't have INTMIT and we don't have DFS on channel,
+		 * it is safe to filter error packets! */
+		if (!ath_radar_is_dfs_required(sc, &sc->sc_curchan)) {
+			ath_hal_setrxfilter(sc->sc_ah, 
+				ath_hal_getrxfilter(sc->sc_ah) & 
+					    ~HAL_RX_FILTER_PHYERR);
+		}
+	}
+	else {
+		/* Make sure that we have errors in rx filter cause ANI needs 
+		 * them. */
+		ath_hal_setrxfilter(sc->sc_ah, 
+			ath_hal_getrxfilter(sc->sc_ah) | HAL_RX_FILTER_PHYERR);
+	}
+}
+
 
 /* Channel Availability Check is running, or a channel has already found to be 
  * unavailable. */
@@ -2316,18 +2362,20 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 		}
 		if (status & HAL_INT_MIB) {
 			sc->sc_stats.ast_mib++;
-			/* When the card receives lots of PHY errors, the MIB
-			 * interrupt will fire at a very rapid rate. We will use
-			 * a timer to enforce at least 1 jiffy delay between
-			 * MIB interrupts. This should be unproblematic, since
-			 * the hardware will continue to update the counters in 
-			 * the mean time. */
-			sc->sc_imask &= ~HAL_INT_MIB;
-			ath_hal_intrset(ah, sc->sc_imask);
-			mod_timer(&sc->sc_mib_enable, jiffies + 1);
+			/* If we aren't doing interference mitigation and we get
+			 * a lot of MIB events we can safely skip them.
+			 * However, we must never throttle them DURING interference
+			 * mitigation calibration sequence as it depends on this
+			 * hook to advance the calibration sequence / alg.
+			 */
+			if (!sc->sc_useintmit) {
+				sc->sc_imask &= ~HAL_INT_MIB;
+				ath_hal_intrset(ah, sc->sc_imask);
+			}
 
-			/* Let the HAL handle the event. */
+			/* Let the HAL handle the event.*/
 			ath_hal_mibevent(ah, &sc->sc_halstats);
+			ath_override_intmit_if_disabled(sc);
 		}
 	}
 	if (needmark)
@@ -6666,7 +6714,7 @@ rx_next:
 	 *      the data used for ANI, so we will only call it for client only
 	 *      mode. 
 	 *      This may will not affect ANI problems in client only mode. */
-	if (sc->sc_opmode == HAL_M_STA)
+	if (sc->sc_useintmit) 
 		ath_hal_rxmonitor(ah, &sc->sc_halstats, &sc->sc_curchan);
 #undef PA2DESC
 }
@@ -8569,6 +8617,7 @@ ath_startrecv(struct ath_softc *sc)
 	ath_hal_rxena(ah);		/* enable recv descriptors */
 	ath_mode_init(dev);		/* set filters, etc. */
 	ath_hal_startpcurecv(ah);	/* re-enable PCU/DMA engine */
+	ath_override_intmit_if_disabled(sc);
 	return 0;
 }
 
@@ -8779,19 +8828,6 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 					sc->sc_curchan.channelFlags), 
 				tv.tv_sec, tv.tv_usec);
 	return 0;
-}
-
-/*
- * Enable MIB interrupts again, after the ISR disabled them
- * to slow down the rate of PHY error reporting.
- */
-static void
-ath_mib_enable(unsigned long arg)
-{
-	struct ath_softc *sc = (struct ath_softc *)arg;
-
-	sc->sc_imask |= HAL_INT_MIB;
-	ath_hal_intrset(sc->sc_ah, sc->sc_imask);
 }
 
 /*
@@ -10500,6 +10536,7 @@ enum {
 	ATH_RP_IGNORED 		= 24,
 	ATH_RADAR_IGNORED       = 25,
 	ATH_MAXVAPS  		= 26,
+        ATH_INTMIT 		= 27,
 };
 
 static int
@@ -10510,6 +10547,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 	u_int val;
 	u_int tab_3_val[3];
 	int ret = 0;
+	int oldval = 0;
 
 	ctl->data = &val;
 	ctl->maxlen = sizeof(val);
@@ -10681,6 +10719,29 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			case ATH_RADAR_IGNORED:
 				sc->sc_radar_ignored = val;
 				break;
+			case ATH_INTMIT:
+				oldval = sc->sc_useintmit;
+				sc->sc_useintmit = (sc->sc_hasintmit && val); 
+				sc->sc_needmib = ath_hal_hwphycounters(ah) && 
+					sc->sc_hasintmit && 
+					sc->sc_useintmit;
+				/* Update the HAL and MIB interrupt mask bits */
+				ath_hal_setintmit(ah, val ? 1 : 0); 
+				sc->sc_imask = (sc->sc_imask & ~HAL_INT_MIB) | 
+					(sc->sc_needmib ? HAL_INT_MIB : 0);
+				ath_hal_intrset(sc->sc_ah, sc->sc_imask);
+				/* Only do a reset if device is valid and UP 
+				 * and we just made a change to the settings. */
+				if ((oldval != sc->sc_useintmit) &&
+				    NULL != sc->sc_dev && !sc->sc_invalid &&
+				    (sc->sc_dev->flags & IFF_RUNNING) && 
+				    sc->sc_hasintmit)
+					ath_reset(sc->sc_dev); 
+				/* NB: Run this step to cleanup if HAL doesn't 
+				 * obey capability flags and hangs onto ANI
+				 * settings. */
+				ath_override_intmit_if_disabled(sc);
+                                break; 
 			default:
 				ret = -EINVAL;
 				break;
@@ -10747,7 +10808,10 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 		case ATH_RADAR_IGNORED:
 			val = sc->sc_radar_ignored;
 			break;
-		default:
+                case ATH_INTMIT: 
+			val = sc->sc_useintmit; 
+			break; 
+	       	default:
 			ret = -EINVAL;
 			break;
 		}
@@ -10924,6 +10988,12 @@ static const ctl_table ath_sysctl_template[] = {
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RADAR_IGNORED,
 	},
+        { .ctl_name     = CTL_AUTO, 
+	  .procname     = "intmit", 
+	  .mode         = 0644, 
+	  .proc_handler = ath_sysctl_halparam, 
+	  .extra2       = (void *)ATH_INTMIT, 
+	}, 
 	{ 0 }
 };
 

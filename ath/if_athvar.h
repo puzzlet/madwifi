@@ -670,6 +670,7 @@ struct ath_softc {
 	unsigned int	sc_ackrate:1;		/* send acks at high bitrate */
 	unsigned int	sc_dfs_cac:1;		/* waiting on channel for radar detect */
 	unsigned int	sc_hasintmit:1;		/* Interference mitigation */
+	unsigned int	sc_useintmit:1;		/* Interference mitigation enabled? */
 	unsigned int	sc_txcont:1;		/* Is continuous transmit enabled? */
 	unsigned int	sc_dfs_testmode:1; 	/* IF this is on, AP vaps will stay in
 						 * 'channel availability check' indefinately,
