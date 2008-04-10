@@ -2556,9 +2556,6 @@ ath_init(struct net_device *dev)
 	 * in the frame output path; there's nothing to do
 	 * here except setup the interrupt mask.
 	 */
-#if 0
-	ath_initkeytable(sc);		/* XXX still needed? */
-#endif
 	if (ath_startrecv(sc) != 0) {
 		EPRINTF(sc, "Unable to start receive logic.\n");
 		error = -EIO;
@@ -2567,13 +2564,10 @@ ath_init(struct net_device *dev)
 	/* Enable interrupts. */
 	sc->sc_imask = HAL_INT_RX | HAL_INT_TX
 		  | HAL_INT_RXEOL | HAL_INT_RXORN
-		  | HAL_INT_FATAL | HAL_INT_GLOBAL;
-	/*
-	 * Enable MIB interrupts when there are hardware phy counters.
-	 * Note we only do this (at the moment) for station mode.
-	 */
-	if (sc->sc_needmib && ic->ic_opmode == IEEE80211_M_STA)
-		sc->sc_imask |= HAL_INT_MIB;
+		  | HAL_INT_FATAL | HAL_INT_GLOBAL
+		  | (sc->sc_needmib ? HAL_INT_MIB : 0);
+
+	/* Push changes to sc_imask to hardware */
 	ath_hal_intrset(ah, sc->sc_imask);
 
 	/*
