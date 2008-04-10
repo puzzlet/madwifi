@@ -3260,14 +3260,14 @@ _take_txbuf(struct ath_softc *sc, int for_management) {
  * It must return either NETDEV_TX_OK or NETDEV_TX_BUSY
  */
 static int
-ath_hardstart(struct sk_buff *skb, struct net_device *dev)
+ath_hardstart(struct sk_buff *__skb, struct net_device *dev)
 {
 	struct ath_softc *sc = dev->priv;
 	struct ieee80211_node *ni = NULL;
 	struct ath_buf *bf = NULL;
 	struct ether_header *eh;
 	ath_bufhead bf_head;
-	struct ath_buf *tbf, *tempbf;
+	struct ath_buf *tbf;
 	struct sk_buff *tskb;
 	int framecnt;
 	/* We will use the requeue flag to denote when to stuff a skb back into
@@ -3281,22 +3281,48 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_node *an;
 	struct ath_txq *txq = NULL;
+	struct sk_buff* skb = NULL;
+	/* NB: NEVER free __skb, leave it alone and use original_skb instead!
+	 * IF original_skb is NULL it means the ownership was taken!
+	 * *** ALWAYS *** free any skb != __skb when cleaning up - unless it was
+	 * taken. */
+	struct sk_buff* original_skb  = __skb; /* ALWAYS FREE THIS ONE!!! */
 	int ff_flush;
 #endif
-
-	/* If an skb is passed in directly from the kernel, 
-	 * we take responsibility for the reference */
-	ieee80211_skb_track(skb);
-
+	ieee80211_skb_track(original_skb);
 	if ((dev->flags & IFF_RUNNING) == 0 || sc->sc_invalid) {
 		DPRINTF(sc, ATH_DEBUG_XMIT,
 			"Dropping; invalid %d flags %x\n",
 			sc->sc_invalid, dev->flags);
 		sc->sc_stats.ast_tx_invalid++;
-		return -ENETDOWN;
+		ieee80211_dev_kfree_skb(&original_skb);
+		return NETDEV_TX_OK;
+	}
+
+	/* NB: always passed down by 802.11 layer */
+	if (NULL == (an = ATH_NODE(ni = SKB_NI(original_skb)))) {
+		DPRINTF(sc, ATH_DEBUG_XMIT,
+			"Dropping; No node in original_skb control block!\n");
+		ieee80211_dev_kfree_skb(&original_skb);
+		return NETDEV_TX_OK;
+	}
+	/* NOTE: This used to be done only for clones, but we are doing this
+	 * here as a defensive measure.  XXX: Back off of this later. */
+	if (!skb_cloned(original_skb)) {
+		skb = original_skb;
+		original_skb = NULL;
+	}
+	else {
+		if (NULL == (skb = skb_copy(original_skb, GFP_ATOMIC))) {
+			DPRINTF(sc, ATH_DEBUG_XMIT, "Dropping; skb_copy failure.\n");
+			ieee80211_dev_kfree_skb(&original_skb);
+			return NETDEV_TX_OK;
+		}
+		ieee80211_skb_copy_noderef(skb, original_skb);
 	}
 
 	STAILQ_INIT(&bf_head);
+	eh = (struct ether_header *)skb->data;
 
 	if (SKB_CB(skb)->flags & M_RAW) {
 		bf = ath_take_txbuf(sc);
@@ -3306,15 +3332,8 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 			goto hardstart_fail;
 		}
 		ath_tx_startraw(dev, bf, skb);
+		ieee80211_dev_kfree_skb(&original_skb);
 		return NETDEV_TX_OK;
-	}
-
-	ni = SKB_CB(skb)->ni;		/* NB: always passed down by 802.11 layer */
-	if (ni == NULL) {
-		/* NB: this happens if someone marks the underlying device up */
-		DPRINTF(sc, ATH_DEBUG_XMIT,
-			"Dropping; No node in skb control block!\n");
-		goto hardstart_fail;
 	}
 
 #ifdef ATH_SUPERG_FF
@@ -3333,29 +3352,11 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 	 * Fast frames check.
 	 */
 	ATH_FF_MAGIC_CLR(skb);
-	an = ATH_NODE(ni);
 
 	txq = sc->sc_ac2q[skb->priority];
 
 #endif
 
-	/* If the skb data is shared, we will copy it so we can strip padding
-	 * without affecting any other bridge ports. */
-	if (skb_cloned(skb)) {
-		/* Remember the original SKB so we can free up our references */
-		struct sk_buff *skb_new;
-		skb_new = skb_copy(skb, GFP_ATOMIC);
-		if (skb_new == NULL) {
-			DPRINTF(sc, ATH_DEBUG_XMIT,
-				"Dropping; skb_copy failure.\n");
-			/* No free RAM, do not requeue! */
-			goto hardstart_fail;
-		}
-		ieee80211_skb_copy_noderef(skb, skb_new);
-		ieee80211_dev_kfree_skb(&skb);
-		skb = skb_new;
-	}
-	eh = (struct ether_header *)skb->data;
 
 #ifdef ATH_SUPERG_FF
 	/* NB: use this lock to protect an->an_tx_ffbuf (and txq->axq_stageq)
@@ -3406,6 +3407,7 @@ ath_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 			ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
 
+			ieee80211_dev_kfree_skb(&original_skb);
 			return NETDEV_TX_OK;
 		}
 	} else {
@@ -3501,7 +3503,9 @@ ff_bypass:
 		 *  already alloc'd
 		 */
 		bf->bf_skb = NULL;
-		ATH_TXBUF_LOCK_IRQ(sc);
+		STAILQ_INSERT_TAIL(&bf_head, bf, bf_list);
+		bf = NULL;
+
 		for (bfcnt = 1; bfcnt < framecnt; ++bfcnt) {
 			tbf = ath_take_txbuf_locked(sc);
 			if (tbf == NULL)
@@ -3511,11 +3515,9 @@ ff_bypass:
 
 		if (bfcnt != framecnt) {
 			ath_return_txbuf_list_locked(sc, &bf_head);
-			ATH_TXBUF_UNLOCK_IRQ_EARLY(sc);
 			STAILQ_INIT(&bf_head);
 			goto hardstart_fail;
 		}
-		ATH_TXBUF_UNLOCK_IRQ(sc);
 
 		while (((bf = STAILQ_FIRST(&bf_head)) != NULL) && (skb != NULL)) {
 			unsigned int nextfraglen = 0;
@@ -3555,16 +3557,12 @@ ff_bypass:
 		ath_ffstageq_flush(sc, txq, ath_ff_ageflushtestdone);
 #endif
 
+	KASSERT((skb == NULL),  ("(skb != NULL)"));
+ 	KASSERT((bf == NULL),  ("(bf != NULL)"));
+	ieee80211_dev_kfree_skb(&original_skb);
 	return NETDEV_TX_OK;
 
 hardstart_fail:
-	/* Clear all SKBs from the buffers, we will clear them separately IF
-	 * we do not requeue them. */
-	ATH_TXBUF_LOCK_IRQ(sc);
-	STAILQ_FOREACH_SAFE(tbf, &bf_head, bf_list, tempbf) {
-		tbf->bf_skb = NULL;
-	}
-	ATH_TXBUF_UNLOCK_IRQ(sc);
 	/* Release the buffers, now that skbs are disconnected */
 	ath_return_txbuf_list(sc, &bf_head);
 	/* Pass control of the skb to the caller (i.e., resources are their 
@@ -3572,12 +3570,21 @@ hardstart_fail:
 	if (requeue) {
 		/* Queue is full, let the kernel backlog the skb */
 		netif_stop_queue(dev);
-		/* Stop tracking again we are giving it back*/
-		ieee80211_skb_untrack(skb);
+		/* Take care to free clone, but not original when we are
+		 * requeuing.  Untrack the original skb, so that it is good to
+		 * go again. */
+		if (skb != __skb)
+			ieee80211_dev_kfree_skb(&skb);
+		skb = NULL;
+		ieee80211_skb_untrack(__skb);
 		return NETDEV_TX_BUSY;
 	}
-	/* Now free the SKBs */
-	ieee80211_dev_kfree_skb_list(&skb);
+	/* Avoid a duplicate free */
+	KASSERT( ((!original_skb) || (skb != original_skb)), 
+		("skb should never be the same as original_skb, without setting "
+		 "original_skb to NULL"));
+	ieee80211_dev_kfree_skb(&skb);
+	ieee80211_dev_kfree_skb(&original_skb);
 	return NETDEV_TX_OK;	
 }
 
@@ -3616,16 +3623,22 @@ ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 		goto bad;
 	}
 
-	error = ath_tx_start(dev, SKB_CB(skb)->ni, bf, skb, 0);
-	if (error) {
-		ath_return_txbuf(sc, &bf);
-		return error;
-	}
+	/*
+	 * NB: the referenced node pointer is in the
+	 * control block of the sk_buff.  This is
+	 * placed there by ieee80211_mgmt_output because
+	 * we need to hold the reference with the frame.
+	 */
+	error = ath_tx_start(dev, SKB_NI(skb), bf, skb, 0);
+	if (error)
+		goto bad;
 
 	sc->sc_stats.ast_tx_mgmt++;
 	return 0;
 bad:
-	ieee80211_dev_kfree_skb(&skb);
+	if (skb)
+		ieee80211_dev_kfree_skb(&skb);
+	ath_return_txbuf(sc, &bf);
 	return error;
 }
 
