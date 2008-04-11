@@ -229,22 +229,22 @@ NM := $(save_NM)
 include $(TOP)/BuildCaps.inc
 
 ifeq ($(strip $(ATH_DEBUG)),1)
-CFLAGS += -DAR_DEBUG -DIEEE80211_DEBUG 
+EXTRA_CFLAGS += -DAR_DEBUG -DIEEE80211_DEBUG 
 endif
 
 ifeq ($(strip $(ATH_DEBUG_SPINLOCKS)),1)
-CFLAGS += -DATH_DEBUG_SPINLOCKS
+EXTRA_CFLAGS += -DATH_DEBUG_SPINLOCKS
 endif
 
 ifeq ($(strip $(IEEE80211_DEBUG_REFCNT)),1)
-CFLAGS += -DIEEE80211_DEBUG_REFCNT
+EXTRA_CFLAGS += -DIEEE80211_DEBUG_REFCNT
 endif
 
 # Ensure correct endianess
 LDFLAGS += $(LDOPTS)
 
 # Be pedantic
-CFLAGS += -Werror -Wall
+EXTRA_CFLAGS += -Wall
 
 # Filter out compiler options that are not supported by all compilers
 # and that are not needed to ensure compatible architecture and calling
