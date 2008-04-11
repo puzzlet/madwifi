@@ -35,3 +35,7 @@ obj-$(CONFIG_ATHEROS_RATE_SAMPLE)	+= ath_rate/sample/
 obj-$(CONFIG_ATHEROS)			+= ath/ ath_hal/ net80211/
 
 endif
+
+ifeq ($(CONFIG_ATHEROS_DEBUG),y)
+CFLAGS += -DAR_DEBUG -DIEEE80211_DEBUG
+endif

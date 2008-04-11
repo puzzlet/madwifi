@@ -16,6 +16,13 @@ config ATHEROS
 	  To compile this driver as a module, choose M here: the module will be
 	  called ath_pci.  If unsure, say N.
 
+config ATHEROS_DEBUG
+	bool "Atheros: Debugging support for Atheros PCI/Cardbus cards"
+	depends on ATHEROS
+	default y
+	help
+	  Enable diagnostic checks and log output.
+
 choice
 	prompt "Atheros: Default Transmission Rate Control Algorithm"
 	depends on ATHEROS
