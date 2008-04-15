@@ -480,90 +480,89 @@ ath_hal_lookup_register_name(struct ath_hal *ah, char* buf, int buflen,
 
 		if (address >= 0x0800 && address <= 0x082c) {
 			snprintf(buf, buflen, "AR5K_QUEUE_TXDP_%d",
-				((address - 0x0800) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x0800) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x08c0 && address <= 0x08ec) {
 			snprintf(buf, buflen, "AR5K_QUEUE_CBRCFG_%d",
-				((address - 0x08c0) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x08c0) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x0900 && address <= 0x092c) {
 			snprintf(buf, buflen, "AR5K_QUEUE_RDYTIMECFG_%d",
-				((address - 0x0900) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x0900) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x09c0 && address <= 0x09ec) {
 			snprintf(buf, buflen, "AR5K_QUEUE_MISC_%d",
-				((address - 0x09c0) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x09c0) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x0a00 && address <= 0x0a2c) {
 			snprintf(buf, buflen, "AR5K_QUEUE_STATUS_%d",
-				((address - 0x0a00) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x0a00) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x1000 && address <= 0x102c) {
 			snprintf(buf, buflen, "AR5K_QUEUE_QCUMASK_%d",
-				((address - 0x1000) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x1000) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x1040 && address <= 0x106c) {
 			snprintf(buf, buflen, "AR5K_QUEUE_DFS_LOCAL_IFS_%d",
-				((address - 0x1040) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x1040) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x1080 && address <= 0x10ac) {
 			snprintf(buf, buflen, "AR5K_QUEUE_DFS_RETRY_LIMIT_%d",
-				((address - 0x1080) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x1080) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x10c0 && address <= 0x10ec) {
 			snprintf(buf, buflen, "AR5K_QUEUE_DFS_CHANNEL_TIME_%d",
-				((address - 0x10c0) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x10c0) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x1100 && address <= 0x112c) {
 			snprintf(buf, buflen, "AR5K_QUEUE_DFS_MISC_%d",
-				((address - 0x1100) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x1100) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x1140 && address <= 0x116c) {
 			snprintf(buf, buflen, "AR5K_QUEUE_DFS_SEQNUM_%d",
-				((address - 0x1140) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x1140) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x4000 && address <= 0x5000) {
 			snprintf(buf, buflen, "(PCI_TIMING)_%d",
-				((address - 0x4000) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x4000) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x8700 && address <= 0x877c) {
 			snprintf(buf, buflen, "AR5K_RATE_DUR_%d",
-				((address - 0x8700) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x8700) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x8800 && address <= 0x9800) {
 			snprintf(buf, buflen, "AR5K_KEYTABLE_0_5211_%d",
-				((address - 0x8800) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x8800) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x9a00 && address <= 0x9afc) {
 			snprintf(buf, buflen, "AR5K_RF_GAIN_%d",
-				((address - 0x9a00) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x9a00) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0x9b00 && address <= 0x9bfc) {
 			snprintf(buf, buflen, "AR5K_BB_GAIN_%d",
-				((address - 0x9b00) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0x9b00) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
 		if (address >= 0xa180 && address <= 0xa1fc) {
 			snprintf(buf, buflen, "AR5K_PHY_PCDAC_TXPOWER_%d",
-				((address - 0xa180) / sizeof(u_int32_t)));
+				(u_int32_t)((address - 0xa180) / sizeof(u_int32_t)));
 			return AH_TRUE;
 		}
-
 	}
 
 	/* Everything else... */
