@@ -147,7 +147,7 @@ ATH_RATE=	$(TOP)/ath_rate
 # 
 TOOLS=  $(TOP)/tools 
 
-WARNINGS = -Werror
+WARNINGS = -Werror -Wall
 COPTS+= $(WARNINGS)
 INCS=	-include $(TOP)/include/compat.h -I$(TOP)/include
 
@@ -242,9 +242,6 @@ endif
 
 # Ensure correct endianess
 LDFLAGS += $(LDOPTS)
-
-# Be pedantic
-EXTRA_CFLAGS += -Wall
 
 # Filter out compiler options that are not supported by all compilers
 # and that are not needed to ensure compatible architecture and calling
