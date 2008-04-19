@@ -213,7 +213,7 @@ static void ath_tx_draintxq(struct ath_softc *, struct ath_txq *);
 static int ath_chan_set(struct ath_softc *, struct ieee80211_channel *);
 static void ath_draintxq(struct ath_softc *);
 static void ath_tx_txqaddbuf(struct ath_softc *, struct ieee80211_node *,
-	struct ath_txq *, struct ath_buf *, struct ath_desc *, int);
+	struct ath_txq *, struct ath_buf *, int);
 static void ath_stoprecv(struct ath_softc *);
 static int ath_startrecv(struct ath_softc *);
 static void ath_flushrecv(struct ath_softc *);
@@ -2857,12 +2857,10 @@ ath_desc_swap(struct ath_desc *ds)
 
 /*
  * Insert a buffer on a txq
- *
  */
 static __inline void
 ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
-	struct ath_txq *txq, struct ath_buf *bf,
-	struct ath_desc *lastds, int framelen)
+	struct ath_txq *txq, struct ath_buf *bf, int framelen)
 {
 	struct ath_hal *ah = sc->sc_ah;
 
@@ -2892,7 +2890,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 				txq->axq_qnum, txq->axq_link,
 				ito64(bf->bf_daddr), bf->bf_desc);
 		}
-		txq->axq_link = &lastds->ds_link;
+		txq->axq_link = &bf->bf_desc->ds_link;
 		/* We do not start tx on this queue as it will be done as
 		"CAB" data at DTIM intervals. */
 		ath_hal_intrset(ah, sc->sc_imask);
@@ -2914,7 +2912,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 				txq->axq_qnum, txq->axq_link,
 				ito64(bf->bf_daddr), bf->bf_desc);
 		}
-		txq->axq_link = &lastds->ds_link;
+		txq->axq_link = &bf->bf_desc->ds_link;
 		ath_hal_txstart(ah, txq->axq_qnum);
 		sc->sc_dev->trans_start = jiffies;
 	}
@@ -3035,7 +3033,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 		ds->ds_ctl0, ds->ds_ctl1, 
 		ds->ds_hw[0], ds->ds_hw[1]);
 
-	ath_tx_txqaddbuf(sc, NULL, txq, bf, ds, pktlen);
+	ath_tx_txqaddbuf(sc, NULL, txq, bf, pktlen);
 	return 0;
 }
 
@@ -7412,7 +7410,7 @@ ath_uapsd_flush(struct ieee80211_node *ni)
 		STAILQ_REMOVE_HEAD(&an->an_uapsd_q, bf_list);
 		bf->bf_desc->ds_link = 0;
 		txq = sc->sc_ac2q[bf->bf_skb->priority & 0x3];
-		ath_tx_txqaddbuf(sc, ni, txq, bf, bf->bf_desc, bf->bf_skb->len);
+		ath_tx_txqaddbuf(sc, ni, txq, bf, bf->bf_skb->len);
 		an->an_uapsd_qdepth--;
 	}
 
@@ -7421,7 +7419,7 @@ ath_uapsd_flush(struct ieee80211_node *ni)
 		STAILQ_REMOVE_HEAD(&an->an_uapsd_overflowq, bf_list);
 		bf->bf_desc->ds_link = 0;
 		txq = sc->sc_ac2q[bf->bf_skb->priority & 0x3];
-		ath_tx_txqaddbuf(sc, ni, txq, bf, bf->bf_desc, bf->bf_skb->len);
+		ath_tx_txqaddbuf(sc, ni, txq, bf, bf->bf_skb->len);
 		an->an_uapsd_overflowqdepth--;
 	}
 	if (IEEE80211_NODE_UAPSD_USETIM(ni))
@@ -8200,7 +8198,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 		return 0;
 	}
 
-	ath_tx_txqaddbuf(sc, PASS_NODE(ni), txq, bf, ds, pktlen);
+	ath_tx_txqaddbuf(sc, PASS_NODE(ni), txq, bf, pktlen);
 	return 0;
 #undef MIN
 }
@@ -11877,7 +11875,6 @@ txcont_queue_packet(struct ieee80211com *ic, struct ath_txq* txq)
 		ath_tx_txqaddbuf(sc, NULL,	/* node */
 		    txq,			/* hardware queue */
 		    bf,				/* atheros buffer */
-		    bf->bf_desc,		/* last descriptor */
 		    bf->bf_skb->len		/* frame length */
 		    );
 		ath_hal_txstart(ah, txq->axq_qnum);
