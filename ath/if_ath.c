@@ -5834,6 +5834,7 @@ ath_node_getrssi(const struct ieee80211_node *ni)
 /*
  * Stops the txqs and moves data between XR and Normal queues.
  * Also adjusts the rate info in the descriptors.
+ * XXX: Check for TXQ races
  */
 
 static u_int8_t
@@ -7181,11 +7182,13 @@ static void ath_grppoll_stop(struct ieee80211vap *vap)
 		ATH_TXQ_LOCK_IRQ(txq);
 		bf = STAILQ_FIRST(&txq->axq_q);
 		if (bf == NULL) {
-			txq->axq_link = NULL;
 			ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
 			goto bf_fail;
 		}
 		ATH_TXQ_REMOVE_HEAD(txq, bf_list);
+		if (txq->axq_depth <= 0)
+			txq->axq_link = NULL;
+
 		ATH_TXQ_UNLOCK_IRQ(txq);
 
 		cleanup_ath_buf(sc, bf, BUS_DMA_TODEVICE);
@@ -8571,11 +8574,13 @@ ath_tx_draintxq(struct ath_softc *sc, struct ath_txq *txq)
 		ATH_TXQ_LOCK_IRQ(txq);
 		bf = STAILQ_FIRST(&txq->axq_q);
 		if (bf == NULL) {
-			txq->axq_link = NULL;
 			ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
 			return;
 		}
 		ATH_TXQ_REMOVE_HEAD(txq, bf_list);
+		if (txq->axq_depth <= 0)
+			txq->axq_link = NULL;
+
 		ATH_TXQ_UNLOCK_IRQ(txq);
 #ifdef AR_DEBUG
 		if (sc->sc_debug & ATH_DEBUG_RESET)
