@@ -8229,13 +8229,12 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 		uapsdq = 1;
 	}
 
-	for (;;) {
+	while (1) {
 		ATH_TXQ_LOCK_IRQ(txq);
 
 		txq->axq_intrcnt = 0; /* reset periodic desc intr count */
 		bf = STAILQ_FIRST(&txq->axq_q);
 		if (bf == NULL) {
-			txq->axq_link = NULL;
 			ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
 			goto bf_fail;
 		}
@@ -8259,6 +8258,9 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 		}
 
 		ATH_TXQ_REMOVE_HEAD(txq, bf_list);
+		if (txq->axq_depth <= 0)
+			txq->axq_link = NULL;
+
 		ATH_TXQ_UNLOCK_IRQ(txq);
 
 		ni = BF_NI(bf);
