@@ -7233,9 +7233,6 @@ static void ath_grppoll_stop(struct ieee80211vap *vap)
 			goto bf_fail;
 		}
 		ATH_TXQ_REMOVE_HEAD(txq, bf_list);
-		if (txq->axq_depth <= 0)
-			txq->axq_link = NULL;
-
 		ATH_TXQ_UNLOCK_IRQ(txq);
 
 		cleanup_ath_buf(sc, bf, BUS_DMA_TODEVICE);
@@ -8318,9 +8315,6 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 		}
 
 		ATH_TXQ_REMOVE_HEAD(txq, bf_list);
-		if (txq->axq_depth <= 0)
-			txq->axq_link = NULL;
-
 		ATH_TXQ_UNLOCK_IRQ(txq);
 
 		ni = BF_NI(bf);
@@ -8641,9 +8635,6 @@ ath_tx_draintxq(struct ath_softc *sc, struct ath_txq *txq)
 			return;
 		}
 		ATH_TXQ_REMOVE_HEAD(txq, bf_list);
-		if (txq->axq_depth <= 0)
-			txq->axq_link = NULL;
-
 		ATH_TXQ_UNLOCK_IRQ(txq);
 #ifdef AR_DEBUG
 		if (sc->sc_debug & ATH_DEBUG_RESET)
