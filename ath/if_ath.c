@@ -2879,7 +2879,7 @@ ath_txq_dump(struct ath_softc *sc, struct ath_txq *txq)
 /* Check TXDP (HW queue head) and SW queue head */
 static void
 ath_txq_check(struct ath_softc *sc, struct ath_txq *txq)
-
+{
 	struct ath_hal * ah = sc->sc_ah;
 	struct ath_buf *bf;
 	u_int32_t txdp;
