@@ -2858,49 +2858,48 @@ ath_desc_swap(struct ath_desc *ds)
 static void
 ath_txq_dump(struct ath_softc *sc, struct ath_txq *txq)
 {
-  int j;
-  struct ath_buf *bf;
+	int j;
+	struct ath_buf *bf;
 
-  DPRINTF(sc, ATH_DEBUG_WATCHDOG,
-	  "txq:%p : axq_qnum:%u axq_depth:%d axq_link:%p TXDP:%08x\n",
-	  txq, txq->axq_qnum, txq->axq_depth, txq->axq_link,
-	  ath_hal_gettxbuf(sc->sc_ah, txq->axq_qnum));
+	DPRINTF(sc, ATH_DEBUG_WATCHDOG, "txq:%p : axq_qnum:%u axq_depth:%d "
+			"axq_link:%p TXDP:%08x\n",
+			txq, txq->axq_qnum, txq->axq_depth, txq->axq_link,
+			ath_hal_gettxbuf(sc->sc_ah, txq->axq_qnum));
 
-  j = 0;
-  STAILQ_FOREACH(bf, &txq->axq_q, bf_list) {
-    DPRINTF(sc, ATH_DEBUG_WATCHDOG,
-	    "  [%3u] bf_daddr:%08x ds_link:%08x ds_hw3:%08x\n",
-	    j++,
-	    bf->bf_daddr, bf->bf_desc->ds_link,
-	    bf->bf_desc->ds_hw[3]);
-  }
+	j = 0;
+	STAILQ_FOREACH(bf, &txq->axq_q, bf_list) {
+		DPRINTF(sc, ATH_DEBUG_WATCHDOG, "  [%3u] bf_daddr:%08x "
+				"ds_link:%08x ds_hw3:%08x\n",
+				j++,
+				bf->bf_daddr, bf->bf_desc->ds_link,
+				bf->bf_desc->ds_hw[3]);
+	}
 }
 
 /* Check TXDP (HW queue head) and SW queue head */
-
 static void
 ath_txq_check(struct ath_softc *sc, struct ath_txq *txq)
-{
-  struct ath_hal * ah = sc->sc_ah;
-  struct ath_buf *bf;
-  u_int32_t txdp;
-  int sw_head_printed = 0;
-  int hw_head_printed = 0;
 
-  txdp = ath_hal_gettxbuf(ah, txq->axq_qnum);
+	struct ath_hal * ah = sc->sc_ah;
+	struct ath_buf *bf;
+	u_int32_t txdp;
+	int sw_head_printed = 0;
+	int hw_head_printed = 0;
 
-  STAILQ_FOREACH(bf, &txq->axq_q, bf_list) {
-    if (!sw_head_printed)
-      sw_head_printed = 1;
-    if (!hw_head_printed && txdp == bf->bf_daddr)
-      hw_head_printed = 1;
-  }
-  
-  if (sw_head_printed && !hw_head_printed) {
-    DPRINTF(sc, ATH_DEBUG_WATCHDOG,
-	    "Q:%u BUG TXDP:%08x not in queue (%d elements)\n",
-	    txq->axq_qnum, txdp, txq->axq_depth);
-  }
+	txdp = ath_hal_gettxbuf(ah, txq->axq_qnum);
+
+	STAILQ_FOREACH(bf, &txq->axq_q, bf_list) {
+		if (!sw_head_printed)
+			sw_head_printed = 1;
+		if (!hw_head_printed && txdp == bf->bf_daddr)
+			hw_head_printed = 1;
+	}
+
+	if (sw_head_printed && !hw_head_printed) {
+		DPRINTF(sc, ATH_DEBUG_WATCHDOG, "Q:%u BUG TXDP:%08x not "
+				"in queue (%d elements)\n",
+				txq->axq_qnum, txdp, txq->axq_depth);
+	}
 }
 
 /*
@@ -8312,9 +8311,8 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 		 * which the HW is pointing since it contains the
 		 * ds_link field, except if this is the last TX
 		 * descriptor in the queue */
-
-		if ((txq->axq_depth > 1) &&
-		    (bf->bf_daddr == ath_hal_gettxbuf(ah, txq->axq_qnum))) {
+		if ((txq->axq_depth > 1) && (bf->bf_daddr == 
+					ath_hal_gettxbuf(ah, txq->axq_qnum))) {
 			ATH_TXQ_UNLOCK_IRQ_EARLY(txq);
 			goto bf_fail;
 		}
@@ -8613,9 +8611,9 @@ ath_tx_timeout(struct net_device *dev)
 		(dev->flags & IFF_RUNNING) ? "" : "NOT ",
 		sc->sc_invalid ? "in" : "");
 
-	for (i=0; i<HAL_NUM_TX_QUEUES; i++) {
-	  ath_txq_check(sc, &sc->sc_txq[i]);
-	  ath_txq_dump(sc, &sc->sc_txq[i]);
+	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
+		ath_txq_check(sc, &sc->sc_txq[i]);
+		ath_txq_dump(sc, &sc->sc_txq[i]);
 	}
 
 	if ((dev->flags & IFF_RUNNING) && !sc->sc_invalid) {
