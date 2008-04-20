@@ -582,7 +582,8 @@ struct ath_vap {
 } while (0)
 #define ATH_TXQ_REMOVE_HEAD(_tq, _field) do { \
 	STAILQ_REMOVE_HEAD(&(_tq)->axq_q, _field); \
-	(_tq)->axq_depth--; \
+	if (--(_tq)->axq_depth <= 0) \
+		(_tq)->axq_link = NULL; \
 } while (0)
 /* move buffers from MCASTQ to CABQ */
 #define ATH_TXQ_MOVE_MCASTQ(_tqs,_tqd) do { \
