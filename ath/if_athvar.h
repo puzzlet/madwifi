@@ -167,9 +167,10 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 /*
  * Macro to expand scalars to 64-bit objects
  */
-#define	ito64(x) (sizeof(x)==8) ? (((unsigned long long int)(x)) & (0xff)) : \
-		 (sizeof(x)==16) ? (((unsigned long long int)(x)) & 0xffff) : \
-		 ((sizeof(x)==32) ? (((unsigned long long int)(x)) & 0xffffffff): (unsigned long long int)(x))
+#define	ito64(x) ((sizeof(x) == 1) ? (((unsigned long long int)(x)) & 0xff) : \
+		  (sizeof(x) == 2) ? (((unsigned long long int)(x)) & 0xffff) : \
+		  (sizeof(x) == 4) ? (((unsigned long long int)(x)) & 0xffffffff) : \
+				       (unsigned long long int)(x))
 
 
 /*
