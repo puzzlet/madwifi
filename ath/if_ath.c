@@ -2868,10 +2868,10 @@ ath_txq_dump(struct ath_softc *sc, struct ath_txq *txq)
 
 	j = 0;
 	STAILQ_FOREACH(bf, &txq->axq_q, bf_list) {
-		DPRINTF(sc, ATH_DEBUG_WATCHDOG, "  [%3u] bf_daddr:%08x "
+		DPRINTF(sc, ATH_DEBUG_WATCHDOG, "  [%3u] bf_daddr:%08llx "
 				"ds_link:%08x ds_hw3:%08x\n",
 				j++,
-				bf->bf_daddr, bf->bf_desc->ds_link,
+				(u_int64_t)bf->bf_daddr, bf->bf_desc->ds_link,
 				bf->bf_desc->ds_hw[3]);
 	}
 }
@@ -2933,9 +2933,9 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 #else
 			*txq->axq_link = bf->bf_daddr;
 #endif
-			DPRINTF(sc, ATH_DEBUG_XMIT, "link[%u](%p)=%llx (%p)\n",
+			DPRINTF(sc, ATH_DEBUG_XMIT, "link[%u](%p)=%08llx (%p)\n",
 				txq->axq_qnum, txq->axq_link,
-				ito64(bf->bf_daddr), bf->bf_desc);
+				(u_int64_t)bf->bf_daddr, bf->bf_desc);
 		}
 		txq->axq_link = &bf->bf_desc->ds_link;
 		/* We do not start tx on this queue as it will be done as
@@ -2947,17 +2947,17 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 				txq->axq_qnum, txq->axq_depth);
 		if (txq->axq_link == NULL) {
 			ath_hal_puttxbuf(ah, txq->axq_qnum, bf->bf_daddr);
-			DPRINTF(sc, ATH_DEBUG_XMIT, "TXDP[%u] = %llx (%p)\n",
-				txq->axq_qnum, ito64(bf->bf_daddr), bf->bf_desc);
+			DPRINTF(sc, ATH_DEBUG_XMIT, "TXDP[%u] = %08llx (%p)\n",
+				txq->axq_qnum, (u_int64_t)bf->bf_daddr, bf->bf_desc);
 		} else {
 #ifdef AH_NEED_DESC_SWAP
 			*txq->axq_link = cpu_to_le32(bf->bf_daddr);
 #else
 			*txq->axq_link = bf->bf_daddr;
 #endif
-			DPRINTF(sc, ATH_DEBUG_XMIT, "link[%u] (%p)=%llx (%p)\n",
+			DPRINTF(sc, ATH_DEBUG_XMIT, "link[%u] (%p)=%08llx (%p)\n",
 				txq->axq_qnum, txq->axq_link,
-				ito64(bf->bf_daddr), bf->bf_desc);
+				(u_int64_t)bf->bf_daddr, bf->bf_desc);
 		}
 		txq->axq_link = &bf->bf_desc->ds_link;
 		ath_hal_txstart(ah, txq->axq_qnum);
@@ -3008,8 +3008,8 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 					skb->data, pktlen, BUS_DMA_TODEVICE);
-	DPRINTF(sc, ATH_DEBUG_XMIT, "skb=%p [data %p len %u] skbaddr %llx\n",
-		skb, skb->data, skb->len, ito64(bf->bf_skbaddr));
+	DPRINTF(sc, ATH_DEBUG_XMIT, "skb=%p [data %p len %u] skbaddr %08llx\n",
+		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
 
 	bf->bf_skb = skb;
 #ifdef ATH_SUPERG_FF
@@ -5653,9 +5653,9 @@ ath_descdma_setup(struct ath_softc *sc,
 		goto fail;
 	}
 	ds = dd->dd_desc;
-	DPRINTF(sc, ATH_DEBUG_RESET, "%s DMA map: %p (%lu) -> %llx (%lu)\n",
+	DPRINTF(sc, ATH_DEBUG_RESET, "%s DMA map: %p (%lu) -> %08llx (%lu)\n",
 		dd->dd_name, ds, (u_long) dd->dd_desc_len,
-		ito64(dd->dd_desc_paddr), /*XXX*/ (u_long) dd->dd_desc_len);
+		(u_int64_t)dd->dd_desc_paddr, /*XXX*/ (u_long) dd->dd_desc_len);
 
 	/* allocate buffers */
 	bsize = sizeof(struct ath_buf) * nbuf;
@@ -6131,9 +6131,9 @@ ath_node_move_data(const struct ieee80211_node *ni)
 					*wmeq->axq_link = bf_tmp->bf_daddr;
 #endif
 					DPRINTF(sc, ATH_DEBUG_XMIT, 
-							"link[%u](%p)=%p (%p)\n",
+							"link[%u](%p)=%08llx (%p)\n",
 							wmeq->axq_qnum, wmeq->axq_link,
-							(caddr_t)bf_tmp->bf_daddr, 
+							(u_int64_t)bf_tmp->bf_daddr, 
 							bf_tmp->bf_desc);
 				}
 				wmeq->axq_link = &ds->ds_link;
@@ -7741,13 +7741,13 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 #ifndef ATH_SUPERG_FF
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 		skb->data, pktlen, BUS_DMA_TODEVICE);
-	DPRINTF(sc, ATH_DEBUG_XMIT, "skb %p [data %p len %u] skbaddr %llx\n",
-		skb, skb->data, skb->len, ito64(bf->bf_skbaddr));
+	DPRINTF(sc, ATH_DEBUG_XMIT, "skb %p [data %p len %u] skbaddr %08llx\n",
+		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
 #else /* ATH_SUPERG_FF case */
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 		skb->data, skb->len, BUS_DMA_TODEVICE);
-	DPRINTF(sc, ATH_DEBUG_XMIT, "skb %p [data %p len %u] skbaddr %llx\n",
-		skb, skb->data, skb->len, ito64(bf->bf_skbaddr));
+	DPRINTF(sc, ATH_DEBUG_XMIT, "skb %p [data %p len %u] skbaddr %08llx\n",
+		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
 	/* NB: ensure skb->len had been updated for each skb so we don't need pktlen */
 	{
 		struct sk_buff *skbtmp = skb;
@@ -7757,9 +7757,9 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 			bf->bf_skbaddrff[i] = bus_map_single(sc->sc_bdev,
 				skbtmp->data, skbtmp->len, BUS_DMA_TODEVICE);
 			DPRINTF(sc, ATH_DEBUG_XMIT, "skb%d (FF) %p "
-				"[data %p len %u] skbaddr %llx\n", 
+				"[data %p len %u] skbaddr %08llx\n", 
 				i, skbtmp, skbtmp->data, skbtmp->len,
-				ito64(bf->bf_skbaddrff[i]));
+				(u_int64_t)bf->bf_skbaddrff[i]);
 			i++;
 		}
 		bf->bf_numdescff = i;
@@ -10408,8 +10408,8 @@ ath_printrxbuf(const struct ath_buf *bf, int done)
 	const struct ath_rx_status *rs = &bf->bf_dsstatus.ds_rxstat;
 	const struct ath_desc *ds = bf->bf_desc;
 	u_int8_t status = done ? rs->rs_status : 0;
-	printk("R (%p %llx) %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s%s%s%s\n",
-	    ds, ito64(bf->bf_daddr),
+	printk("R (%p %08llx) %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s%s%s%s\n",
+	    ds, (u_int64_t)bf->bf_daddr,
 	    ds->ds_link, ds->ds_data,
 	    ds->ds_ctl0, ds->ds_ctl1,
 	    ds->ds_hw[0], ds->ds_hw[1],
@@ -10433,8 +10433,8 @@ ath_printtxbuf(const struct ath_buf *bf, int done)
 	u_int8_t status = done ? ts->ts_status : 0;
 
 	DPRINTF(sc, ATH_DEBUG_ANY, 
-	    "T (%p %llx) %08x %08x %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s%s%s%s\n",
-	    ds, ito64(bf->bf_daddr),
+	    "T (%p %08llx) %08x %08x %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s%s%s%s\n",
+	    ds, (u_int64_t)bf->bf_daddr,
 	    ds->ds_link, ds->ds_data,
 	    ds->ds_ctl0, ds->ds_ctl1,
 	    ds->ds_hw[0], ds->ds_hw[1], ds->ds_hw[2], ds->ds_hw[3],
