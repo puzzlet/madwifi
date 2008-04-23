@@ -106,9 +106,6 @@ struct sample_node {
 #define MAX(a,b)        ((a) > (b) ? (a) : (b))
 #endif
 
-#define WIFI_CW_MIN 31
-#define WIFI_CW_MAX 1023
-
 /*
  * Definitions for pulling the rate and trie counts from
  * a 5212 h/w descriptor. These Don't belong here; the

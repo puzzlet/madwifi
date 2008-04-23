@@ -198,7 +198,7 @@ calc_usecs_unicast_packet(struct ath_softc *sc, int length,
 		unsigned int x = 0, tt = 0;
 		unsigned int cix = rt->info[rix].controlRate;
 		int rts = 0, cts = 0;
-		int cw = WIFI_CW_MIN;
+		int cw = ATH_DEFAULT_CWMIN;
 
 		KASSERT(rt != NULL, ("no rate table, mode %u", sc->sc_curmode));
 
@@ -283,7 +283,7 @@ calc_usecs_unicast_packet(struct ath_softc *sc, int length,
 		tt += (long_retries + 1) * ath_hal_computetxtime(sc->sc_ah, rt, length,
 							rix, AH_TRUE);
 		for (x = 0; x <= short_retries + long_retries; x++) {
-			cw = MIN(WIFI_CW_MAX, (cw + 1) * 2);
+			cw = MIN(ATH_DEFAULT_CWMAX, (cw + 1) * 2);
 			tt += (t_slot * cw / 2);
 		}
 		return tt;

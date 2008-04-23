@@ -253,6 +253,10 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 #define AES_ICV_FIELD_SIZE      8       /* AES ICV field size */
 #define EXT_IV_FIELD_SIZE       4       /* ext IV field size */
 
+/* This is what the HAL uses by default for 11a+g */
+#define ATH_DEFAULT_CWMIN	15
+#define ATH_DEFAULT_CWMAX	1023
+
 /* XR specific macros */
 
 #define XR_DEFAULT_GRPPOLL_RATE_STR 	"0.25 1 1 3 3 6 6 20"

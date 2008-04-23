@@ -180,14 +180,6 @@ struct minstrel_node {
 #define MAX(a,b)        ((a) > (b) ? (a) : (b))
 #endif
 
-#if 0
-#define WIFI_CW_MIN 31
-#define WIFI_CW_MAX 1023
-#else
-#define WIFI_CW_MIN 3
-#define WIFI_CW_MAX 10
-#endif
-
 /*
  * Definitions for pulling the rate and trie counts from
  * a 5212 h/w descriptor. These Don't belong here; the
