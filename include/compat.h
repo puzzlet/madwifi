@@ -43,6 +43,7 @@
 #include <linux/types.h>
 #include <linux/time.h>
 #include <linux/netdevice.h>
+#include <linux/kernel.h>
 #endif
 
 #if !defined(__KERNEL__) || !defined (__bitwise)
@@ -80,7 +81,6 @@
 #define	NBBY	8			/* number of bits/byte */
 
 /* roundup() appears in Linux 2.6.18 */
-#include <linux/kernel.h>
 #ifndef roundup
 #define	roundup(x, y)	((((x)+((y)-1))/(y))*(y))  /* to any y */
 #endif
