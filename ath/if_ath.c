@@ -57,7 +57,6 @@
 #include <linux/random.h>
 #include <linux/delay.h>
 #include <linux/cache.h>
-#include <linux/bitmap.h>
 #include <linux/bitops.h>
 #include <linux/types.h>
 #include <linux/sysctl.h>
