@@ -46,6 +46,8 @@
 #include <linux/kernel.h>
 #endif
 
+#include <linux/version.h>
+
 #if !defined(__KERNEL__) || !defined (__bitwise)
 #define __le16 u_int16_t
 #define __le32 u_int32_t
@@ -140,7 +142,6 @@ static inline void *kzalloc(size_t size, gfp_t flags)
  */
 #ifdef __KERNEL__
 
-#include <linux/version.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,21)
 #define ATH_REGISTER_SYSCTL_TABLE(t) register_sysctl_table(t, 1)
 #else
