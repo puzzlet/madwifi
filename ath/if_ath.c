@@ -532,8 +532,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
 	/* Allocate space for dynamically determined maximum VAP count */
 	sc->sc_bslot = 
-		kmalloc(ath_maxvaps * sizeof(struct ieee80211vap), GFP_KERNEL);
-	memset(sc->sc_bslot, 0, ath_maxvaps * sizeof(struct ieee80211vap));
+		kzalloc(ath_maxvaps * sizeof(struct ieee80211vap), GFP_KERNEL);
 
 	/*
 	 * Cache line size is used to size and align various
@@ -5658,12 +5657,11 @@ ath_descdma_setup(struct ath_softc *sc,
 
 	/* allocate buffers */
 	bsize = sizeof(struct ath_buf) * nbuf;
-	bf = kmalloc(bsize, GFP_KERNEL);
+	bf = kzalloc(bsize, GFP_KERNEL);
 	if (bf == NULL) {
 		error = -ENOMEM;
 		goto fail2;
 	}
-	memset(bf, 0, bsize);
 	dd->dd_bufptr = bf;
 
 	STAILQ_INIT(head);
@@ -5752,9 +5750,8 @@ ath_node_alloc(struct ieee80211vap *vap)
 {
 	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;
 	const size_t space = sizeof(struct ath_node) + sc->sc_rc->arc_space;
-	struct ath_node *an = kmalloc(space, GFP_ATOMIC);
+	struct ath_node *an = kzalloc(space, GFP_ATOMIC);
 	if (an != NULL) {
-		memset(an, 0, space);
 		an->an_decomp_index = INVALID_DECOMP_INDEX;
 		an->an_avgrssi = ATH_RSSI_DUMMY_MARKER;
 		/*
@@ -11271,7 +11268,7 @@ ath_dynamic_sysctl_register(struct ath_softc *sc)
 	char *dev_name = NULL;
 
 	space = 5 * sizeof(struct ctl_table) + sizeof(ath_sysctl_template);
-	sc->sc_sysctls = kmalloc(space, GFP_KERNEL);
+	sc->sc_sysctls = kzalloc(space, GFP_KERNEL);
 	if (sc->sc_sysctls == NULL) {
 		EPRINTF(sc, "Insufficient memory for sysctl table!\n");
 		return;
@@ -11292,7 +11289,6 @@ ath_dynamic_sysctl_register(struct ath_softc *sc)
 	strncpy(dev_name, DEV_NAME(sc->sc_dev), strlen(DEV_NAME(sc->sc_dev)) + 1);
 
 	/* setup the table */
-	memset(sc->sc_sysctls, 0, space);
 	sc->sc_sysctls[0].ctl_name = CTL_DEV;
 	sc->sc_sysctls[0].procname = "dev";
 	sc->sc_sysctls[0].mode = 0555;

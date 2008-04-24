@@ -456,11 +456,11 @@ proc_ieee80211_open(struct inode *inode, struct file *file)
 	struct proc_dir_entry *dp = PDE(inode);
 	struct ieee80211vap *vap = dp->data;
 
-	if (!(file->private_data = kmalloc(sizeof(struct proc_ieee80211_priv), GFP_KERNEL)))
+	if (!(file->private_data = kzalloc(sizeof(struct proc_ieee80211_priv), 
+			GFP_KERNEL)))
 		return -ENOMEM;
 	/* initially allocate both read and write buffers */
-	pv = (struct proc_ieee80211_priv *) file->private_data;
-	memset(pv, 0, sizeof(struct proc_ieee80211_priv));
+	pv = (struct proc_ieee80211_priv *)file->private_data;
 	pv->rbuf = vmalloc(MAX_PROC_IEEE80211_SIZE);
 	if (!pv->rbuf) {
 		kfree(pv);
@@ -744,7 +744,7 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17) */
 
 	space = 5 * sizeof(struct ctl_table) + sizeof(ieee80211_sysctl_template);
-	vap->iv_sysctls = kmalloc(space, GFP_KERNEL);
+	vap->iv_sysctls = kzalloc(space, GFP_KERNEL);
 	if (vap->iv_sysctls == NULL) {
 		printk("%s: no memory for sysctl table!\n", __func__);
 		return;
@@ -762,7 +762,6 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 	strncpy(devname, vap->iv_dev->name, strlen(vap->iv_dev->name) + 1);
 
 	/* setup the table */
-	memset(vap->iv_sysctls, 0, space);
 	vap->iv_sysctls[0].ctl_name = CTL_NET;
 	vap->iv_sysctls[0].procname = "net";
 	vap->iv_sysctls[0].mode = 0555;

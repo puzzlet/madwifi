@@ -1024,13 +1024,12 @@ ath_proc_ratesample_open(struct inode *inode, struct file *file)
 	struct proc_dir_entry *dp = PDE(inode);
 	struct ieee80211vap *vap = dp->data;
 
-	if (!(file->private_data = kmalloc(sizeof(struct proc_ieee80211_priv),
-					   GFP_KERNEL)))
+	if (!(file->private_data = kzalloc(sizeof(struct proc_ieee80211_priv),
+			   GFP_KERNEL)))
 		return -ENOMEM;
 
 	/* Initially allocate both read and write buffers */
-	pv = (struct proc_ieee80211_priv *) file->private_data;
-	memset(pv, 0, sizeof(struct proc_ieee80211_priv));
+	pv = (struct proc_ieee80211_priv *)file->private_data;
 	pv->rbuf = vmalloc(MAX_PROC_IEEE80211_SIZE);
 	if (!pv->rbuf) {
 		kfree(pv);

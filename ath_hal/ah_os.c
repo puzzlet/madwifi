@@ -995,12 +995,7 @@ EXPORT_SYMBOL(ath_hal_getuptime);
 void * __ahdecl
 ath_hal_malloc(size_t size)
 {
-	void *p;
-	p = kmalloc(size, GFP_KERNEL);
-	if (p)
-		OS_MEMZERO(p, size);
-	return p;
-
+	return kzalloc(size, GFP_KERNEL);
 }
 
 void __ahdecl

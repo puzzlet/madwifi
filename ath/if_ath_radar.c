@@ -1535,11 +1535,9 @@ void ath_rp_init(struct ath_softc *sc)
 
 	ath_rp_clear(sc);
 
-	sc->sc_rp = (struct ath_rp *)kmalloc(
+	sc->sc_rp = (struct ath_rp *)kzalloc(
 			sizeof(struct ath_rp) *
 			ATH_RADAR_PULSE_NR, GFP_KERNEL);
-	memset(sc->sc_rp, 0, sizeof(struct ath_rp) *
-			ATH_RADAR_PULSE_NR);
 
 	if (sc->sc_rp == NULL)
 		return;

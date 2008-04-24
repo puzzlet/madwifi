@@ -136,14 +136,11 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 	/* ensure 32-byte alignment of the private area */
 	alloc_size = sizeof (*dev) + sizeof_priv + 31;
 
-	dev = (struct net_device *) kmalloc (alloc_size, GFP_KERNEL);
-	if (dev == NULL)
-	{
+	dev = (struct net_device *)kzalloc(alloc_size, GFP_KERNEL);
+	if (dev == NULL) {
 		printk(KERN_ERR "alloc_dev: Unable to allocate device memory.\n");
 		return NULL;
 	}
-
-	memset(dev, 0, alloc_size);
 
 	if (sizeof_priv)
 		dev->priv = (void *) (((long)(dev + 1) + 31) & ~31);
