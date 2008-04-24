@@ -56,6 +56,16 @@
 #define __force
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,3)
+static inline void *kzalloc(size_t size, gfp_t flags)
+{
+	void *p = kmalloc(size, flags);
+	if (likely(p))
+		memset(p, 0, size);
+	return p;
+}
+#endif
+
 #ifndef container_of
 #define container_of(ptr, type, member) ({				\
 	    const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
