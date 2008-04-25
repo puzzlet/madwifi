@@ -791,8 +791,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	sc->sc_grpplq.axq_qnum = -1;
 	sc->sc_xrtxq = ath_txq_setup(sc, HAL_TX_QUEUE_DATA, HAL_XR_DATA);
 #endif
-	sc->sc_lastcal = INITIAL_JIFFIES; /* see jiffies.h */
 	sc->sc_calinterval_sec = ATH_SHORT_CALINTERVAL_SECS;
+	sc->sc_lastcal = jiffies;
 
 	/*
 	 * Special case certain configurations.  Note the
@@ -5313,9 +5313,9 @@ ath_beacon_send(struct ath_softc *sc, int *needmark, uint64_t hw_tsf)
 			printk("%s: %s: now=%lu lastcal=%lu expires=%lu remaining=%u ms\n", 
 			       SC_DEV_NAME(sc),
 			       __FUNCTION__,
-			       jiffies - INITIAL_JIFFIES,
-			       (sc->sc_lastcal) - INITIAL_JIFFIES, 
-			       (sc->sc_lastcal + (sc->sc_calinterval_sec * HZ)) - INITIAL_JIFFIES,
+			       jiffies
+			       (sc->sc_lastcal)
+			       (sc->sc_lastcal + (sc->sc_calinterval_sec * HZ))
 			       jiffies_to_msecs(sc->sc_lastcal + (sc->sc_calinterval_sec * HZ) - jiffies));
 		}
 #endif
