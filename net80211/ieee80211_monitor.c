@@ -297,6 +297,11 @@ EXPORT_SYMBOL(ieee80211_monitor_encap);
 /*
  * Context: softIRQ (tasklet)
  */
+#define MON_PKT_HDRSPACE ((unsigned int)			\
+	A_MAX(sizeof(struct ath_tx_radiotap_header),		\
+	      A_MAX(sizeof(struct wlan_ng_prism2_header),	\
+			    ATHDESC_HEADER_SIZE)))
+
 void
 ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	const struct ath_buf *bf, int tx, u_int64_t mactime, struct ath_softc *sc)
@@ -306,17 +311,6 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	int noise = 0, antenna = 0, ieeerate = 0;
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
-	unsigned int mon_hdrspace = A_MAX(sizeof(struct ath_tx_radiotap_header),
-				    (A_MAX(sizeof(struct wlan_ng_prism2_header),
-					   ATHDESC_HEADER_SIZE)));
-
-	if ((skb_headroom(skb) < mon_hdrspace) &&
-			pskb_expand_head(skb, mon_hdrspace, 0, GFP_ATOMIC)) {
-		printk("No headroom for monitor header - %s:%d %s\n", 
-				__FILE__, __LINE__, __func__);
-		return;
-	}
-
 	if (tx) {
 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
 		antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
@@ -382,7 +376,12 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			/* don't rx fromds, tods, or dstods packets */
 			continue;
 		}
-		skb1 = skb_copy(skb, GFP_ATOMIC);
+		
+		if (skb_headroom(skb) < MON_PKT_HDRSPACE)
+			skb1 = skb_copy_expand(skb, MON_PKT_HDRSPACE,
+					0, GFP_ATOMIC);
+		else
+			skb1 = skb_copy(skb, GFP_ATOMIC);
 		if (skb1 == NULL) {
 			/* XXX stat+msg */
 			continue;
