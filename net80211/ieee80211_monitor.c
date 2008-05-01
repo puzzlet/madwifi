@@ -297,11 +297,6 @@ EXPORT_SYMBOL(ieee80211_monitor_encap);
 /*
  * Context: softIRQ (tasklet)
  */
-#define MON_PKT_HDRSPACE ((unsigned int)			\
-	A_MAX(sizeof(struct ath_tx_radiotap_header),		\
-	      A_MAX(sizeof(struct wlan_ng_prism2_header),	\
-			    ATHDESC_HEADER_SIZE)))
-
 void
 ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	const struct ath_buf *bf, int tx, u_int64_t mactime, struct ath_softc *sc)
@@ -377,8 +372,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			continue;
 		}
 		
-		if (skb_headroom(skb) < MON_PKT_HDRSPACE)
-			skb1 = skb_copy_expand(skb, MON_PKT_HDRSPACE,
+		if (skb_headroom(skb) < IEEE80211_MON_MAXHDROOM)
+			skb1 = skb_copy_expand(skb, IEEE80211_MON_MAXHDROOM,
 					0, GFP_ATOMIC);
 		else
 			skb1 = skb_copy(skb, GFP_ATOMIC);

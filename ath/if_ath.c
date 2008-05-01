@@ -6339,15 +6339,11 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 {
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_desc *ds = NULL;
-	/* NB: Always use the same size for buffer allocations so that dynamically
-         * adding a monitor mode VAP to a running driver doesn't cause havoc. */
-	unsigned int extra = A_MAX(sizeof(struct ath_rx_radiotap_header),
-				   A_MAX(sizeof(struct wlan_ng_prism2_header),
-					 ATHDESC_HEADER_SIZE));
-	/* NB: I'm being cautious by unmapping and releasing the SKB every time.
-	 * XXX: I could probably keep rolling, but the DMA map/unmap logic doesn't
-	 * seem clean enough and cycling the skb through the free function and
-	 * slab allocator seems to scrub any un-reset values. */
+	/* NB: I'm being cautious by unmapping and releasing the SKB every
+	 * time.
+	 * XXX: I could probably keep rolling, but the DMA map/unmap logic
+	 * doesn't seem clean enough and cycling the skb through the free
+	 * function and slab allocator seems to scrub any un-reset values. */
 	if (bf->bf_skb != NULL) {
 		KASSERT(bf->bf_skbaddr, ("bf->bf_skbaddr is 0"));
 		bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr,
@@ -6355,7 +6351,11 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 		ieee80211_dev_kfree_skb(&bf->bf_skb);
 	}
 	if (!bf->bf_skb) {
-		int size = sc->sc_rxbufsize + extra + sc->sc_cachelsz - 1;
+		/* NB: Always use the same size for buffer allocations so that
+		 * dynamically adding a monitor mode VAP to a running driver
+		 * doesn't cause havoc. */
+		int size = sc->sc_rxbufsize + IEEE80211_MON_MAXHDROOM +
+			sc->sc_cachelsz - 1;
 		int offset = 0;
 		bf->bf_skb = ath_alloc_skb(size, 
 					   sc->sc_cachelsz);
@@ -6367,7 +6367,7 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 		/*
 		 * Reserve space for the header.
 		 */
-		skb_reserve(bf->bf_skb, extra);
+		skb_reserve(bf->bf_skb, IEEE80211_MON_MAXHDROOM);
 		/*
 		 * Cache-line-align.  This is important (for the
 		 * 5210 at least) as not doing so causes bogus data

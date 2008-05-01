@@ -29,6 +29,10 @@
 #ifndef _NET80211_IEEE80211_MONITOR_H_
 #define _NET80211_IEEE80211_MONITOR_H_
 
+#include <net80211/ieee80211_radiotap.h>
+#include <ah_desc.h>
+#include <ath/if_athvar.h>
+
 #ifndef ARPHRD_IEEE80211_RADIOTAP
 #define ARPHRD_IEEE80211_RADIOTAP	803 /* IEEE 802.11 + radiotap header */
 #endif /* ARPHRD_IEEE80211_RADIOTAP */
@@ -39,9 +43,10 @@
 
 #define ATHDESC_HEADER_SIZE	32
 
-#include <net80211/ieee80211_radiotap.h>
-#include <ah_desc.h>
-#include <ath/if_athvar.h>
+#define IEEE80211_MON_MAXHDROOM ((unsigned int)			\
+	A_MAX(sizeof(struct ath_tx_radiotap_header),		\
+	      A_MAX(sizeof(struct wlan_ng_prism2_header),	\
+			    ATHDESC_HEADER_SIZE)))
 
 struct ieee80211_phy_params {
 	u_int8_t rate0;
