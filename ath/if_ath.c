@@ -180,6 +180,7 @@ static void ath_node_free(struct ieee80211_node *);
 #endif
 
 static u_int8_t ath_node_getrssi(const struct ieee80211_node *);
+static struct sk_buff *ath_rxbuf_take_skb(struct ath_softc *, struct ath_buf *);
 static int ath_rxbuf_init(struct ath_softc *, struct ath_buf *);
 static void ath_recv_mgmt(struct ieee80211vap *, struct ieee80211_node *,
 	struct sk_buff *, int, int, u_int64_t);
@@ -6334,22 +6335,34 @@ ath_alloc_skb(u_int size, u_int align)
 	return skb;
 }
 
+static struct sk_buff *
+ath_rxbuf_take_skb(struct ath_softc *sc, struct ath_buf *bf) {
+	struct sk_buff *skb = bf->bf_skb;
+	bf->bf_skb = NULL;
+	KASSERT(bf->bf_skbaddr, ("bf->bf_skbaddr is 0"));
+	bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr,
+			sc->sc_rxbufsize, BUS_DMA_FROMDEVICE);
+	bf->bf_skbaddr = 0;
+	return skb;	
+}
+
 static int
 ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 {
 	struct ath_hal *ah = sc->sc_ah;
 	struct ath_desc *ds = NULL;
+	struct sk_buff *skb;
+
 	/* NB: I'm being cautious by unmapping and releasing the SKB every
 	 * time.
 	 * XXX: I could probably keep rolling, but the DMA map/unmap logic
 	 * doesn't seem clean enough and cycling the skb through the free
 	 * function and slab allocator seems to scrub any un-reset values. */
 	if (bf->bf_skb != NULL) {
-		KASSERT(bf->bf_skbaddr, ("bf->bf_skbaddr is 0"));
-		bus_unmap_single(sc->sc_bdev, bf->bf_skbaddr,
-			sc->sc_rxbufsize, BUS_DMA_FROMDEVICE);
-		ieee80211_dev_kfree_skb(&bf->bf_skb);
+		skb = ath_rxbuf_take_skb(sc, bf);
+		ieee80211_dev_kfree_skb(&skb);
 	}
+
 	if (!bf->bf_skb) {
 		/* NB: Always use the same size for buffer allocations so that
 		 * dynamically adding a monitor mode VAP to a running driver
@@ -6364,15 +6377,13 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 				__func__, size);
 			return -ENOMEM;
 		}
-		/*
-		 * Reserve space for the header.
-		 */
+
+		/* Reserve space for the header. */
 		skb_reserve(bf->bf_skb, IEEE80211_MON_MAXHDROOM);
-		/*
-		 * Cache-line-align.  This is important (for the
+
+		/* Cache-line-align.  This is important (for the
 		 * 5210 at least) as not doing so causes bogus data
-		 * in rx'd frames.
-		 */
+		 * in RX'd frames. */
 		offset = ((unsigned long)bf->bf_skb->data) % sc->sc_cachelsz;
 		if (offset != 0)
 			skb_reserve(bf->bf_skb, sc->sc_cachelsz - offset);
@@ -6612,8 +6623,8 @@ ath_rx_tasklet(TQUEUE_ARG data)
 	struct ath_desc *ds;
 	struct ath_rx_status *rs;
 	struct ieee80211_node *ni;
+	struct sk_buff* skb;
 	unsigned int len, phyerr, mic_fail = 0;
-	int is_mcast = 0;
 	int type = -1; /* undefined */
 	int init_ret = 0;
 	int bf_processed = 0;
@@ -6622,27 +6633,27 @@ ath_rx_tasklet(TQUEUE_ARG data)
 
 	DPRINTF(sc, ATH_DEBUG_RX_PROC, "%s started...\n", __func__);
 	do {
-		/* 
-		 * Get next rx buffer pending processing by rx tasklet...
+		/* Get next RX buffer pending processing by RX tasklet...
 		 *  
-		 * Descriptors are now processed at in the first-level interrupt 
-		 * handler to support U-APSD trigger search. This must also be done 
-		 * even when U-APSD is not active to support other error handling 
-		 * that requires immediate attention. We check bf_status to find 
-		 * out if the bf's descriptors have been processed by the interrupt
-		 * handler and are ready for this tasklet to consume them.  We 
-		 * also never process/remove the self-linked entry at the end
-		 */
+		 * Descriptors are now processed at in the first-level interrupt
+		 * handler to support U-APSD trigger search. This must also be
+		 * done even when U-APSD is not active to support other error
+		 * handling that requires immediate attention. We check
+		 * bf_status to find out if the bf's descriptors have been
+		 * processed by the interrupt handler and are ready for this
+		 * tasklet to consume them.  We also never process/remove the
+		 * self-linked entry at the end. */
 		ATH_RXBUF_LOCK_IRQ(sc);
 		bf = STAILQ_FIRST(&sc->sc_rxbuf);
 		if (bf && (bf->bf_status & ATH_BUFSTATUS_RXDESC_DONE) &&
-		   (bf->bf_desc->ds_link != bf->bf_daddr))
+		    (bf->bf_desc->ds_link != bf->bf_daddr))
 			STAILQ_REMOVE_HEAD(&sc->sc_rxbuf, bf_list);
 		else {
-			if(bf && (bf->bf_status & ATH_BUFSTATUS_RXDESC_DONE))
-				EPRINTF(sc, "Warning: %s detected a non-empty skb that is self-linked. "
-					    "This may be a driver bug.\n", 
-					__func__);
+			if (bf && (bf->bf_status & ATH_BUFSTATUS_RXDESC_DONE))
+				EPRINTF(sc, "Warning: %s detected a non-empty "
+						"skb that is self-linked. "
+						"This may be a driver bug.\n",
+						__func__);
 			bf = NULL;
 		}
 		ATH_RXBUF_UNLOCK_IRQ(sc);
@@ -6651,8 +6662,6 @@ ath_rx_tasklet(TQUEUE_ARG data)
 
 		bf_processed++;
 		ds  = bf->bf_desc;
-		is_mcast = (((const struct ieee80211_frame*)bf->bf_skb->data)->i_addr1[0] & 0x01) ||
-			(((const struct ieee80211_frame*)bf->bf_skb->data)->i_addr3[0] & 0x01);
 
 #ifdef AR_DEBUG
 		if (sc->sc_debug & ATH_DEBUG_RECV_DESC)
@@ -6665,24 +6674,20 @@ ath_rx_tasklet(TQUEUE_ARG data)
 		if (len == 0)
 			goto rx_next;
 		if (rs->rs_more) {
-			/*
-			 * Frame spans multiple descriptors; this
+			/* Frame spans multiple descriptors; this
 			 * cannot happen yet as we don't support
 			 * jumbograms.  If not in monitor mode,
-			 * discard the frame.
-			 */
+			 * discard the frame. */
 #ifndef ERROR_FRAMES
-			/*
-			 * Enable this if you want to see
-			 * error frames in Monitor mode.
-			 */
+			/* Enable this if you want to see
+			 * error frames in Monitor mode. */
 			if (ic->ic_opmode != IEEE80211_M_MONITOR) {
 				sc->sc_stats.ast_rx_toobig++;
 				errors++;
 				goto rx_next;
 			}
 #endif
-			/* fall thru for monitor mode handling... */
+			/* Fall through for monitor mode handling... */
 		} else if (rs->rs_status != 0) {
 			errors++;
 			if (rs->rs_status & HAL_RXERR_CRC)
@@ -6695,16 +6700,14 @@ ath_rx_tasklet(TQUEUE_ARG data)
 				sc->sc_stats.ast_rx_phy[phyerr]++;
 			}
 			if (rs->rs_status & HAL_RXERR_DECRYPT) {
-				/*
-				 * Decrypt error.  If the error occurred
+				/* Decrypt error.  If the error occurred
 				 * because there was no hardware key, then
 				 * let the frame through so the upper layers
 				 * can process it.  This is necessary for 5210
 				 * parts which have no way to setup a ``clear''
 				 * key cache entry.
 				 *
-				 * XXX do key cache faulting
-				 */
+				 * XXX: Do key cache faulting. */
 				if (rs->rs_keyix == HAL_RXKEYIX_INVALID)
 					goto rx_accept;
 				sc->sc_stats.ast_rx_badcrypt++;
@@ -6722,24 +6725,25 @@ ath_rx_tasklet(TQUEUE_ARG data)
 		}
 rx_accept:
 		skb_accepted++;
-		/*
-		 * Sync and unmap the frame.  At this point we're
-		 * committed to passing the sk_buff somewhere so
-		 * clear buf_skb; this means a new sk_buff must be
-		 * allocated when the rx descriptor is setup again
-		 * to receive another frame.
-		 */
+		
+		/* Sync and unmap the frame.  At this point we're committed
+		 * to passing the sk_buff somewhere so clear bf_skb; this means
+		 * a new sk_buff must be allocated when the RX descriptor is
+		 * setup again to receive another frame. 
+		 * NB: Meta-data (rs, noise, tsf) in the ath_buf is still
+		 * used. */
 		bus_dma_sync_single(sc->sc_bdev,
 			bf->bf_skbaddr, len, BUS_DMA_FROMDEVICE);
+		skb = ath_rxbuf_take_skb(sc, bf);
 
 		sc->sc_stats.ast_ant_rx[rs->rs_antenna]++;
 		sc->sc_devstats.rx_packets++;
 		sc->sc_devstats.rx_bytes += len;
 
-		skb_put(bf->bf_skb, len);
-		bf->bf_skb->protocol = __constant_htons(ETH_P_CONTROL);
+		skb_put(skb, len);
+		skb->protocol = __constant_htons(ETH_P_CONTROL);
 
-		ath_capture(dev, bf, bf->bf_skb, bf->bf_tsf, 0 /* RX */);
+		ath_capture(dev, bf, skb, bf->bf_tsf, 0 /* RX */);
 
 		/* Finished monitor mode handling, now reject error frames 
 		 * before passing to other VAPs. Ignore MIC failures here, as 
@@ -6747,22 +6751,22 @@ rx_accept:
 		if (rs->rs_status & ~(HAL_RXERR_MIC | HAL_RXERR_DECRYPT))
 			goto rx_next;
 
-		/* remove the CRC */
-		skb_trim(bf->bf_skb, bf->bf_skb->len - IEEE80211_CRC_LEN);
+		/* Remove the CRC. */
+		skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
 
 		if (mic_fail) {
 			/* Ignore control frames which are reported with MIC 
 			 * error. */
-			if ((((struct ieee80211_frame *)bf->bf_skb->data)->i_fc[0] &
+			if ((((struct ieee80211_frame *)skb->data)->i_fc[0] &
 						 IEEE80211_FC0_TYPE_MASK) == 
 						IEEE80211_FC0_TYPE_CTL)
 				goto drop_micfail;
 
 			ni = ieee80211_find_rxnode(ic, (const struct 
-						ieee80211_frame_min *)bf->bf_skb->data);
+						ieee80211_frame_min *)skb->data);
 			if (ni) {
 				if (ni->ni_table)
-					ieee80211_check_mic(ni, bf->bf_skb);
+					ieee80211_check_mic(ni, skb);
 				ieee80211_unref_node(&ni);
 			}
 
@@ -6783,17 +6787,16 @@ drop_micfail:
 
 		/* Normal receive. */
 		if (IFF_DUMPPKTS(sc, ATH_DEBUG_RECV))
-			ieee80211_dump_pkt(ic, bf->bf_skb->data, bf->bf_skb->len,
+			ieee80211_dump_pkt(ic, skb->data, skb->len,
 				   sc->sc_hwmap[rs->rs_rate].ieeerate,
 				   rs->rs_rssi);
 
 		{
 			struct ieee80211_frame * wh =
-				(struct ieee80211_frame *) bf->bf_skb->data;
+				(struct ieee80211_frame *)skb->data;
 
-			/* only print beacons */
-
-			if ((bf->bf_skb->len >= sizeof(struct ieee80211_frame)) &&
+			/* Only print beacons. */
+			if ((skb->len >= sizeof(struct ieee80211_frame)) &&
 			    ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK)
 			     == IEEE80211_FC0_TYPE_MGT) &&
 			    ((wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK)
@@ -6812,69 +6815,64 @@ drop_micfail:
 		 * are on-channel. */
 		if (!sc->sc_scanning && !(ic->ic_flags & IEEE80211_F_SCAN))
 			ATH_RSSI_LPF(sc->sc_halstats.ns_avgrssi, rs->rs_rssi);
-		KASSERT((atomic_read(&bf->bf_skb->users) == 1), 
-			("BAD starting skb reference count!"));
-		/*
-		 * Locate the node for sender, track state, and then
-		 * pass the (referenced) node up to the 802.11 layer
-		 * for its use.  If the sender is unknown spam the
-		 * frame; it'll be dropped where it's not wanted.
-		 */
-		if (rs->rs_keyix != HAL_RXKEYIX_INVALID &&
+
+		/* Locate the node for sender, track state, and then pass the
+		 * (referenced) node up to the 802.11 layer for its use.  If
+		 * the sender is unknown spam the frame; it'll be dropped
+		 * where it's not wanted. */
+		if ((rs->rs_keyix != HAL_RXKEYIX_INVALID) &&
 		    (ni = sc->sc_keyixmap[rs->rs_keyix]) != NULL) {
 			/* Fast path: node is present in the key map;
 			 * grab a reference for processing the frame. */
 			ni = ieee80211_ref_node(ni);
-			type = ieee80211_input(ni->ni_vap, ni, bf->bf_skb, rs->rs_rssi, bf->bf_tsf);
-			ieee80211_unref_node(&ni);
 		} else {
-			/*
-			 * No key index or no entry, do a lookup and
-			 * add the node to the mapping table if possible.
-			 */
+			/* No key index or no entry, do a lookup and
+			 * add the node to the mapping table if possible. */
 			ni = ieee80211_find_rxnode(ic,
-				(const struct ieee80211_frame_min *)bf->bf_skb->data);
+				(const struct ieee80211_frame_min *)skb->data);
 			if (ni != NULL) {
-				ieee80211_keyix_t keyix;
-				type = ieee80211_input(ni->ni_vap, ni, bf->bf_skb, rs->rs_rssi, bf->bf_tsf);
-				/*
-				 * If the station has a key cache slot assigned
-				 * update the key->node mapping table.
-				 */
-				keyix = ni->ni_ucastkey.wk_keyix;
-				if (keyix != IEEE80211_KEYIX_NONE &&
-				    sc->sc_keyixmap[keyix] == NULL)
-					sc->sc_keyixmap[keyix] = ieee80211_ref_node(ni);
-				ieee80211_unref_node(&ni);
-			} else {
-				struct ieee80211vap * vap;
-				TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
-					type = ieee80211_input(vap, NULL, bf->bf_skb, rs->rs_rssi, bf->bf_tsf);
-				}
+				/* If the station has a key cache slot assigned
+				 * update the key->node mapping table. */
+				ieee80211_keyix_t keyix =
+					ni->ni_ucastkey.wk_keyix;
+				if ((keyix != IEEE80211_KEYIX_NONE) &&
+				    (sc->sc_keyixmap[keyix] == NULL))
+					sc->sc_keyixmap[keyix] =
+						ieee80211_ref_node(ni);
 			}
 		}
-		KASSERT((atomic_read(&bf->bf_skb->users) == 1), 
-			("ieee80211_input changed skb reference count!"));
+
+		/* If a node is found, dispatch, else, dispatch to all. */
+		if (ni) {
+			type = ieee80211_input(ni->ni_vap, ni, skb,
+					rs->rs_rssi, bf->bf_tsf);
+			ieee80211_unref_node(&ni);
+		} else {
+			struct ieee80211vap *vap;
+			/* Create a new SKB copy for each VAP except the last
+			 * one, which gets the original SKB. */
+			TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
+					type = ieee80211_input(vap, NULL, skb,
+							rs->rs_rssi, bf->bf_tsf);
+			}
+		}
 
 		if (sc->sc_diversity) {
-			/*
-			 * When using hardware fast diversity, change the default rx
-			 * antenna if rx diversity chooses the other antenna 3
-			 * times in a row.
-			 */
+			/* When using hardware fast diversity, change the default RX
+			 * antenna if RX diversity chooses the other antenna 3
+			 * times in a row. */
 			if (sc->sc_defant != rs->rs_antenna) {
 				if (++sc->sc_rxotherant >= 3)
 					ath_setdefantenna(sc, rs->rs_antenna);
 			} else
 				sc->sc_rxotherant = 0;
 		}
+
 		if (sc->sc_softled) {
-			/*
-			 * Blink for any data frame.  Otherwise do a
+			/* Blink for any data frame.  Otherwise do a
 			 * heartbeat-style blink when idle.  The latter
 			 * is mainly for station mode where we depend on
-			 * periodic beacon frames to trigger the poll event.
-			 */
+			 * periodic beacon frames to trigger the poll event. */
 			if (type == IEEE80211_FC0_TYPE_DATA) {
 				sc->sc_rxrate = rs->rs_rate;
 				ath_led_event(sc, ATH_LED_RX);
@@ -6883,10 +6881,10 @@ drop_micfail:
 		}
 rx_next:
 		KASSERT(bf != NULL, ("null bf"));
-		KASSERT(bf->bf_skb != NULL, ("null bf->bf_skb"));
 
-		if (0 != (init_ret = ath_rxbuf_init(sc, bf))) {
-			EPRINTF(sc, "Failed to reinitialize rxbuf: %d.  Lost an RX buffer!\n", init_ret);
+		if ((init_ret = ath_rxbuf_init(sc, bf)) != 0) {
+			EPRINTF(sc, "Failed to reinitialize rxbuf: %d.  "
+					"Lost an RX buffer!\n", init_ret);
 			break;
 		}
 
@@ -6895,6 +6893,7 @@ rx_next:
 		STAILQ_INSERT_TAIL(&sc->sc_rxbuf, bf, bf_list);
 		ATH_RXBUF_UNLOCK_IRQ(sc);
 	} while (1);
+
 	if (sc->sc_useintmit) 
 		ath_hal_rxmonitor(ah, &sc->sc_halstats, &sc->sc_curchan);
 	if (!bf_processed)
@@ -8514,7 +8513,7 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 			/* ath_capture modifies skb data; must be last process
 			 * in TX path. */
 			tskb = skb->next;
-			DPRINTF(sc, ATH_DEBUG_TX_PROC, "capture/free skb %p\n",
+			DPRINTF(sc, ATH_DEBUG_TX_PROC, "capture skb %p\n",
 					bf->bf_skb);
 			ath_capture(sc->sc_dev, bf, skb, bf->bf_tsf, 1 /* TX */);
 			skb = tskb;
@@ -8524,7 +8523,7 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 			 * extra buffers */
 			for (i = 0; i < bf->bf_numdescff; i++) {
 				tskb = skb->next;
-				DPRINTF(sc, ATH_DEBUG_TX_PROC, "capture/free skb %p\n",
+				DPRINTF(sc, ATH_DEBUG_TX_PROC, "capture skb %p\n",
 					skb);
 				ath_capture(sc->sc_dev, bf, skb, bf->bf_tsf, 1 /* TX */);
 				skb = tskb;

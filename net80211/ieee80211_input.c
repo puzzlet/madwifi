@@ -213,7 +213,7 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	u_int8_t *bssid;
 	u_int16_t rxseq;
 
-	/* initialize ni as in the previous API */
+	/* Initialize ni as in the previous API. */
 	if (ni_or_null == NULL) {
                /* This function does not 'own' vap->iv_bss, so we cannot
                 * guarantee its existence during the following call, hence
@@ -224,11 +224,10 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	KASSERT(ni != NULL, ("null node"));
 	ni->ni_inact = ni->ni_inact_reload;
 	type = -1;			/* undefined */
-	/*
-	 * In monitor mode, send everything directly to bpf.
+	
+	/* In monitor mode, send everything directly to bpf.
 	 * Also do not process frames w/o i_addr2 any further.
-	 * XXX may want to include the CRC
-	 */
+	 * XXX: may want to include the CRC. */
 	if (vap->iv_opmode == IEEE80211_M_MONITOR)
 		goto out;
 	if (original_skb->len < sizeof(struct ieee80211_frame_min)) {
@@ -252,12 +251,10 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	ieee80211_skb_copy_noderef(original_skb, skb);
 	original_skb = NULL; /* protect caller's skb */
 
-	/*
-	 * Bit of a cheat here, we use a pointer for a 3-address
+	/* Bit of a cheat here, we use a pointer for a 3-address
 	 * frame format but don't reference fields past outside
 	 * ieee80211_frame_min w/o first validating the data is
-	 * present.
-	 */
+	 * present. */
 	wh = (struct ieee80211_frame *)skb->data;
 
 	if ((wh->i_fc[0] & IEEE80211_FC0_VERSION_MASK) !=

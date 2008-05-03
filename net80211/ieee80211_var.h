@@ -294,7 +294,8 @@ struct ieee80211com {
 	struct net_device *ic_dev;		/* associated device */
 	ieee80211com_lock_t ic_comlock;		/* state update lock */
 	ieee80211com_lock_t ic_vapslock; 	/* vap state machine lock */
-	TAILQ_HEAD(, ieee80211vap) ic_vaps;	/* list of vap instances */
+	TAILQ_HEAD(ieee80211vap_headtype,
+			ieee80211vap) ic_vaps;	/* list of vap instances */
 	enum ieee80211_phytype ic_phytype;	/* XXX wrong for multi-mode */
 	enum ieee80211_opmode ic_opmode;	/* operation mode */
 	struct ifmedia ic_media;		/* interface media config */
