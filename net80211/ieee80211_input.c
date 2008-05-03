@@ -195,7 +195,7 @@ iwspy_event(struct ieee80211vap *vap, struct ieee80211_node *ni, u_int rssi)
  */
 int
 ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
-	struct sk_buff *original_skb, int rssi, u_int64_t rtsf)
+	struct sk_buff *skb, int rssi, u_int64_t rtsf)
 {
 #define	HAS_SEQ(type)	((type & 0x4) == 0)
 	struct ieee80211_node * ni = ni_or_null;
@@ -204,7 +204,6 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	struct ieee80211_frame *wh;
 	struct ieee80211_key *key;
 	struct ether_header *eh;
-	struct sk_buff *skb = NULL;
 #ifdef ATH_SUPERG_FF
 	struct llc *llc;
 #endif
@@ -220,7 +219,7 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
                 * briefly grab our own reference. */
 		ni = ieee80211_ref_node(vap->iv_bss);
 	}
-	KASSERT(original_skb != NULL, ("null skb"));
+	KASSERT(skb != NULL, ("null skb"));
 	KASSERT(ni != NULL, ("null node"));
 	ni->ni_inact = ni->ni_inact_reload;
 	type = -1;			/* undefined */
@@ -230,26 +229,13 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	 * XXX: may want to include the CRC. */
 	if (vap->iv_opmode == IEEE80211_M_MONITOR)
 		goto out;
-	if (original_skb->len < sizeof(struct ieee80211_frame_min)) {
+	if (skb->len < sizeof(struct ieee80211_frame_min)) {
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY,
 			ni->ni_macaddr, NULL,
-			"too short (1): len %u", original_skb->len);
+			"too short (1): len %u", skb->len);
 		vap->iv_stats.is_rx_tooshort++;
 		goto out;
 	}
-	/* Copy the SKB... we assume somewhere in this driver that we 'own'
-	 * the skbuff passed into hard start and we do a lot of messing with it
-	 * but bridges under some cases will not clone for the first pass of skb
-	 * to a bridge port, but will then clone for subsequent ones.  This is 
-	 * odd behavior but it means that if we have trashed the skb we are given
-	 * then other ports get clones of the residual garbage. */
-	if ((skb = skb_copy(original_skb, GFP_ATOMIC)) == NULL) {
-		vap->iv_devstats.tx_dropped++;
-		original_skb = NULL; /* protect caller's skb */
-		goto out;
-	}
-	ieee80211_skb_copy_noderef(original_skb, skb);
-	original_skb = NULL; /* protect caller's skb */
 
 	/* Bit of a cheat here, we use a pointer for a 3-address
 	 * frame format but don't reference fields past outside
@@ -853,8 +839,7 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 err:
 	vap->iv_devstats.rx_errors++;
 out:
-	if (skb != NULL)
-		ieee80211_dev_kfree_skb(&skb); /* This is a copy! */
+	ieee80211_dev_kfree_skb(&skb);
 	if (ni_or_null == NULL)
 		ieee80211_unref_node(&ni);
 	return type;
