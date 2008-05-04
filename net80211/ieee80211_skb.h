@@ -46,6 +46,37 @@ extern atomic_t skb_refs_counter;
  * Public API
  ******************************************************************************/
 
+/* SKB_XX(...) macros will blow up if _skb is NULL (detect problems early) */
+#define	SKB_CB(_skb) 		((struct ieee80211_cb *)(_skb)->cb)
+#define	SKB_NI(_skb) 		(SKB_CB(_skb)->ni)
+
+#define M_FLAG_SET(_skb, _flag) \
+	(SKB_CB(_skb)->flags |= (_flag))
+#define	M_FLAG_CLR(_skb, _flag) \
+	(SKB_CB(_skb)->flags &= ~(_flag))
+#define	M_FLAG_GET(_skb, _flag) \
+	(SKB_CB(_skb)->flags & (_flag))
+#define M_FLAG_KEEP_ONLY(_skb, _flag) \
+	(SKB_CB(_skb)->flags &= (_flag))
+
+#define	M_PWR_SAV_SET(skb) M_FLAG_SET((skb), M_PWR_SAV)
+#define	M_PWR_SAV_CLR(skb) M_FLAG_CLR((skb), M_PWR_SAV)
+#define	M_PWR_SAV_GET(skb) M_FLAG_GET((skb), M_PWR_SAV)
+
+/* SKBs on the power save queue are tagged with an age and
+ * timed out.  We reuse the hardware checksum field in the
+ * mbuf packet header to store this data.
+ * XXX: use private cb area. */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
+#define skb_age csum_offset
+#else
+#define skb_age csum
+#endif
+
+#define	M_AGE_SET(_skb,_v)	((_skb)->skb_age = (_v))
+#define	M_AGE_GET(_skb)		((_skb)->skb_age)
+#define	M_AGE_SUB(_skb,_adj)	((_skb)->skb_age -= (_adj))
+
 /* ieee80211_dev_kfree_skb will release one reference from SKB.
  * If SKB refcount is going to zero:
  *  - Free the node reference and set it to null.

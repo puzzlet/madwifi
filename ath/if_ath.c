@@ -3186,15 +3186,15 @@ ath_ffstageq_flush(struct ath_softc *sc, struct ath_txq *txq,
 			return;
 		}
 
-		KASSERT(BF_AN(bf_ff)->an_tx_ffbuf[bf_ff->bf_skb->priority],
+		KASSERT(ATH_BUF_AN(bf_ff)->an_tx_ffbuf[bf_ff->bf_skb->priority],
 			("no bf_ff on staging queue %p", bf_ff));
-		BF_AN(bf_ff)->an_tx_ffbuf[bf_ff->bf_skb->priority] = NULL;
+		ATH_BUF_AN(bf_ff)->an_tx_ffbuf[bf_ff->bf_skb->priority] = NULL;
 		TAILQ_REMOVE(&txq->axq_stageq, bf_ff, bf_stagelist);
 
 		ATH_TXQ_UNLOCK_IRQ(txq);
 
 		/* encap and xmit */
-		bf_ff->bf_skb = ieee80211_encap(BF_NI(bf_ff), bf_ff->bf_skb, 
+		bf_ff->bf_skb = ieee80211_encap(ATH_BUF_NI(bf_ff), bf_ff->bf_skb, 
 				&framecnt);
 		if (bf_ff->bf_skb == NULL) {
 			DPRINTF(sc, ATH_DEBUG_XMIT | ATH_DEBUG_FF,
@@ -3203,7 +3203,7 @@ ath_ffstageq_flush(struct ath_softc *sc, struct ath_txq *txq,
 			goto bad;
 		}
 		pktlen = bf_ff->bf_skb->len;	/* NB: don't reference skb below */
-		if (ath_tx_start(sc->sc_dev, BF_NI(bf_ff), bf_ff, 
+		if (ath_tx_start(sc->sc_dev, ATH_BUF_NI(bf_ff), bf_ff, 
 					bf_ff->bf_skb, 0) == 0)
 			continue;
 	bad:
@@ -6004,7 +6004,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 			else
 				bf_tmp = prev;
 			while (bf) {
-				if (ni == BF_NI(bf)) {
+				if (ni == ATH_BUF_NI(bf)) {
 					if (prev == bf) {
 						ATH_TXQ_REMOVE_HEAD(txq, 
 								bf_list);
@@ -6160,7 +6160,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 		 * collect all the data in to four temp SW queues.
 		 */
 		while (bf) {
-			if (ni == BF_NI(bf)) {
+			if (ni == ATH_BUF_NI(bf)) {
 				if (prev == bf) {
 					STAILQ_REMOVE_HEAD(&txq->axq_q, bf_list);
 					bf_tmp=bf;
@@ -8389,7 +8389,7 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 		ATH_TXQ_REMOVE_HEAD(txq, bf_list);
 		ATH_TXQ_UNLOCK_IRQ(txq);
 
-		ni = BF_NI(bf);
+		ni = ATH_BUF_NI(bf);
 		if (ni != NULL) {
 			an = ATH_NODE(ni);
 			if (ts->ts_status == 0) {
@@ -10501,7 +10501,7 @@ ath_printtxbuf(const struct ath_buf *bf, int done)
 {
 	const struct ath_tx_status *ts = &bf->bf_dsstatus.ds_txstat;
 	const struct ath_desc *ds = bf->bf_desc;
-	struct ath_softc *sc = BF_NI(bf)->ni_ic->ic_dev->priv;
+	struct ath_softc *sc = ATH_BUF_NI(bf)->ni_ic->ic_dev->priv;
 	u_int8_t status = done ? ts->ts_status : 0;
 
 	DPRINTF(sc, ATH_DEBUG_ANY, 

@@ -409,46 +409,6 @@ typedef spinlock_t acl_lock_t;
 	struct sk_buff *next;			/* fast frame sk_buf chain */
 };
 
-
-/* SKB_XX(...) macros will blow up if _skb is NULL (detect problems early) */
-#define	SKB_CB(_skb) 		((struct ieee80211_cb *)(_skb)->cb)
-#define	SKB_NI(_skb) 		(SKB_CB(_skb)->ni)
-#define	SKB_AN(_skb) 		(ATH_NODE(SKB_NI(_skb)))
-/* BF_XX(...) macros will blow up if _bf is NULL, but not if _bf->bf_skb is
- * null*/
-#define	BF_CB(_bf) 		(((_bf)->bf_skb) ? SKB_CB((_bf)->bf_skb) : NULL)
-#define	BF_NI(_bf) 		(((_bf)->bf_skb) ? SKB_NI((_bf)->bf_skb) : NULL)
-#define	BF_AN(_bf) 		(((_bf)->bf_skb) ? SKB_AN((_bf)->bf_skb) : NULL)
-
-#define M_FLAG_SET(_skb, _flag) \
-	(SKB_CB(_skb)->flags |= (_flag))
-#define	M_FLAG_CLR(_skb, _flag) \
-	(SKB_CB(_skb)->flags &= ~(_flag))
-#define	M_FLAG_GET(_skb, _flag) \
-	(SKB_CB(_skb)->flags & (_flag))
-#define M_FLAG_KEEP_ONLY(_skb, _flag) \
-	(SKB_CB(_skb)->flags &= (_flag))
-
-#define	M_PWR_SAV_SET(skb) M_FLAG_SET((skb), M_PWR_SAV)
-#define	M_PWR_SAV_CLR(skb) M_FLAG_CLR((skb), M_PWR_SAV)
-#define	M_PWR_SAV_GET(skb) M_FLAG_GET((skb), M_PWR_SAV)
-
-/*
- * Skbufs on the power save queue are tagged with an age and
- * timed out.  We reuse the hardware checksum field in the
- * mbuf packet header to store this data.
- * XXX use private cb area
- */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
-#define skb_age csum_offset
-#else
-#define skb_age csum
-#endif
-
-#define	M_AGE_SET(skb,v)	((skb)->skb_age = (v))
-#define	M_AGE_GET(skb)		((skb)->skb_age)
-#define	M_AGE_SUB(skb,adj)	((skb)->skb_age -= (adj))
-
 struct ieee80211com;
 struct ieee80211vap;
 

@@ -368,6 +368,7 @@ struct ath_node {
 	/* variable-length rate control state follows */
 };
 #define	ATH_NODE(_n)			((struct ath_node *)(_n))
+#define	SKB_AN(_skb) 			(ATH_NODE(SKB_NI(_skb)))
 #define	ATH_NODE_CONST(ni)		((const struct ath_node *)(ni))
 #define ATH_NODE_UAPSD_LOCK_INIT(_an)	spin_lock_init(&(_an)->an_uapsd_lock)
 #define ATH_NODE_UAPSD_LOCK_IRQ(_an)	do {				     \
@@ -451,6 +452,11 @@ struct ath_buf {
 	const char* bf_taken_at_func;			
 };
 
+/* BF_XX(...) macros will blow up if _bf is NULL, but not if _bf->bf_skb is
+ * null*/
+#define	ATH_BUF_CB(_bf) 		(((_bf)->bf_skb) ? SKB_CB((_bf)->bf_skb) : NULL)
+#define	ATH_BUF_NI(_bf) 		(((_bf)->bf_skb) ? SKB_NI((_bf)->bf_skb) : NULL)
+#define	ATH_BUF_AN(_bf) 		(((_bf)->bf_skb) ? SKB_AN((_bf)->bf_skb) : NULL)
 /* XXX: only managed for rx at the moment */
 #define ATH_BUFSTATUS_RXDESC_DONE	0x00000001	/* rx descriptor processing complete, desc processed by hal */
 #define ATH_BUFSTATUS_RADAR_DONE	0x00000002	/* marker to indicate a PHYERR for radar pulse
