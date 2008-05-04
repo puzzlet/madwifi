@@ -58,6 +58,10 @@
 #define __force
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
+typedef int gfp_t;
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,3)
 static inline void *kzalloc(size_t size, gfp_t flags)
 {
@@ -152,10 +156,6 @@ static inline void *kzalloc(size_t size, gfp_t flags)
 #define __user
 #define __kernel
 #define __iomem
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
-typedef int gfp_t;
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16)
