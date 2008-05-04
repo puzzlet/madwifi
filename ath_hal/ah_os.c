@@ -75,6 +75,10 @@ EXPORT_SYMBOL(ath_hal_debug);
 #define REGOP_READ  1
 #define REGOP_WRITE 2
 
+#ifndef INITIAL_JIFFIES
+#define INITIAL_JIFFIES ((unsigned long)(unsigned int) (-300*HZ))
+#endif
+
 
 int	ath_hal_dma_beacon_response_time = 2;	/* in TUs */
 int	ath_hal_sw_beacon_response_time = 10;	/* in TUs */
