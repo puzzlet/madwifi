@@ -89,8 +89,8 @@ else
 endif
 	# Replace as many hashed names as possible with meaningful
 	# ones in the symbol table of the binary kernel module for HAL.
-	$(OBJCOPY) \
-		`cat $(shell dirname $(obj))/scripts/hal_unmangle.objcopy` \
+	$(filter-out -O binary -S,$(OBJCOPY)) \
+		`cat $(TOP)/scripts/hal_unmangle.objcopy` \
 		$(obj)/$(TARGET).hal.o
 
 install:
