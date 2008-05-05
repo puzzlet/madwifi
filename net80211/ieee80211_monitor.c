@@ -61,7 +61,6 @@
 #include <ath/if_athvar.h>
 
 
-
 static int
 ratecode_to_dot11(int ratecode)
 {
@@ -128,24 +127,22 @@ struct ar5212_openbsd_desc {
 void
 ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 {
-	struct ieee80211_phy_params *ph = (struct ieee80211_phy_params *)
-		(SKB_CB(skb) + 1); /* NB: SKB_CB casts to CB struct*. */
+	struct ieee80211_phy_params *ph = &(SKB_CB(skb)->phy);
 	SKB_CB(skb)->flags = M_RAW;
 	SKB_NI(skb) = NULL;
 	SKB_CB(skb)->next = NULL;
-	memset(ph, 0, sizeof(struct ieee80211_phy_params));
 
 	/* send at a static rate if it is configured */
-	ph->rate0 = vap->iv_fixed_rate > 0 ? vap->iv_fixed_rate : 2;
+	ph->rate[0] = vap->iv_fixed_rate > 0 ? vap->iv_fixed_rate : 2;
 	/* don't retry control packets */
-	ph->try0 = 11;
+	ph->try[0] = 11;
 	ph->power = 60;
 
 	switch (skb->dev->type) {
 	case ARPHRD_IEEE80211: {
 		struct ieee80211_frame *wh = (struct ieee80211_frame *) skb->data;
 		if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_CTL)
-			ph->try0 = 1;
+			ph->try[0] = 1;
 		break;
 	}
 	case ARPHRD_IEEE80211_PRISM: {
@@ -156,12 +153,12 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 		if (skb->len > sizeof(struct wlan_ng_prism2_header) &&
 	                p2h->msgcode == DIDmsg_lnxind_wlansniffrm &&
 		    p2h->rate.did == DIDmsg_lnxind_wlansniffrm_rate) {
-	                    ph->rate0 = p2h->rate.data;
+	                    ph->rate[0] = p2h->rate.data;
 	                    skb_pull(skb, sizeof(struct wlan_ng_prism2_header));
 		}
 		wh = (struct ieee80211_frame *) skb->data;
 		if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_CTL)
-			ph->try0 = 1;
+			ph->try[0] = 1;
 		break;
 	}
 	case ARPHRD_IEEE80211_RADIOTAP: {
@@ -201,7 +198,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 				continue;
 			switch (bit) {
 				case IEEE80211_RADIOTAP_RATE:
-					ph->rate0 = *p;
+					ph->rate[0] = *p;
 					p++;
 					break;
 
@@ -247,7 +244,7 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 					break;
 
 				case IEEE80211_RADIOTAP_DATA_RETRIES:
-					ph->try0 = *p + 1;
+					ph->try[0] = *p + 1;
 					p++;
 					break;
 
@@ -261,9 +258,9 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			/* Remove FCS from the end of frames to transmit */
 			skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
 		wh = (struct ieee80211_frame *)skb->data;
-		if (!ph->try0 &&
+		if (!ph->try[0] &&
 		    (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_CTL)
-			ph->try0 = 1;
+			ph->try[0] = 1;
 		break;
 	}
 	case ARPHRD_IEEE80211_ATHDESC: {
@@ -271,14 +268,14 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 			struct ar5212_openbsd_desc *desc =
 				(struct ar5212_openbsd_desc *) (skb->data + 8);
 			ph->power = desc->xmit_power;
-			ph->rate0 = ratecode_to_dot11(desc->xmit_rate0);
-			ph->rate1 = ratecode_to_dot11(desc->xmit_rate1);
-			ph->rate2 = ratecode_to_dot11(desc->xmit_rate2);
-			ph->rate3 = ratecode_to_dot11(desc->xmit_rate3);
-			ph->try0 = desc->xmit_tries0;
-			ph->try1 = desc->xmit_tries1;
-			ph->try2 = desc->xmit_tries2;
-			ph->try3 = desc->xmit_tries3;
+			ph->rate[0] = ratecode_to_dot11(desc->xmit_rate0);
+			ph->rate[1] = ratecode_to_dot11(desc->xmit_rate1);
+			ph->rate[2] = ratecode_to_dot11(desc->xmit_rate2);
+			ph->rate[3] = ratecode_to_dot11(desc->xmit_rate3);
+			ph->try[0] = desc->xmit_tries0;
+			ph->try[1] = desc->xmit_tries1;
+			ph->try[2] = desc->xmit_tries2;
+			ph->try[3] = desc->xmit_tries3;
 			skb_pull(skb, ATHDESC_HEADER_SIZE);
 		}
 		break;
@@ -287,9 +284,9 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 		break;
 	}
 
-	if (!ph->rate0) {
-		ph->rate0 = 0;
-		ph->try0 = 11;
+	if (!ph->rate[0]) {
+		ph->rate[0] = 0;
+		ph->try[0] = 11;
 	}
 }
 EXPORT_SYMBOL(ieee80211_monitor_encap);

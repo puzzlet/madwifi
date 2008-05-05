@@ -3048,8 +3048,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 {
 	struct ath_softc *sc = dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
-	struct ieee80211_phy_params *ph = (struct ieee80211_phy_params *)
-		(SKB_CB(skb) + 1); /* NB: SKB_CB casts to CB struct*. */
+	struct ieee80211_phy_params *ph = &(SKB_CB(skb)->phy); 
 	const HAL_RATE_TABLE *rt;
 	unsigned int pktlen, hdrlen, try0, power;
 	HAL_PKT_TYPE atype;
@@ -3060,9 +3059,9 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	struct ieee80211_frame *wh;
 
 	wh = (struct ieee80211_frame *)skb->data;
-	try0 = ph->try0;
+	try0 = ph->try[0];
 	rt = sc->sc_currates;
-	txrate = dot11_to_ratecode(sc, rt, ph->rate0);
+	txrate = dot11_to_ratecode(sc, rt, ph->rate[0]);
 	power = ph->power > 60 ? 60 : ph->power;
 	hdrlen = ieee80211_anyhdrsize(wh);
 	pktlen = skb->len + IEEE80211_CRC_LEN;
@@ -3113,11 +3112,11 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 			    ATH_COMP_PROC_NO_COMP_NO_CCS /* comp scheme */
 			   );
 
-	if (ph->try1) {
+	if (ph->try[1]) {
 		ath_hal_setupxtxdesc(sc->sc_ah, ds,
-			dot11_to_ratecode(sc, rt, ph->rate1), ph->try1,
-			dot11_to_ratecode(sc, rt, ph->rate2), ph->try2,
-			dot11_to_ratecode(sc, rt, ph->rate3), ph->try3
+			dot11_to_ratecode(sc, rt, ph->rate[1]), ph->try[1],
+			dot11_to_ratecode(sc, rt, ph->rate[2]), ph->try[2],
+			dot11_to_ratecode(sc, rt, ph->rate[3]), ph->try[3]
 			);
 	}
 	bf->bf_flags = flags;	/* record for post-processing */

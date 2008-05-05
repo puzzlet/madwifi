@@ -388,8 +388,18 @@ typedef spinlock_t acl_lock_t;
  * NB: sizeof(cb) == 48 and the vlan code grabs the first
  *     8 bytes so we reserve/avoid it.
  */
-	struct ieee80211_cb {
-	u_int8_t vlan[8];			/* reserve for vlan tag info */
+
+struct ieee80211_phy_params {
+	u_int8_t rate[4];
+	u_int8_t try[4];
+
+	u_int8_t power;
+	u_int32_t flags;
+};
+
+struct ieee80211_cb {
+	u_int8_t __reserved_vlan[8];		/* reserve for vlan tag info */
+	struct ieee80211_phy_params phy;
 	struct ieee80211_node *ni;
 	u_int32_t flags;
 #define	M_LINK0		0x01			/* frame needs WEP encryption */
@@ -402,6 +412,10 @@ typedef spinlock_t acl_lock_t;
 	void		(*next_destructor)(struct sk_buff *skb);
 #endif
 	struct sk_buff *next;			/* fast frame sk_buf chain */
+};
+
+struct __assert {
+	int __ieee80211_cb_size[sizeof(struct ieee80211_cb) <= 48 ? 0 : -1];
 };
 
 struct ieee80211com;

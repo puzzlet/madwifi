@@ -47,22 +47,6 @@
 	A_MAX(sizeof(struct ath_tx_radiotap_header),		\
 	      A_MAX(sizeof(struct wlan_ng_prism2_header),	\
 			    ATHDESC_HEADER_SIZE)))
-
-struct ieee80211_phy_params {
-	u_int8_t rate0;
-	u_int8_t rate1;
-	u_int8_t rate2;
-	u_int8_t rate3;
-
-	u_int8_t try0;
-	u_int8_t try1;
-	u_int8_t try2;
-	u_int8_t try3;
-
-	u_int8_t power;
-	u_int32_t flags;
-};
-
 enum {
 	DIDmsg_lnxind_wlansniffrm		= 0x00000044,
 	DIDmsg_lnxind_wlansniffrm_hosttime	= 0x00010044,
