@@ -102,6 +102,6 @@ clean:
 	rm -f .depend .version .*.o.flags .*.o.d
 	rm -rf .tmp_versions
 
-ath_hal.o: $(ath_hal-objs)
+ath_hal.o: $(addprefix $(obj)/,$(ath_hal-objs))
 	$(LD) $(LDFLAGS) -o ath_hal.$(KMODSUF) -r $(ath_hal-objs)
 
