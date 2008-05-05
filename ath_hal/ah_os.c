@@ -948,50 +948,6 @@ ath_hal_delay(int n)
 	udelay(n);
 }
 
-u_int32_t __ahdecl
-ath_hal_getuptime(struct ath_hal *ah)
-{
-	/* NB: Original uptime logic was totally wrong for Linux.
-	 * 
-	 * Linux systems use unsigned long and special detection of rollover
-	 * using macros like time_before, time_after, ...
-	 *
-	 * Linux initializes jiffies to cause rollover 5m after boot (to detect 
-	 * bugs earlier).
-	 * 
-	*/
-	static unsigned long last_uptime_seconds = 0;
-	unsigned long uptime_jiffies = (jiffies - INITIAL_JIFFIES);
-	unsigned long uptime_seconds = ((uptime_jiffies / HZ) * 1000) + 
-		(uptime_jiffies % HZ) * (1000 / HZ);
-
-#define TEST_ROLLOVER_THEORY
-#ifdef TEST_ROLLOVER_THEORY
-	static unsigned long last_old_uptime_seconds = 0;
-	unsigned long old_uptime_jiffies = jiffies;
-	unsigned long old_uptime_seconds = ((old_uptime_jiffies / HZ) * 1000) + 
-		(old_uptime_jiffies % HZ) * (1000 / HZ);
-
-	if (old_uptime_seconds < last_old_uptime_seconds) {
-		printk("ROLLOVER ROLLOVER ROLLOVER\n");
-		printk("ROLLOVER ROLLOVER ROLLOVER\n");
-		printk("ROLLOVER ROLLOVER ROLLOVER\n");
-		printk("Expect bugs to follow...\n");
-	}
-	last_old_uptime_seconds = old_uptime_seconds;
-#endif
-	if (uptime_seconds < last_uptime_seconds) {
-		printk("ROLLOVER ROLLOVER ROLLOVER\n");
-		printk("ROLLOVER ROLLOVER ROLLOVER\n");
-		printk("ROLLOVER ROLLOVER ROLLOVER\n");
-		printk("Expect bugs to follow...\n");
-		// XXX: Replace stupid message with a HAL reset??
-	}
-	last_uptime_seconds = uptime_seconds;
-	return uptime_seconds;
-}
-EXPORT_SYMBOL(ath_hal_getuptime);
-
 /*
  * Allocate/free memory.
  */

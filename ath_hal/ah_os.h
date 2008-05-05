@@ -96,6 +96,8 @@ typedef unsigned int		u_int;
 typedef	void*			va_list;
 #endif				/* !_LINUX_TYPES_H */
 
+struct ath_hal;
+
 extern int ath_hal_dma_beacon_response_time;
 extern int ath_hal_sw_beacon_response_time;
 extern int ath_hal_additional_swba_backoff;
@@ -127,10 +129,6 @@ extern void *__ahdecl ath_hal_memcpy(void *, const void *, size_t);
 #ifndef labs
 #define	labs(_a)		__builtin_labs(_a)
 #endif
-
-struct ath_hal;
-extern u_int32_t __ahdecl ath_hal_getuptime(struct ath_hal *);
-#define	OS_GETUPTIME(_ah)	ath_hal_getuptime(_ah)
 
 /* Byte order/swapping support. */
 #define	AH_LITTLE_ENDIAN	1234
