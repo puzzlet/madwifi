@@ -373,7 +373,6 @@ static u_int32_t ath_set_clamped_maxtxpower(struct ath_softc *sc,
 static void ath_scanbufs(struct ath_softc *sc);
 static int ath_debug_iwpriv(struct ieee80211com *ic, 
 		      unsigned int param, unsigned int value);
-static __inline int txqactive(struct ath_hal *ah, int qnum);
 
 static u_int32_t ath_get_real_maxtxpower(struct ath_softc *sc);
 static int ath_txq_check(struct ath_softc *sc, struct ath_txq *txq, const char *msg);
@@ -4993,6 +4992,14 @@ ath_beacon_setup(struct ath_softc *sc, struct ath_buf *bf)
 #undef USE_SHPREAMBLE
 }
 
+static int
+txqactive(struct ath_hal *ah, int qnum)
+{
+	u_int32_t txqs = 1 << qnum;
+	ath_hal_gettxintrtxqs(ah, &txqs);
+	return (txqs & (1 << qnum));
+}
+
 /*
  * Generate beacon frame and queue cab data for a VAP.
  */
@@ -8556,14 +8563,6 @@ bf_fail:
 #else
 	;
 #endif /* ATH_SUPERG_FF */
-}
-
-static __inline int
-txqactive(struct ath_hal *ah, int qnum)
-{
-	u_int32_t txqs = 1 << qnum;
-	ath_hal_gettxintrtxqs(ah, &txqs);
-	return (txqs & (1 << qnum));
 }
 
 /*
