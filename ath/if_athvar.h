@@ -46,7 +46,10 @@
 #include "ah_desc.h"
 #include "ah_os.h"
 #include "if_athioctl.h"
-#include "net80211/ieee80211.h"		/* XXX for WME_NUM_AC */
+
+#include <net80211/ieee80211.h>		/* XXX for WME_NUM_AC */
+#include <sys/queue.h>
+
 #include <asm/io.h>
 #include <linux/list.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,15)
