@@ -1,7 +1,4 @@
-ifeq ($(obj),)
-obj=	.
-endif
-
+obj := $(firstword $(obj) $(SUBDIRS) .)
 TOP = $(obj)/..
 
 obj-y := ccmp/ tkip/ wep/

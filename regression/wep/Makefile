@@ -1,10 +1,7 @@
 #
 # Makefile for the WEP regression test.
 #
-ifeq ($(obj),)
-obj=	.
-endif
-
+obj := $(firstword $(obj) $(SUBDIRS) .)
 TOP = $(obj)/../..
 
 obj-m			+= ath_test_wep.o

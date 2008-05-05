@@ -40,10 +40,7 @@
 # Makefile for the HAL-based Atheros driver.
 #
 
-ifeq ($(obj),)
-obj=	.
-endif
-
+obj := $(firstword $(obj) $(SUBDIRS) .)
 TOP = $(obj)
 
 ifneq (svnversion.h,$(MAKECMDGOALS))

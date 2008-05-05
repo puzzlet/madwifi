@@ -38,10 +38,7 @@
 #
 # Makefile for the Atheros Rate Control Support.
 #
-ifeq ($(obj),)
-obj=	.
-endif
-
+obj := $(firstword $(obj) $(SUBDIRS) .)
 TOP = $(obj)/../..
 
 obj-m		+= ath_rate_sample.o

@@ -40,10 +40,7 @@
 # Makefile for the Atheros WLAN driver.
 #
 
-ifeq ($(obj),)
-obj=	.
-endif
-
+obj := $(firstword $(obj) $(SUBDIRS) .)
 TOP = $(obj)/..
 
 ifeq ($(strip $(BUS)),AHB)
