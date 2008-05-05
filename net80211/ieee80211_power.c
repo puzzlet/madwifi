@@ -244,7 +244,7 @@ ieee80211_pwrsave(struct sk_buff *skb)
 	tail = skb_peek_tail(&ni->ni_savedq);
 	if (tail != NULL) {
 		age -= M_AGE_GET(tail);
-		__skb_append(tail, skb, &ni->ni_savedq);
+		__skb_queue_after(&ni->ni_savedq, tail, skb);
 	} else
 		__skb_queue_head(&ni->ni_savedq, skb);
 	M_AGE_SET(skb, age);

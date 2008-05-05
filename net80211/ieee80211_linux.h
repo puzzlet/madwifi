@@ -315,13 +315,6 @@ typedef spinlock_t acl_lock_t;
 #define	ACL_LOCK_CHECK(_as)
 #endif
 
-/* __skb_append got a third parameter in 2.6.14 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
-#define __skb_append(a,b,c)	__skb_append(a, b)
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25)
-#define __skb_append(a,b,c)	__skb_queue_after(c, a, b)
-#endif
-
 /*
  * Per-node power-save queue definitions.  Beware of control
  * flow with IEEE80211_NODE_SAVEQ_LOCK/IEEE80211_NODE_SAVEQ_UNLOCK.
@@ -373,16 +366,16 @@ typedef spinlock_t acl_lock_t;
 	_skb = __skb_dequeue(&(_ni)->ni_savedq);		\
 	(_qlen) = skb_queue_len(&(_ni)->ni_savedq);		\
 } while (0)
-#define	_IEEE80211_NODE_SAVEQ_ENQUEUE(_ni, _skb, _qlen, _age) do {\
-	struct sk_buff *tail = skb_peek_tail(&(_ni)->ni_savedq);\
-	if (tail != NULL) {					\
-		_age -= M_AGE_GET(tail);			\
-		__skb_append(tail, _skb, &(_ni)->ni_savedq);	\
-	} else { 						\
-		__skb_queue_head(&(_ni)->ni_savedq, _skb);	\
-	}							\
-	M_AGE_SET(_skb, _age);					\
-	(_qlen) = skb_queue_len(&(_ni)->ni_savedq); 		\
+#define	_IEEE80211_NODE_SAVEQ_ENQUEUE(_ni, _skb, _qlen, _age) do {	\
+	struct sk_buff *tail = skb_peek_tail(&(_ni)->ni_savedq);	\
+	if (tail != NULL) {						\
+		_age -= M_AGE_GET(tail);				\
+		__skb_queue_after(&(_ni)->ni_savedq, tail, _skb);	\
+	} else { 							\
+		__skb_queue_head(&(_ni)->ni_savedq, _skb);		\
+	}								\
+	M_AGE_SET(_skb, _age);						\
+	(_qlen) = skb_queue_len(&(_ni)->ni_savedq); 			\
 } while (0)
 
 /*

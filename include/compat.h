@@ -197,6 +197,13 @@ typedef unsigned long resource_size_t;
 #define DEV_ATH CTL_UNNUMBERED
 #endif
 
+/* __skb_append got a third parameter in 2.6.14 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
+#define __skb_queue_after(_list, _old, _new)	__skb_append(_old, _new)
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,25)
+#define __skb_queue_after(_list, _old, _new)	__skb_append(_old, _new, _list)
+#endif
+
 #endif /* __KERNEL__ */
 
 #endif /* _ATH_COMPAT_H_ */
