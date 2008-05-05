@@ -8257,54 +8257,30 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	ds->ds_ctl0, ds->ds_ctl1, ds->ds_hw[0], ds->ds_hw[1]);
 #else /* ATH_SUPERG_FF */
 	{
-		struct sk_buff *skbtmp = skb;
+		struct sk_buff *tskb;
 		struct ath_desc *ds0 = ds;
 		unsigned int i;
 
-		ds->ds_data = bf->bf_skbaddr;
-		ds->ds_link = (skb->next == NULL) ? 0 : bf->bf_daddr + sizeof(*ds);
+		for (i = 0, tskb = skb; 
+				i < (bf->bf_numdescff + 1);
+				i++, tskb = tskb->next, ds++) {
+			/* Link to the next, (i + 1)th, desc. if it exists. */
+			ds->ds_link = (tskb->next == NULL) ? 
+				0 : bf->bf_daddr + ((i + 1) * sizeof(*ds));
+			ds->ds_data = (i == 0) ? bf->bf_skbaddr : bf->bf_skbaddrff[i];
 
-		ath_hal_filltxdesc(ah, ds,
-			skbtmp->len,		/* segment length */
-			AH_TRUE,		/* first segment */
-			(skbtmp->next == NULL), /* last segment */
-			ds			/* first descriptor */
-		);
-
-		/* NB: The desc swap function becomes void,
-		 * if descriptor swapping is not enabled
-		 */
-		ath_desc_swap(ds);
-
-		DPRINTF(sc, ATH_DEBUG_XMIT, "Q%d: (ds)%p (lk)%08x (d)%08x "
-			"(c0)%08x (c1)%08x %08x %08x\n", 
-			M_FLAG_GET(skb, M_UAPSD) ? 0 : txq->axq_qnum,
-			ds, ds->ds_link, ds->ds_data, ds->ds_ctl0, ds->ds_ctl1,
-			ds->ds_hw[0], ds->ds_hw[1]);
-		for (i = 0, skbtmp = skbtmp->next; 
-				i < bf->bf_numdescff; i++, 
-				skbtmp = skbtmp->next) {
-			ds++;
-			ds->ds_link = (skbtmp->next == NULL) ? 
-				0 : bf->bf_daddr + (sizeof(*ds) * (i + 2));
-			ds->ds_data = bf->bf_skbaddrff[i];
 			ath_hal_filltxdesc(ah, ds,
-				skbtmp->len,		/* segment length */
-				AH_FALSE,		/* first segment */
-				(skbtmp->next == NULL), /* last segment */
-				ds0			/* first descriptor */
+				tskb->len,		/* Segment length */
+				(i == 0),		/* First segment? */
+				(tskb->next == NULL),	/* Last segment? */
+				ds0			/* First descriptor */
 			);
-
-			/* NB: The desc swap function becomes void,
-			 * if descriptor swapping is not enabled
-			 */
 			ath_desc_swap(ds);
 
-			DPRINTF(sc, ATH_DEBUG_XMIT, 
-				"Q%d: %08x %08x %08x %08x %08x %08x\n",
-				M_FLAG_GET(skb, M_UAPSD) ? 
-					0 : txq->axq_qnum,
-				ds->ds_link, ds->ds_data, ds->ds_ctl0,
+			DPRINTF(sc, ATH_DEBUG_XMIT, "Q%d: (ds)%p (lk)%08x "
+				"(d)%08x (c0)%08x (c1)%08x %08x %08x\n", 
+				M_FLAG_GET(tskb, M_UAPSD) ? 0 : txq->axq_qnum,
+				ds, ds->ds_link, ds->ds_data, ds->ds_ctl0,
 				ds->ds_ctl1, ds->ds_hw[0], ds->ds_hw[1]);
 		}
 	}
