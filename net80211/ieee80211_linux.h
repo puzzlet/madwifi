@@ -408,7 +408,7 @@ struct ieee80211_cb {
 #define M_UAPSD		0x08			/* frame flagged for u-apsd handling */
 #define M_RAW           0x10
 #ifdef IEEE80211_DEBUG_REFCNT
-	int tracked;
+#define M_SKB_TRACKED	0x20
 	void		(*next_destructor)(struct sk_buff *skb);
 #endif
 };

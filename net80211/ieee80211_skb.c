@@ -280,7 +280,7 @@ static void print_skb_trackchange_message(
 static struct sk_buff *
 clean_clone_or_copy(struct sk_buff *skb) {
 	if (skb != NULL)
-		SKB_CB(skb)->tracked = 0;
+		M_FLAG_CLR(skb, M_SKB_TRACKED);
 	return skb;
 }
 
@@ -295,7 +295,7 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 			"ERROR: NULL skb received.  Skipping.");
 		return NULL;
 	}
-	if (SKB_CB(skb)->tracked) {
+	if (M_FLAG_GET(skb, M_SKB_TRACKED)) {
 		skb_print_message(0 /* show_counter */, 
 			skb, func1, line1, func2, line2,
 			"ERROR: Already tracked skb received.  Skipping.");
@@ -310,7 +310,7 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 	}
 	atomic_inc(&skb_total_counter);
 	atomic_inc(&skb_refs_counter);
-	SKB_CB(skb)->tracked = 1;
+	M_FLAG_SET(skb, M_SKB_TRACKED);
 	print_skb_trackchange_message(skb, users_adjustment,
 				      func1, line1, func2, line2, 
 				      " is now ** TRACKED **");
@@ -335,7 +335,7 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
 			"ERROR: NULL skb received.  No changes made.");
 		return NULL;
 	}
-	if (!SKB_CB(skb)->tracked) {
+	if (!M_FLAG_GET(skb, M_SKB_TRACKED)) {
 		skb_print_message(0 /* show_counter */, 
 			skb, func1, line1, func2, line2,
 			"ERROR: Untracked skb received.  No changes made.");
@@ -350,7 +350,7 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
 	}
 	atomic_dec(&skb_total_counter);
 	atomic_dec(&skb_refs_counter);
-	SKB_CB(skb)->tracked = 0;
+	M_FLAG_CLR(skb, M_SKB_TRACKED);
 #ifdef IEEE80211_DEBUG_REFCNT_SKBDEST
 	/* Uninstall our debug destructor, restoring any original... */
 	if (skb->destructor == skb_destructor) {
@@ -383,7 +383,7 @@ unref_skb(struct sk_buff *skb, int type,
 		dump_stack();
 		return;
 	}
-	if (!SKB_CB(skb)->tracked) {
+	if (!M_FLAG_GET(skb, M_SKB_TRACKED)) {
 		skb_print_message(0 /* show_counter */, 
 			skb, func1, line1, func2, line2,
 			"ERROR: Untracked skb received.  Probable duplicate free error!");
@@ -463,7 +463,7 @@ ref_skb(struct sk_buff *skb,
 		dump_stack();
 		return NULL;
 	}
-	if (!SKB_CB(skb)->tracked) {
+	if (!M_FLAG_GET(skb, M_SKB_TRACKED)) {
 		skb_print_message(0 /* show_counter */, 
 			skb, func1, line1, func2, line2,
 			"ERROR: Untracked skb received.  Probable use after free!  "

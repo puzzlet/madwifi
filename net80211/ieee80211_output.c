@@ -287,7 +287,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		if (skb1) {
 			memset(SKB_CB(skb1), 0, sizeof(struct ieee80211_cb));
 #ifdef IEEE80211_DEBUG_REFCNT
-			SKB_CB(skb1)->tracked = 1;
+			M_FLAG_SET(skb1, M_SKB_TRACKED);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 			SKB_CB(skb1)->ni = ieee80211_find_txnode(vap->iv_xrvap, 
 						       eh->ether_dhost);
