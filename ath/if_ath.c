@@ -164,7 +164,8 @@ static void ath_beacon_free(struct ath_softc *);
 static void ath_beacon_config(struct ath_softc *, struct ieee80211vap *);
 static int ath_desc_alloc(struct ath_softc *);
 static void ath_desc_free(struct ath_softc *);
-static void ath_desc_swap(struct ath_desc *);
+static __inline void ath_desc_swap(struct ath_desc *);
+static __inline u_int32_t ath_ds_link_swap(u_int32_t);
 
 #ifdef IEEE80211_DEBUG_REFCNT
 static struct ieee80211_node *ath_node_alloc_debug(struct ieee80211vap *, 
@@ -2118,13 +2119,8 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int* pneedmark, u_int64_t 
 							    BUS_DMA_TODEVICE);
 
 					if (uapsd_xmit_q->axq_link) {
-#ifdef AH_NEED_DESC_SWAP
 						*uapsd_xmit_q->axq_link =
-							cpu_to_le32(STAILQ_FIRST(&an->an_uapsd_q)->bf_daddr);
-#else
-						*uapsd_xmit_q->axq_link =
-							STAILQ_FIRST(&an->an_uapsd_q)->bf_daddr;
-#endif
+							ath_ds_link_swap(STAILQ_FIRST(&an->an_uapsd_q)->bf_daddr);
 					}
 					/* below leaves an_uapsd_q NULL */
 					STAILQ_CONCAT(&uapsd_xmit_q->axq_q,
@@ -2904,6 +2900,16 @@ ath_desc_swap(struct ath_desc *ds)
 #endif
 }
 
+/* Swap transmit descriptor pointer for HW. */
+static __inline u_int32_t
+ath_ds_link_swap(u_int32_t dp) {
+#ifdef AH_NEED_DESC_SWAP
+	return swab32(dp);
+#else
+	return (dp);
+#endif
+}
+
 static void
 ath_txq_dump(struct ath_softc *sc, struct ath_txq *txq)
 {
@@ -2990,11 +2996,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 		DPRINTF(sc, ATH_DEBUG_TX_PROC, "MC txq [%d] depth = %d\n", 
 				txq->axq_qnum, txq->axq_depth);
 		if (txq->axq_link != NULL) {
-#ifdef AH_NEED_DESC_SWAP
-			*txq->axq_link = cpu_to_le32(bf->bf_daddr);
-#else
-			*txq->axq_link = bf->bf_daddr;
-#endif
+			*txq->axq_link = ath_ds_link_swap(bf->bf_daddr);
 			DPRINTF(sc, ATH_DEBUG_XMIT, "link[%u](%p)=%08llx (%p)\n",
 				txq->axq_qnum, txq->axq_link,
 				(u_int64_t)bf->bf_daddr, bf->bf_desc);
@@ -3021,11 +3023,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 				  (u_int64_t)bf->bf_daddr);
 			}
 		} else {
-#ifdef AH_NEED_DESC_SWAP
-			*txq->axq_link = cpu_to_le32(bf->bf_daddr);
-#else
-			*txq->axq_link = bf->bf_daddr;
-#endif
+			*txq->axq_link = ath_ds_link_swap(bf->bf_daddr);
 			DPRINTF(sc, ATH_DEBUG_XMIT, "link[%u] (%p)=%08llx (%p)\n",
 				txq->axq_qnum, txq->axq_link,
 				(u_int64_t)bf->bf_daddr, bf->bf_desc);
@@ -5162,11 +5160,7 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 				ath_hal_puttxbuf(ah, cabq->axq_qnum,
 						 bfmcast->bf_daddr);
 			} else {
-#ifdef AH_NEED_DESC_SWAP
-				*cabq->axq_link = cpu_to_le32(bfmcast->bf_daddr);
-#else
-				*cabq->axq_link = bfmcast->bf_daddr;
-#endif
+				*cabq->axq_link = ath_ds_link_swap(bfmcast->bf_daddr);
 			}
 			/* Set the MORE_DATA bit for each packet except the last one */
 			STAILQ_FOREACH(bfmcast, &avp->av_mcastq.axq_q, bf_list) {
@@ -5291,11 +5285,7 @@ ath_beacon_send(struct ath_softc *sc, int *needmark, uint64_t hw_tsf)
 						sc, vap, 
 						needmark)) != NULL) {
 					if (bflink != NULL)
-#ifdef AH_NEED_DESC_SWAP
-						*bflink = cpu_to_le32(bf->bf_daddr);
-#else
-						*bflink = bf->bf_daddr;
-#endif
+						*bflink = ath_ds_link_swap(bf->bf_daddr);
 					else /* For the first bf, save bf_addr for later */
 						bfaddr = bf->bf_daddr;
 
@@ -6047,11 +6037,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 						/* NB: last descriptor */
 						ds = prev->bf_desc;
 #endif
-#ifdef AH_NEED_DESC_SWAP
-						ds->ds_link = cpu_to_le32(bf->bf_daddr);
-#else
-						ds->ds_link = bf->bf_daddr;
-#endif
+						ds->ds_link = ath_ds_link_swap(bf->bf_daddr);
 					}
 				} else {
 					prev = bf;
@@ -6201,12 +6187,8 @@ ath_node_move_data(const struct ieee80211_node *ni)
 				 * link the descriptors
 				 */
 				if (wmeq->axq_link != NULL) {
-#ifdef AH_NEED_DESC_SWAP
 					*wmeq->axq_link = 
-						cpu_to_le32(bf_tmp->bf_daddr);
-#else
-					*wmeq->axq_link = bf_tmp->bf_daddr;
-#endif
+						ath_ds_link_swap(bf_tmp->bf_daddr);
 					DPRINTF(sc, ATH_DEBUG_XMIT, 
 							"link[%u](%p)=%08llx (%p)\n",
 							wmeq->axq_qnum, wmeq->axq_link,
@@ -6282,12 +6264,8 @@ ath_node_move_data(const struct ieee80211_node *ni)
 				if (bf) {
 					ATH_TXQ_MOVE_Q(wmeq, txq);
 					if (txq->axq_link != NULL) {
-#ifdef AH_NEED_DESC_SWAP
 						*(txq->axq_link) = 
-							cpu_to_le32(bf->bf_daddr);
-#else
-						*(txq->axq_link) = bf->bf_daddr;
-#endif
+							ath_ds_link_swap(bf->bf_daddr);
 					}
 				}
 				index--;
@@ -7270,11 +7248,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 			 * if descriptor swapping is not enabled */
 			ath_desc_swap(ds);
 			if (txq->axq_link) {
-#ifdef AH_NEED_DESC_SWAP
-				*txq->axq_link = cpu_to_le32(bf->bf_daddr);
-#else
-				*txq->axq_link = bf->bf_daddr;
-#endif
+				*txq->axq_link = ath_ds_link_swap(bf->bf_daddr);
 			}
 			txq->axq_link = &ds->ds_link;
 			pollsperrate++;
@@ -7285,11 +7259,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 		}
 	}
 	/* make it circular */
-#ifdef AH_NEED_DESC_SWAP
-	ds->ds_link = cpu_to_le32(head->bf_daddr);
-#else
-	ds->ds_link = head->bf_daddr;
-#endif
+	ds->ds_link = ath_ds_link_swap(head->bf_daddr);
 	/* start the queue */
 	ath_hal_puttxbuf(ah, txq->axq_qnum, head->bf_daddr);
 	ath_hal_txstart(ah, txq->axq_qnum);
@@ -7662,11 +7632,7 @@ ath_tx_uapsdqueue(struct ath_softc *sc, struct ath_node *an, struct ath_buf *bf)
 	if (an->an_uapsd_qdepth < an->an_node.ni_uapsd_maxsp) {
 		/* add to delivery q */
 		if ((lastbuf = STAILQ_LAST(&an->an_uapsd_q, ath_buf, bf_list))) {
-#ifdef AH_NEED_DESC_SWAP
-			lastbuf->bf_desc->ds_link = cpu_to_le32(bf->bf_daddr);
-#else
-			lastbuf->bf_desc->ds_link = bf->bf_daddr;
-#endif
+			lastbuf->bf_desc->ds_link = ath_ds_link_swap(bf->bf_daddr);
 		}
 		STAILQ_INSERT_TAIL(&an->an_uapsd_q, bf, bf_list);
 		an->an_uapsd_qdepth++;
@@ -7699,11 +7665,7 @@ ath_tx_uapsdqueue(struct ath_softc *sc, struct ath_node *an, struct ath_buf *bf)
 
 	/* add to overflow q */
 	if ((lastbuf = STAILQ_LAST(&an->an_uapsd_overflowq, ath_buf, bf_list))) {
-#ifdef AH_NEED_DESC_SWAP
-		lastbuf->bf_desc->ds_link = cpu_to_le32(bf->bf_daddr);
-#else
-		lastbuf->bf_desc->ds_link = bf->bf_daddr;
-#endif
+		lastbuf->bf_desc->ds_link = ath_ds_link_swap(bf->bf_daddr);
 	}
 	STAILQ_INSERT_TAIL(&an->an_uapsd_overflowq, bf, bf_list);
 	an->an_uapsd_overflowqdepth++;
