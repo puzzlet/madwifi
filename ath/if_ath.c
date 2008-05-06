@@ -2964,6 +2964,14 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 	struct ath_txq *txq, struct ath_buf *bf, int framelen)
 {
 	struct ath_hal *ah = sc->sc_ah;
+	struct ath_desc	*ds = bf->bf_desc;
+
+#ifdef ATH_SUPERG_FF
+	/* Go to the last descriptor.
+	 * NB: This code assumes that the descriptors for a buf are allocated,
+	 *     contiguously. This assumption is made elsewhere too. */
+	ds += bf->bf_numdescff;
+#endif
 
 	if (ath_cac_running_dbgmsg(sc))
 		return;
@@ -2991,7 +2999,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 				txq->axq_qnum, txq->axq_link,
 				(u_int64_t)bf->bf_daddr, bf->bf_desc);
 		}
-		txq->axq_link = &bf->bf_desc->ds_link;
+		txq->axq_link = &ds->ds_link;
 		/* We do not start tx on this queue as it will be done as
 		"CAB" data at DTIM intervals. */
 		ath_hal_intrset(ah, sc->sc_imask);
@@ -3022,7 +3030,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 				txq->axq_qnum, txq->axq_link,
 				(u_int64_t)bf->bf_daddr, bf->bf_desc);
 		}
-		txq->axq_link = &bf->bf_desc->ds_link;
+		txq->axq_link = &ds->ds_link;
 		ath_hal_txstart(ah, txq->axq_qnum);
 		sc->sc_dev->trans_start = jiffies;
 	}
