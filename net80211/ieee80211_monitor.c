@@ -130,7 +130,6 @@ ieee80211_monitor_encap(struct ieee80211vap *vap, struct sk_buff *skb)
 	struct ieee80211_phy_params *ph = &(SKB_CB(skb)->phy);
 	SKB_CB(skb)->flags = M_RAW;
 	SKB_NI(skb) = NULL;
-	SKB_CB(skb)->next = NULL;
 
 	/* send at a static rate if it is configured */
 	ph->rate[0] = vap->iv_fixed_rate > 0 ? vap->iv_fixed_rate : 2;

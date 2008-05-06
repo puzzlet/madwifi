@@ -158,7 +158,6 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 
 		SKB_NI(skb) = NULL;
 		SKB_CB(skb)->flags = 0;
-		SKB_CB(skb)->next = NULL;
 
 		skb_reserve(skb, sizeof(struct ieee80211_frame));
 		*frm = skb_put(skb, pktlen);

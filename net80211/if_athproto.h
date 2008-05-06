@@ -73,10 +73,6 @@ struct athl2p_tunnel_hdr {
 	(SKB_CB(_skb)->flags &= ~M_FF)
 #define ATH_FF_MAGIC_PRESENT(_skb) \
 	((SKB_CB(_skb)->flags & M_FF) != 0)
-#define ATH_FF_NEXTSKB_PUT(_skb, _next) \
-	(SKB_CB(_skb)->next = _next)
-#define ATH_FF_NEXTSKB_GET(_skb) \
-	(SKB_CB(_skb)->next)
 
 /*
  * default value for the minimum txq depth required for an ath_buf to be

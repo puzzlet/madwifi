@@ -411,7 +411,6 @@ struct ieee80211_cb {
 	int tracked;
 	void		(*next_destructor)(struct sk_buff *skb);
 #endif
-	struct sk_buff *next;			/* fast frame sk_buf chain */
 };
 
 struct __assert {
