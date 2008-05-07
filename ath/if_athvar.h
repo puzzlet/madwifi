@@ -455,8 +455,16 @@ struct ath_buf {
 	const char* bf_taken_at_func;			
 };
 
+/* The last descriptor for a buffer.
+ * NB: This code assumes that the descriptors for a buf are allocated,
+ *     contiguously. This assumption is made elsewhere too. */
+#ifdef ATH_SUPERG_FF
+# define ATH_BUF_LAST_DESC(_bf)	((_bf)->bf_desc + (_bf)->bf_numdescff)
+#else
+# define ATH_BUF_LAST_DESC(_bf)	((_bf)->bf_desc)
+#endif
 /* BF_XX(...) macros will blow up if _bf is NULL, but not if _bf->bf_skb is
- * null*/
+ * null. */
 #define	ATH_BUF_CB(_bf) 		(((_bf)->bf_skb) ? SKB_CB((_bf)->bf_skb) : NULL)
 #define	ATH_BUF_NI(_bf) 		(((_bf)->bf_skb) ? SKB_NI((_bf)->bf_skb) : NULL)
 #define	ATH_BUF_AN(_bf) 		(((_bf)->bf_skb) ? SKB_AN((_bf)->bf_skb) : NULL)
@@ -496,7 +504,6 @@ struct proc_dir_entry;
  */
 struct ath_txq {
 	u_int axq_qnum;			/* hardware q number */
-	u_int32_t *axq_link;		/* link ptr in last TX desc */
 	STAILQ_HEAD(, ath_buf) axq_q;	/* transmit queue */
 	spinlock_t axq_lock;		/* lock on q and link */
 	int axq_depth;			/* queue depth */
@@ -576,6 +583,10 @@ struct ath_vap {
 #define	ATH_TXQ_LOCK_CHECK(_tq)
 #endif
 
+#define ATH_TXQ_LAST(_txq) \
+	STAILQ_LAST(&(_txq)->axq_q, ath_buf, bf_list)
+#define ATH_TXQ_LAST_DESC(_txq) \
+	ATH_BUF_LAST_DESC(ATH_TXQ_LAST((_txq)))
 #define ATH_TXQ_INSERT_TAIL(_tq, _elm, _field) do { \
 	STAILQ_INSERT_TAIL(&(_tq)->axq_q, (_elm), _field); \
 	(_tq)->axq_depth++; \
@@ -583,24 +594,29 @@ struct ath_vap {
 } while (0)
 #define ATH_TXQ_REMOVE_HEAD(_tq, _field) do { \
 	STAILQ_REMOVE_HEAD(&(_tq)->axq_q, _field); \
-	if (--(_tq)->axq_depth <= 0) \
-		(_tq)->axq_link = NULL; \
+	--(_tq)->axq_depth; \
 } while (0)
-/* move buffers from MCASTQ to CABQ */
-#define ATH_TXQ_MOVE_MCASTQ(_tqs,_tqd) do { \
+/* Concat. buffers from one queue to other. */
+#define ATH_TXQ_MOVE_Q(_tqs,_tqd) do { \
 	(_tqd)->axq_depth += (_tqs)->axq_depth; \
 	(_tqd)->axq_totalqueued += (_tqs)->axq_totalqueued; \
-	(_tqd)->axq_link = (_tqs)->axq_link; \
+	ATH_TXQ_LINK_DESC((_tqd), STAILQ_FIRST(&(_tqs)->axq_q)); \
 	STAILQ_CONCAT(&(_tqd)->axq_q, &(_tqs)->axq_q); \
-	(_tqs)->axq_depth=0; \
+	(_tqs)->axq_depth = 0; \
 	(_tqs)->axq_totalqueued = 0; \
-	(_tqs)->axq_link = NULL; \
 } while (0)
+#define ATH_TXQ_LINK_DESC(_txq, _bf) \
+		ATH_STQ_LINK_DESC(&(_txq)->axq_q, (_bf))
 
-/* 
- * concat buffers from one queue to other
- */
-#define ATH_TXQ_MOVE_Q(_tqs,_tqd)  ATH_TXQ_MOVE_MCASTQ(_tqs,_tqd)
+/* NB: This macro's behaviour is dependent upon it being called *before* _bf is
+ *     inserted into _stq. */
+#define ATH_STQ_LINK_DESC(_stq, _bf) do { \
+	if (STAILQ_FIRST((_stq))) \
+		ATH_BUF_LAST_DESC( \
+				STAILQ_LAST((_stq), ath_buf, bf_list) \
+			)->ds_link = \
+			ath_ds_link_swap((_bf)->bf_daddr); \
+	} while (0)
 
 #define	BSTUCK_THRESH	10	/* # of stuck beacons before resetting NB: this is a guess*/
 

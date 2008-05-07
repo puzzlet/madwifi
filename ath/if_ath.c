@@ -2118,15 +2118,13 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int* pneedmark, u_int64_t 
 							    sizeof(*qwhl),
 							    BUS_DMA_TODEVICE);
 
-					if (uapsd_xmit_q->axq_link) {
-						*uapsd_xmit_q->axq_link =
-							ath_ds_link_swap(STAILQ_FIRST(&an->an_uapsd_q)->bf_daddr);
-					}
-					/* below leaves an_uapsd_q NULL */
+  
+					ATH_TXQ_LINK_DESC(uapsd_xmit_q,
+							STAILQ_FIRST(
+							&an->an_uapsd_q));
+					/* Below leaves an_uapsd_q NULL. */
 					STAILQ_CONCAT(&uapsd_xmit_q->axq_q,
 						      &an->an_uapsd_q);
-					uapsd_xmit_q->axq_link =
-						&last_desc->ds_link;
 					ath_hal_puttxbuf(sc->sc_ah,
 						uapsd_xmit_q->axq_qnum,
 						(STAILQ_FIRST(&uapsd_xmit_q->axq_q))->bf_daddr);
@@ -2917,8 +2915,8 @@ ath_txq_dump(struct ath_softc *sc, struct ath_txq *txq)
 	struct ath_buf *bf;
 
 	DPRINTF(sc, ATH_DEBUG_WATCHDOG, "txq:%p : axq_qnum:%u axq_depth:%d "
-			"axq_link:%p TXDP:%08x\n",
-			txq, txq->axq_qnum, txq->axq_depth, txq->axq_link,
+			"TXDP:%08x\n",
+			txq, txq->axq_qnum, txq->axq_depth, 
 			ath_hal_gettxbuf(sc->sc_ah, txq->axq_qnum));
 
 	j = 0;
@@ -2981,54 +2979,53 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 
 	if (ath_cac_running_dbgmsg(sc))
 		return;
-	/*
-	 * Insert the frame on the outbound list and
-	 * pass it on to the hardware.
-	 */
+
+	/* Insert the frame on the outbound list and
+	 * pass it on to the hardware. */
 	ATH_TXQ_LOCK_IRQ(txq);
 	if (ni && ni->ni_vap && txq == &ATH_VAP(ni->ni_vap)->av_mcastq) {
-		/*
-		 * The CAB queue is started from the SWBA handler since
-		 * frames only go out on DTIM and to avoid possible races.
-		 */
+		/* The CAB queue is started from the SWBA handler since
+		 * frames only go out on DTIM and to avoid possible races. */
 		ath_hal_intrset(ah, sc->sc_imask & ~HAL_INT_SWBA);
-		ATH_TXQ_INSERT_TAIL(txq, bf, bf_list);
-		DPRINTF(sc, ATH_DEBUG_TX_PROC, "MC txq [%d] depth = %d\n", 
-				txq->axq_qnum, txq->axq_depth);
-		if (txq->axq_link != NULL) {
-			*txq->axq_link = ath_ds_link_swap(bf->bf_daddr);
-			DPRINTF(sc, ATH_DEBUG_XMIT, "link[%u](%p)=%08llx (%p)\n",
-				txq->axq_qnum, txq->axq_link,
-				(u_int64_t)bf->bf_daddr, bf->bf_desc);
-		}
-		txq->axq_link = &ds->ds_link;
+
+		ATH_TXQ_LINK_DESC(txq, bf);
+		ATH_TXQ_INSERT_TAIL(txq, bf, bf_list); 
+		DPRINTF(sc, ATH_DEBUG_XMIT, 
+				"link[%u]=%08llx (%p)\n",
+				txq->axq_qnum, 
+  				(u_int64_t)bf->bf_daddr, bf->bf_desc);
+
 		/* We do not start tx on this queue as it will be done as
-		"CAB" data at DTIM intervals. */
+		 * "CAB" data at DTIM intervals. */
 		ath_hal_intrset(ah, sc->sc_imask);
 	} else {
-		ATH_TXQ_INSERT_TAIL(txq, bf, bf_list);
-		DPRINTF(sc, ATH_DEBUG_TX_PROC, "UC txq [%d] depth = %d\n", 
-				txq->axq_qnum, txq->axq_depth);
-		if (txq->axq_link == NULL) {
+		ATH_TXQ_LINK_DESC(txq, bf);
+		if (!STAILQ_FIRST(&txq->axq_q)) {
 			u_int32_t txdp;
 
 			ath_hal_puttxbuf(ah, txq->axq_qnum, bf->bf_daddr);
 			DPRINTF(sc, ATH_DEBUG_XMIT, "TXDP[%u] = %08llx (%p)\n",
-				txq->axq_qnum, (u_int64_t)bf->bf_daddr, bf->bf_desc);
+				txq->axq_qnum, (u_int64_t)bf->bf_daddr,
+				bf->bf_desc);
 			txdp = ath_hal_gettxbuf(ah, txq->axq_qnum);
 			if (txdp != bf->bf_daddr) {
-			  DPRINTF(sc, ATH_DEBUG_WATCHDOG,
-				  "TXQ%d: BUG TXDP:%08x instead of %08llx\n",
-				  txq->axq_qnum, txdp,
-				  (u_int64_t)bf->bf_daddr);
+				DPRINTF(sc, ATH_DEBUG_WATCHDOG,
+						"TXQ%d: BUG TXDP:%08x instead "
+						"of %08llx\n",
+						txq->axq_qnum, txdp,
+						(u_int64_t)bf->bf_daddr);
 			}
-		} else {
-			*txq->axq_link = ath_ds_link_swap(bf->bf_daddr);
-			DPRINTF(sc, ATH_DEBUG_XMIT, "link[%u] (%p)=%08llx (%p)\n",
-				txq->axq_qnum, txq->axq_link,
-				(u_int64_t)bf->bf_daddr, bf->bf_desc);
 		}
-		txq->axq_link = &ds->ds_link;
+		ATH_TXQ_INSERT_TAIL(txq, bf, bf_list);
+		
+		DPRINTF(sc, ATH_DEBUG_TX_PROC, "UC txq [%d] depth = %d\n", 
+				txq->axq_qnum, txq->axq_depth);
+		DPRINTF(sc, ATH_DEBUG_XMIT,
+				"link[%u] (%08x)=%08llx (%p)\n",
+				txq->axq_qnum, 
+				ATH_TXQ_LAST_DESC(txq)->ds_link,
+				(u_int64_t)bf->bf_daddr, bf->bf_desc);
+
 		ath_hal_txstart(ah, txq->axq_qnum);
 		sc->sc_dev->trans_start = jiffies;
 	}
@@ -5080,8 +5077,11 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	skb = bf->bf_skb;
 	curlen = skb->len;
 	DPRINTF(sc, ATH_DEBUG_BEACON,
-		"Updating beacon - mcast pending=%d.\n", avp->av_mcastq.axq_depth);
-	if (ieee80211_beacon_update(SKB_NI(bf->bf_skb), &avp->av_boff, skb, !!avp->av_mcastq.axq_depth, &is_dtim)) {
+		"Updating beacon - mcast pending=%d.\n",
+		avp->av_mcastq.axq_depth);
+	if (ieee80211_beacon_update(SKB_NI(bf->bf_skb), &avp->av_boff, skb,
+				!!STAILQ_FIRST(&avp->av_mcastq.axq_q),
+				&is_dtim)) {
 		bus_unmap_single(sc->sc_bdev,
 			bf->bf_skbaddr, curlen, BUS_DMA_TODEVICE);
 		bf->bf_skbaddr = 0;
@@ -5101,21 +5101,21 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 	 */
 	tim_bitctl = ((struct ieee80211_tim_ie *)avp->av_boff.bo_tim)->tim_bitctl;
 	if ((tim_bitctl & BITCTL_BUFD_MCAST) && 
-	    (avp->av_mcastq.axq_depth) && 
-	    (sc->sc_cabq->axq_depth) &&
+	    STAILQ_FIRST(&avp->av_mcastq.axq_q) && 
+	    STAILQ_FIRST(&sc->sc_cabq->axq_q) &&
 	    (sc->sc_nvaps > 1) && 
 	    (sc->sc_stagbeacons)) {
 		ath_tx_draintxq(sc, sc->sc_cabq);
 		DPRINTF(sc, ATH_DEBUG_BEACON,
 			"Drained previous cabq transmit traffic to make room for next VAP.\n");
-	} else if ((sc->sc_cabq->axq_depth) &&
-		 ATH_TXQ_SETUP(sc, sc->sc_cabq->axq_qnum) &&
-                 (!txqactive(sc->sc_ah,  sc->sc_cabq->axq_qnum))) {
-			DPRINTF(sc, 
-				ATH_DEBUG_BEACON,
-				"Draining %d stalled CABQ transmit buffers.\n",
-				sc->sc_cabq->axq_depth);
-			ath_tx_draintxq(sc, sc->sc_cabq);
+	} else if (STAILQ_FIRST(&sc->sc_cabq->axq_q) &&
+			ATH_TXQ_SETUP(sc, sc->sc_cabq->axq_qnum) &&
+			!txqactive(sc->sc_ah,  sc->sc_cabq->axq_qnum)) {
+		DPRINTF(sc, 
+			ATH_DEBUG_BEACON,
+			"Draining %d stalled CABQ transmit buffers.\n",
+			sc->sc_cabq->axq_depth);
+		ath_tx_draintxq(sc, sc->sc_cabq);
 	} else {
 		DPRINTF(sc, ATH_DEBUG_BEACON,
 			"No need to drain previous CABQ transmit traffic.\n");
@@ -5152,27 +5152,26 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 		ATH_TXQ_LOCK_IRQ_INSIDE(cabq);
 		bfmcast = STAILQ_FIRST(&avp->av_mcastq.axq_q);
 		if (bfmcast != NULL) {
+			struct ath_buf *tbf;
 			DPRINTF(sc, ATH_DEBUG_BEACON,
 				"Multicast pending.  "
 				"Linking CABQ to avp->av_mcastq.axq_q.\n");
-			/* link the descriptors */
-			if (cabq->axq_link == NULL) {
-				ath_hal_puttxbuf(ah, cabq->axq_qnum,
-						 bfmcast->bf_daddr);
-			} else {
-				*cabq->axq_link = ath_ds_link_swap(bfmcast->bf_daddr);
-			}
-			/* Set the MORE_DATA bit for each packet except the last one */
-			STAILQ_FOREACH(bfmcast, &avp->av_mcastq.axq_q, bf_list) {
-				if (bfmcast != STAILQ_LAST(&avp->av_mcastq.axq_q, 
+
+			/* Set the MORE_DATA bit for each packet except the
+			 * last one */
+			STAILQ_FOREACH(tbf, &avp->av_mcastq.axq_q, bf_list) {
+				if (tbf != STAILQ_LAST(&avp->av_mcastq.axq_q, 
 							ath_buf, bf_list))
 					((struct ieee80211_frame *)
-					 bfmcast->bf_skb->data)->i_fc[1] |= 
+					 tbf->bf_skb->data)->i_fc[1] |= 
 						IEEE80211_FC1_MORE_DATA;
 			}
 
-			/* append the private VAP mcast list to the cabq */
-			ATH_TXQ_MOVE_MCASTQ(&avp->av_mcastq, cabq);
+			/* Append the private VAP mcast list to the cabq. */
+			ATH_TXQ_MOVE_Q(&avp->av_mcastq, cabq);
+			if (!STAILQ_FIRST(&cabq->axq_q))
+				ath_hal_puttxbuf(ah, cabq->axq_qnum,
+						 bfmcast->bf_daddr);
 		}
 		else {
 			DPRINTF(sc, ATH_DEBUG_BEACON,
@@ -5182,7 +5181,7 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 		}
 
 		/* NB: gated by beacon so safe to start here */
-		if (cabq->axq_depth > 0) {
+		if (STAILQ_FIRST(&cabq->axq_q)) {
 			DPRINTF(sc, ATH_DEBUG_BEACON,
 				"Checking CABQ - CABQ being started.\n");
 			if (!ath_hal_txstart(ah, cabq->axq_qnum)) {
@@ -5285,8 +5284,11 @@ ath_beacon_send(struct ath_softc *sc, int *needmark, uint64_t hw_tsf)
 						sc, vap, 
 						needmark)) != NULL) {
 					if (bflink != NULL)
-						*bflink = ath_ds_link_swap(bf->bf_daddr);
-					else /* For the first bf, save bf_addr for later */
+						*bflink = ath_ds_link_swap(
+								bf->bf_daddr);
+					else
+						/* For the first bf, save 
+						 * bf_addr for later */
 						bfaddr = bf->bf_daddr;
 
 					bflink = &bf->bf_desc->ds_link;
@@ -5973,10 +5975,9 @@ ath_node_move_data(const struct ieee80211_node *ni)
 		struct ath_txq tmp_q;
 		memset(&tmp_q, 0, sizeof(tmp_q));
 		STAILQ_INIT(&tmp_q.axq_q);
-		/*
-		 * collect all the data towards the node
-		 * in to the tmp_q.
-		 */
+		
+		/* Collect all the data towards the node
+		 * in to the tmp_q. */
 		index = WME_AC_VO;
 		while (index >= WME_AC_BE && txq != sc->sc_ac2q[index]) {
 			txq = sc->sc_ac2q[index];
@@ -5984,10 +5985,9 @@ ath_node_move_data(const struct ieee80211_node *ni)
 			ATH_TXQ_LOCK_IRQ(txq);
 			ath_hal_stoptxdma(ah, txq->axq_qnum);
 			bf = prev = STAILQ_FIRST(&txq->axq_q);
-			/*
-			 * skip all the buffers that are done
-			 * until the first one that is in progress
-			 */
+			
+			/* Skip all the buffers that are done
+			 * until the first one that is in progress. */
 			while (bf) {
 #ifdef ATH_SUPERG_FF
 				ds = &bf->bf_desc[bf->bf_numdescff];
@@ -6002,7 +6002,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 				bf = STAILQ_NEXT(bf, bf_list);
 			}
 
-			/* save the pointer to the last buf that's done */
+			/* Save the pointer to the last buf that's done. */
 			if (prev == bf)
 				bf_tmp = NULL;
 			else
@@ -6027,27 +6027,26 @@ ath_node_move_data(const struct ieee80211_node *ni)
 						STAILQ_INSERT_TAIL(&tmp_q.axq_q, 
 								bf, bf_list);
 						bf = STAILQ_NEXT(prev, bf_list);
-						/*
-						 * after deleting the node
-						 * link the descriptors
-						 */
+						/* After deleting the node
+						 * link the descriptors. */
 #ifdef ATH_SUPERG_FF
-						ds = &prev->bf_desc[prev->bf_numdescff];
+						ds = &prev->bf_desc
+							[prev->bf_numdescff];
 #else
-						/* NB: last descriptor */
+						/* NB: last descriptor. */
 						ds = prev->bf_desc;
 #endif
-						ds->ds_link = ath_ds_link_swap(bf->bf_daddr);
+						ds->ds_link = ath_ds_link_swap(
+								bf->bf_daddr);
 					}
 				} else {
 					prev = bf;
 					bf = STAILQ_NEXT(bf, bf_list);
 				}
 			}
-			/*
-			 * if the last buf was deleted.
-			 * set the pointer to the last descriptor.
-			 */
+
+			/* If the last buf. was deleted.
+			 * set the pointer to the last descriptor. */
 			bf = STAILQ_FIRST(&txq->axq_q);
 			if (bf) {
 				if (prev) {
@@ -6064,22 +6063,14 @@ ath_node_move_data(const struct ieee80211_node *ni)
 						status = ath_hal_txprocdesc(
 								ah, ds, ts
 								);
-						if (status == HAL_EINPROGRESS)
-							txq->axq_link = 
-								&ds->ds_link;
-						else
-							txq->axq_link = NULL;
 					}
 				}
-			} else
-				txq->axq_link = NULL;
+			}
 
 			ATH_TXQ_UNLOCK_IRQ(txq);
 
-			/*
-			 * restart the DMA from the first
-			 * buffer that was not DMA'd.
-			 */
+			/* Restart the DMA from the first
+			 * buffer that was not DMA'd. */
 			if (bf_tmp)
 				bf = STAILQ_NEXT(bf_tmp, bf_list);
 			else
@@ -6090,12 +6081,11 @@ ath_node_move_data(const struct ieee80211_node *ni)
 				ath_hal_txstart(ah, txq->axq_qnum);
 			}
 		}
-		/*
-		 * queue them on to the XR txqueue.
-		 * can not directly put them on to the XR txq. since the
-		 * skb data size may be greater than the XR fragmentation
-		 * threshold size.
-		 */
+		
+		/* Queue them on to the XR txqueue.
+		 * Can not directly put them on to the XR txq, since the
+		 * SKB data size may be greater than the XR fragmentation
+		 * threshold size. */
 		bf  = STAILQ_FIRST(&tmp_q.axq_q);
 		index = 0;
 		while (bf) {
@@ -6112,15 +6102,13 @@ ath_node_move_data(const struct ieee80211_node *ni)
 		DPRINTF(sc, ATH_DEBUG_XMIT_PROC, 
 				"moved %d buffers from NORMAL to XR\n", index);
 	} else {
-		struct ath_txq wme_tmp_qs[WME_AC_VO+1];
+		struct ath_txq wme_tmp_qs[WME_AC_VO + 1];
 		struct ath_txq *wmeq = NULL, *prevq;
 		struct ieee80211_frame *wh;
 		struct ath_desc *ds = NULL;
 		unsigned int count = 0;
 
-		/*
-		 * move data from XR txq to Normal txqs.
-		 */
+		/* Move data from XR txq to Normal txqs. */
 		DPRINTF(sc, ATH_DEBUG_XMIT_PROC, 
 				"move buffers from XR to NORMAL\n");
 		memset(&wme_tmp_qs, 0, sizeof(wme_tmp_qs));
@@ -6131,10 +6119,8 @@ ath_node_move_data(const struct ieee80211_node *ni)
 		ATH_TXQ_LOCK_IRQ(txq);
 		ath_hal_stoptxdma(ah, txq->axq_qnum);
 		bf = prev = STAILQ_FIRST(&txq->axq_q);
-		/*
-		 * skip all the buffers that are done
-		 * until the first one that is in progress
-		 */
+		/* Skip all the buffers that are done
+		 * until the first one that is in progress. */
 		while (bf) {
 #ifdef ATH_SUPERG_FF
 			ds = &bf->bf_desc[bf->bf_numdescff];
@@ -6148,17 +6134,14 @@ ath_node_move_data(const struct ieee80211_node *ni)
 			prev= bf;
 			bf = STAILQ_NEXT(bf, bf_list);
 		}
-		/*
-		 * save the pointer to the last buf that's
-		 * done
-		 */
+		
+		/* Save the pointer to the last buf that's done. */
 		if (prev == bf)
 			bf_tmp1 = NULL;
 		else
 			bf_tmp1 = prev;
-		/*
-		 * collect all the data in to four temp SW queues.
-		 */
+
+		/* Collect all the data in to four temp SW queues. */
 		while (bf) {
 			if (ni == ATH_BUF_NI(bf)) {
 				if (prev == bf) {
@@ -6176,29 +6159,20 @@ ath_node_move_data(const struct ieee80211_node *ni)
 				skb = bf_tmp->bf_skb;
 				wh = (struct ieee80211_frame *)skb->data;
 				if (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_QOS) {
-					/* XXX validate skb->priority, remove 
+					/* XXX: Validate skb->priority, remove 
 					 * mask */
 					wmeq = &wme_tmp_qs[skb->priority & 0x3];
 				} else
 					wmeq = &wme_tmp_qs[WME_AC_BE];
+				ATH_TXQ_LINK_DESC(wmeq, bf_tmp);
 				STAILQ_INSERT_TAIL(&wmeq->axq_q, bf_tmp, bf_list);
-				ds = bf_tmp->bf_desc;
-				/*
-				 * link the descriptors
-				 */
-				if (wmeq->axq_link != NULL) {
-					*wmeq->axq_link = 
-						ath_ds_link_swap(bf_tmp->bf_daddr);
-					DPRINTF(sc, ATH_DEBUG_XMIT, 
-							"link[%u](%p)=%08llx (%p)\n",
-							wmeq->axq_qnum, wmeq->axq_link,
-							(u_int64_t)bf_tmp->bf_daddr, 
-							bf_tmp->bf_desc);
-				}
-				wmeq->axq_link = &ds->ds_link;
-				/*
-				 * update the rate information
-				 */
+				DPRINTF(sc, ATH_DEBUG_XMIT, 
+						"link[%u]=%08llx (%p)\n",
+						wmeq->axq_qnum, 
+						(u_int64_t)bf_tmp->bf_daddr, 
+						bf_tmp->bf_desc);
+
+				/* Update the rate information. (?) */
 			} else {
 				prev = bf;
 				bf = STAILQ_NEXT(bf, bf_list);
@@ -6218,26 +6192,12 @@ ath_node_move_data(const struct ieee80211_node *ni)
 					/* NB: last descriptor */
 					ds = prev->bf_desc;
 #endif
-					ts = &bf->bf_dsstatus.ds_txstat;
-					status = ath_hal_txprocdesc(ah, ds, ts);
-					if (status == HAL_EINPROGRESS)
-						txq->axq_link = &ds->ds_link;
-					else
-						txq->axq_link = NULL;
 				}
 			}
-		} else {
-			/*
-			 * if the list is empty reset the pointer.
-			 */
-			txq->axq_link = NULL;
 		}
 		ATH_TXQ_UNLOCK_IRQ(txq);
 
-		/*
-		 * restart the DMA from the first
-		 * buffer that was not DMA'd.
-		 */
+		/* Restart the DMA from the first buffer that was not DMA'd. */
 		if (bf_tmp1)
 			bf = STAILQ_NEXT(bf_tmp1, bf_list);
 		else
@@ -6261,13 +6221,8 @@ ath_node_move_data(const struct ieee80211_node *ni)
 					(index >= WME_AC_BE)) {
 				wmeq = &wme_tmp_qs[index];
 				bf = STAILQ_FIRST(&wmeq->axq_q);
-				if (bf) {
+				if (bf)
 					ATH_TXQ_MOVE_Q(wmeq, txq);
-					if (txq->axq_link != NULL) {
-						*(txq->axq_link) = 
-							ath_ds_link_swap(bf->bf_daddr);
-					}
-				}
 				index--;
 			}
 
@@ -7034,7 +6989,6 @@ ath_grppoll_txq_setup(struct ath_softc *sc, int qtype, int period)
 
 		txq->axq_qnum = qnum;
 	}
-	txq->axq_link = NULL;
 	STAILQ_INIT(&txq->axq_q);
 	ATH_TXQ_LOCK_INIT(txq);
 	txq->axq_depth = 0;
@@ -7058,7 +7012,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 	ath_keyix_t keyix = HAL_TXKEYIX_INVALID;
 	unsigned int pollsperrate, pos;
 	struct sk_buff *skb = NULL;
-	struct ath_buf *bf, *head = NULL;
+	struct ath_buf *bf = NULL, *head = NULL;
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ath_softc *sc = ic->ic_dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
@@ -7068,7 +7022,6 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 	u_int8_t cix, rtindex = 0;
 	u_int type;
 	struct ath_txq *txq = &sc->sc_grpplq;
-	struct ath_desc *ds = NULL;
 	int rates[XR_NUM_RATES];
 	u_int8_t ratestr[16], numpollstr[16];
 	struct rate_to_str_map {
@@ -7206,24 +7159,23 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 			}
 			ATH_TXBUF_UNLOCK_IRQ(sc);
 
-			bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
-				skb->data, skb->len, BUS_DMA_TODEVICE);
 			bf->bf_skb = skb;
-			ATH_TXQ_INSERT_TAIL(txq, bf, bf_list);
-			ds = bf->bf_desc;
-			ds->ds_data = bf->bf_skbaddr;
-			if (i == pollcount && amode == (HAL_ANTENNA_MAX_MODE - 1)) {
+			bf->bf_desc->ds_data = bus_map_single(sc->sc_bdev,
+				skb->data, skb->len, BUS_DMA_TODEVICE);;
+
+			if ((i == pollcount) && (amode == (HAL_ANTENNA_MAX_MODE - 1))) {
 				type = HAL_PKT_TYPE_NORMAL;
 				flags |= (HAL_TXDESC_CLRDMASK | HAL_TXDESC_VEOL);
 			} else {
 				flags |= HAL_TXDESC_CTSENA;
 				type = HAL_PKT_TYPE_GRP_POLL;
 			}
-			if (i == 0 && amode == HAL_ANTENNA_FIXED_A) {
+			if ((i == 0) && (amode == HAL_ANTENNA_FIXED_A)) {
 				flags |= HAL_TXDESC_CLRDMASK;
 				head = bf;
 			}
-			ath_hal_setuptxdesc(ah, ds,
+
+			ath_hal_setuptxdesc(ah, bf->bf_desc,
 				skb->len + IEEE80211_CRC_LEN,	/* frame length */
 				sizeof(struct ieee80211_frame), /* header length */
 				type,				/* Atheros packet type */
@@ -7238,19 +7190,17 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 				0,				/* comp iv len */
 				ATH_COMP_PROC_NO_COMP_NO_CCS	/* comp scheme */
 				);
-			ath_hal_filltxdesc(ah, ds,
+			ath_hal_filltxdesc(ah, bf->bf_desc,
 				roundup(skb->len, 4),	/* buffer length */
 				AH_TRUE,		/* first segment */
 				AH_TRUE,		/* last segment */
-				ds			/* first descriptor */
+				bf->bf_desc		/* first descriptor */
 				);
-			/* NB: The desc swap function becomes void,
-			 * if descriptor swapping is not enabled */
-			ath_desc_swap(ds);
-			if (txq->axq_link) {
-				*txq->axq_link = ath_ds_link_swap(bf->bf_daddr);
-			}
-			txq->axq_link = &ds->ds_link;
+
+			ath_desc_swap(bf->bf_desc);
+			ATH_TXQ_LINK_DESC(txq, bf);
+			ATH_TXQ_INSERT_TAIL(txq, bf, bf_list);
+
 			pollsperrate++;
 			if (pollsperrate > rates[rtindex]) {
 				rtindex = (rtindex + 1) % MAX_GRPPOLL_RATE;
@@ -7259,7 +7209,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 		}
 	}
 	/* make it circular */
-	ds->ds_link = ath_ds_link_swap(head->bf_daddr);
+	bf->bf_desc->ds_link = ath_ds_link_swap(head->bf_daddr);
 	/* start the queue */
 	ath_hal_puttxbuf(ah, txq->axq_qnum, head->bf_daddr);
 	ath_hal_txstart(ah, txq->axq_qnum);
@@ -7400,7 +7350,6 @@ ath_txq_setup(struct ath_softc *sc, int qtype, int subtype)
 		struct ath_txq *txq = &sc->sc_txq[qnum];
 
 		txq->axq_qnum = qnum;
-		txq->axq_link = NULL;
 		STAILQ_INIT(&txq->axq_q);
 		ATH_TXQ_LOCK_INIT(txq);
 		txq->axq_depth = 0;
@@ -7617,9 +7566,9 @@ ath_tx_findindex(const HAL_RATE_TABLE *rt, int rate)
 static void
 ath_tx_uapsdqueue(struct ath_softc *sc, struct ath_node *an, struct ath_buf *bf)
 {
-	struct ath_buf *lastbuf;
+	struct ath_buf *tbf;
 
-	/* case the delivery queue just sent and can move overflow q over */
+	/* Case the delivery queue just sent and can move overflow q over. */
 	if (an->an_uapsd_qdepth == 0 && an->an_uapsd_overflowqdepth != 0) {
 		DPRINTF(sc, ATH_DEBUG_UAPSD,
 			"Delivery queue empty, replacing with overflow queue\n");
@@ -7628,14 +7577,13 @@ ath_tx_uapsdqueue(struct ath_softc *sc, struct ath_node *an, struct ath_buf *bf)
 		an->an_uapsd_overflowqdepth = 0;
 	}
 
-	/* most common case - room on delivery q */
+	/* Most common case - room on delivery q. */
 	if (an->an_uapsd_qdepth < an->an_node.ni_uapsd_maxsp) {
-		/* add to delivery q */
-		if ((lastbuf = STAILQ_LAST(&an->an_uapsd_q, ath_buf, bf_list))) {
-			lastbuf->bf_desc->ds_link = ath_ds_link_swap(bf->bf_daddr);
-		}
+		/* Add to delivery q. */
+		ATH_STQ_LINK_DESC(&an->an_uapsd_q, bf);
 		STAILQ_INSERT_TAIL(&an->an_uapsd_q, bf, bf_list);
 		an->an_uapsd_qdepth++;
+
 		DPRINTF(sc, ATH_DEBUG_UAPSD,
 				"Added AC %d frame to delivery queue, "
 				"new depth: %d\n", 
@@ -7643,30 +7591,24 @@ ath_tx_uapsdqueue(struct ath_softc *sc, struct ath_node *an, struct ath_buf *bf)
 		return;
 	}
 
-	/* check if need to make room on overflow queue */
-	if (an->an_uapsd_overflowqdepth == an->an_node.ni_uapsd_maxsp) {
-		/*
-		 *  pop oldest from delivery queue and cleanup
-		 */
-		lastbuf = STAILQ_FIRST(&an->an_uapsd_q);
-		STAILQ_REMOVE_HEAD(&an->an_uapsd_q, bf_list);
-		ath_return_txbuf(sc, &lastbuf);
-
-		/*
-		 *  move oldest from overflow to delivery
-		 */
-		lastbuf = STAILQ_FIRST(&an->an_uapsd_overflowq);
-		STAILQ_REMOVE_HEAD(&an->an_uapsd_overflowq, bf_list);
-		an->an_uapsd_overflowqdepth--;
-		STAILQ_INSERT_TAIL(&an->an_uapsd_q, lastbuf, bf_list);
-		DPRINTF(sc, ATH_DEBUG_UAPSD,
-			"Delivery and overflow queues full.  Dropped oldest.\n");
-	}
-
-	/* add to overflow q */
-	if ((lastbuf = STAILQ_LAST(&an->an_uapsd_overflowq, ath_buf, bf_list))) {
-		lastbuf->bf_desc->ds_link = ath_ds_link_swap(bf->bf_daddr);
-	}
+	/* Check if need to make room on overflow queue. */
+  	if (an->an_uapsd_overflowqdepth == an->an_node.ni_uapsd_maxsp) {
+		/*  Pop oldest from delivery queue and cleanup. */
+		tbf = STAILQ_FIRST(&an->an_uapsd_q);
+  		STAILQ_REMOVE_HEAD(&an->an_uapsd_q, bf_list);
+		ath_return_txbuf(sc, &tbf);
+  
+		/* Move oldest from overflow to delivery. */
+		tbf = STAILQ_FIRST(&an->an_uapsd_overflowq);
+  		STAILQ_REMOVE_HEAD(&an->an_uapsd_overflowq, bf_list);
+  		an->an_uapsd_overflowqdepth--;
+		STAILQ_INSERT_TAIL(&an->an_uapsd_q, tbf, bf_list);
+  		DPRINTF(sc, ATH_DEBUG_UAPSD,
+  			"Delivery and overflow queues full.  Dropped oldest.\n");
+  	}
+  
+	/* Add to overflow q/ */
+	ATH_STQ_LINK_DESC(&an->an_uapsd_overflowq, bf);
 	STAILQ_INSERT_TAIL(&an->an_uapsd_overflowq, bf, bf_list);
 	an->an_uapsd_overflowqdepth++;
 	DPRINTF(sc, ATH_DEBUG_UAPSD, "Added AC %d to overflow queue, "
@@ -7951,9 +7893,9 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	 * multicast frames must be buffered until after the beacon.
 	 * We use the private mcast queue for that.
 	 */
-	if (ismcast && (vap->iv_ps_sta || avp->av_mcastq.axq_depth)) {
+	if (ismcast && (vap->iv_ps_sta || STAILQ_FIRST(&avp->av_mcastq.axq_q))) {
 		txq = &avp->av_mcastq;
-		/* XXX? more bit in 802.11 frame header */
+		/* XXX: More bit in 802.11 frame header? */
 	}
 
 	/*
@@ -7963,7 +7905,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 		flags |= HAL_TXDESC_NOACK;	/* no ack on broad/multicast */
 		sc->sc_stats.ast_tx_noack++;
 		try0 = ATH_TXMAXTRY;    /* turn off multi-rate retry for multicast traffic */
-	 } else if (pktlen > vap->iv_rtsthreshold) {
+	} else if (pktlen > vap->iv_rtsthreshold) {
 #ifdef ATH_SUPERG_FF
 		/* we could refine to only check that the frame of interest
 		 * is a FF, but this seems inconsistent.
@@ -8291,9 +8233,9 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 	HAL_STATUS status;
 	int uapsdq = 0;
 
-	DPRINTF(sc, ATH_DEBUG_TX_PROC, "TX queue: %d (0x%x), link: %p\n", 
+	DPRINTF(sc, ATH_DEBUG_TX_PROC, "TX queue: %d (0x%x), link: %08x\n", 
 		txq->axq_qnum, ath_hal_gettxbuf(sc->sc_ah, txq->axq_qnum),
-		txq->axq_link);
+		ATH_TXQ_LAST_DESC(txq)->ds_link);
 
 	if (txq == sc->sc_uapsdq) {
 		DPRINTF(sc, ATH_DEBUG_UAPSD, "Reaping U-APSD txq\n");
@@ -8501,10 +8443,10 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 bf_fail:
 #ifdef ATH_SUPERG_FF
 	/* flush ff staging queue if buffer low */
-	if (txq->axq_depth <= sc->sc_fftxqmin - 1) {
+	if (txq->axq_depth <= sc->sc_fftxqmin - 1)
 		/* NB: consider only flushing a preset number based on age. */
 		ath_ffstageq_flush(sc, txq, ath_ff_neverflushtestdone);
-	}
+
 #else
 	;
 #endif /* ATH_SUPERG_FF */
@@ -8553,7 +8495,7 @@ ath_tx_tasklet_q0123(TQUEUE_ARG data)
 	if (txqactive(sc->sc_ah, 3))
 		ath_tx_processq(sc, &sc->sc_txq[3]);
 	if (ATH_TXQ_SETUP(sc, sc->sc_cabq->axq_qnum)
-	    && sc->sc_cabq->axq_depth) {
+	    && STAILQ_FIRST(&sc->sc_cabq->axq_q)) {
 		DPRINTF(sc, ATH_DEBUG_BEACON,
 			"Processing CABQ... it is active in HAL.\n");
 		ath_tx_processq(sc, sc->sc_cabq);
@@ -8599,7 +8541,7 @@ ath_tx_tasklet(TQUEUE_ARG data)
 		else if (sc->sc_cabq->axq_qnum == i) { /* is CABQ */
 			DPRINTF(sc, ATH_DEBUG_BEACON,
 				"NOT processing CABQ... it is %s.\n",
-				sc->sc_cabq->axq_depth ? "not setup" : "empty");
+				STAILQ_FIRST(&sc->sc_cabq->axq_q) ? "not setup" : "empty");
 		}
 	}
 	netif_wake_queue(dev);
@@ -8668,9 +8610,10 @@ ath_tx_stopdma(struct ath_softc *sc, struct ath_txq *txq)
 	struct ath_hal *ah = sc->sc_ah;
 
 	(void) ath_hal_stoptxdma(ah, txq->axq_qnum);
-	DPRINTF(sc, ATH_DEBUG_RESET, "TX queue [%u] 0x%x, link %p\n",
+	DPRINTF(sc, ATH_DEBUG_RESET, "TX queue [%u] 0x%x, link %08x\n",
 		txq->axq_qnum,
-		ath_hal_gettxbuf(ah, txq->axq_qnum), txq->axq_link);
+		ath_hal_gettxbuf(ah, txq->axq_qnum),
+		ATH_TXQ_LAST_DESC(txq)->ds_link);
 }
 
 /*
