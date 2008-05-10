@@ -8162,7 +8162,8 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 			/* Link to the next, (i + 1)th, desc. if it exists. */
 			ds->ds_link = (tskb->next == NULL) ? 
 				0 : bf->bf_daddr + ((i + 1) * sizeof(*ds));
-			ds->ds_data = (i == 0) ? bf->bf_skbaddr : bf->bf_skbaddrff[i];
+			ds->ds_data = (i == 0) ?
+				bf->bf_skbaddr : bf->bf_skbaddrff[i - 1];
 
 			ath_hal_filltxdesc(ah, ds,
 				tskb->len,		/* Segment length */
