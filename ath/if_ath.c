@@ -3740,8 +3740,7 @@ ath_mgtstart(struct ieee80211com *ic, struct sk_buff *skb)
 	sc->sc_stats.ast_tx_mgmt++;
 	return 0;
 bad:
-	if (skb)
-		ieee80211_dev_kfree_skb(&skb);
+	ieee80211_dev_kfree_skb(&skb);
 	ath_return_txbuf(sc, &bf);
 	return error;
 }
@@ -12600,8 +12599,7 @@ cleanup_ath_buf(struct ath_softc *sc, struct ath_buf *bf, int direction)
 		bf->bf_desc->ds_data = 0;
 	}
 
-	if (bf->bf_skb != NULL)
-		ieee80211_dev_kfree_skb_list(&bf->bf_skb);
+	ieee80211_dev_kfree_skb_list(&bf->bf_skb);
 
 	bf->bf_taken_at_line = 0;
 	bf->bf_taken_at_func = NULL;
