@@ -6795,25 +6795,10 @@ drop_micfail:
 					rs->rs_rssi, bf->bf_tsf);
 			ieee80211_unref_node(&ni);
 		} else {
-			struct ieee80211vap *vap;
-			struct sk_buff *tskb;
-			/* Create a new SKB copy for each VAP except the last
-			 * one, which gets the original SKB. */
-			TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
-				if (vap == TAILQ_LAST(&ic->ic_vaps,
-							ieee80211vap_headtype))
-					tskb = skb;
-				else
-					tskb = skb_copy(skb, GFP_ATOMIC);
-
-				if (!tskb)
-					/* XXX: Brilliant OOM handling. */
-					vap->iv_devstats.tx_dropped++;
-				else
-					type = ieee80211_input(vap, NULL, skb,
-							rs->rs_rssi, bf->bf_tsf);
-			}
+			type = ieee80211_input_all(ic, skb,
+					rs->rs_rssi, bf->bf_tsf);
 		}
+		skb = NULL;
 
 		if (sc->sc_diversity) {
 			/* When using hardware fast diversity, change the default RX

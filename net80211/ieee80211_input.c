@@ -194,7 +194,7 @@ iwspy_event(struct ieee80211vap *vap, struct ieee80211_node *ni, u_int rssi)
  * Context: softIRQ (tasklet)
  */
 int
-ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
+ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 	struct sk_buff *skb, int rssi, u_int64_t rtsf)
 {
 #define	HAS_SEQ(type)	((type & 0x4) == 0)
@@ -208,9 +208,13 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	struct llc *llc;
 #endif
 	int hdrspace;
-	u_int8_t dir, type, subtype;
+	u_int8_t dir, type = -1, subtype;
 	u_int8_t *bssid;
 	u_int16_t rxseq;
+
+	if ((vap->iv_dev->flags & (IFF_RUNNING | IFF_UP)) !=
+			(IFF_RUNNING | IFF_UP))
+		goto out;
 
 	/* Initialize ni as in the previous API. */
 	if (ni_or_null == NULL) {
@@ -222,7 +226,6 @@ ieee80211_input(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	KASSERT(skb != NULL, ("null skb"));
 	KASSERT(ni != NULL, ("null node"));
 	ni->ni_inact = ni->ni_inact_reload;
-	type = -1;			/* undefined */
 	
 	/* In monitor mode, send everything directly to bpf.
 	 * Also do not process frames w/o i_addr2 any further.
@@ -845,8 +848,49 @@ out:
 	return type;
 #undef HAS_SEQ
 }
-EXPORT_SYMBOL(ieee80211_input);
 
+EXPORT_SYMBOL(ieee80211_input);
+/* 
+ * Context: softIRQ (tasklet) 
+ */ 
+int 
+ieee80211_input_all(struct ieee80211com *ic, 
+		struct sk_buff *skb, int rssi, u_int64_t rtsf) 
+{ 
+	struct ieee80211vap *vap, *next_vap; 
+	struct sk_buff *tskb = NULL;
+	int type = -1;	/* Used to determine when to blinks LEDs. */
+
+	/* Create a new SKB copy for each VAP except the last
+	 * one, which gets the original SKB. */
+	vap = TAILQ_FIRST(&ic->ic_vaps);
+	while (vap) {
+		for (next_vap = TAILQ_NEXT(vap, iv_next); next_vap;
+				next_vap = TAILQ_NEXT(next_vap, iv_next)) {
+			if ((next_vap->iv_dev->flags & (IFF_RUNNING | IFF_UP))
+					== (IFF_RUNNING | IFF_UP))
+				break;
+		}
+
+		if (!next_vap) {
+			tskb = skb;
+			skb = NULL;
+		} else
+			tskb = skb_copy(skb, GFP_ATOMIC);
+
+		if (!tskb)
+			/* XXX: Brilliant OOM handling. */
+			vap->iv_devstats.tx_dropped++;
+		else
+			type = ieee80211_input(vap, NULL, tskb, rssi, rtsf);
+
+		vap = next_vap;
+	};
+
+	ieee80211_dev_kfree_skb(&skb);
+	return type; 
+} 
+EXPORT_SYMBOL(ieee80211_input_all); 
 
 /*
  * Determines whether a frame should be accepted, based on information
