@@ -164,8 +164,6 @@ static void ath_beacon_free(struct ath_softc *);
 static void ath_beacon_config(struct ath_softc *, struct ieee80211vap *);
 static int ath_desc_alloc(struct ath_softc *);
 static void ath_desc_free(struct ath_softc *);
-static __inline void ath_desc_swap(struct ath_desc *);
-static __inline u_int32_t ath_ds_link_swap(u_int32_t);
 
 #ifdef IEEE80211_DEBUG_REFCNT
 static struct ieee80211_node *ath_node_alloc_debug(struct ieee80211vap *, 
@@ -1773,6 +1771,16 @@ ath_extend_tsf(u_int64_t tsf, u_int32_t rstamp)
 	return result;
 }
 
+/* Swap transmit descriptor pointer for HW. */
+static __inline u_int32_t
+ath_ds_link_swap(u_int32_t dp) {
+#ifdef AH_NEED_DESC_SWAP
+	return swab32(dp);
+#else
+	return (dp);
+#endif
+}
+
 static void
 ath_intr_process_rx_descriptors(struct ath_softc *sc, int* pneedmark, u_int64_t hw_tsf)
 {
@@ -2895,16 +2903,6 @@ ath_desc_swap(struct ath_desc *ds)
 	ds->ds_ctl1 = cpu_to_le32(ds->ds_ctl1);
 	ds->ds_hw[0] = cpu_to_le32(ds->ds_hw[0]);
 	ds->ds_hw[1] = cpu_to_le32(ds->ds_hw[1]);
-#endif
-}
-
-/* Swap transmit descriptor pointer for HW. */
-static __inline u_int32_t
-ath_ds_link_swap(u_int32_t dp) {
-#ifdef AH_NEED_DESC_SWAP
-	return swab32(dp);
-#else
-	return (dp);
 #endif
 }
 
