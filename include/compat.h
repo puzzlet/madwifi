@@ -66,7 +66,7 @@ typedef int gfp_t;
 static inline void *kzalloc(size_t size, gfp_t flags)
 {
 	void *p = kmalloc(size, flags);
-	if (likely(p))
+	if (likely(p != NULL))
 		memset(p, 0, size);
 	return p;
 }
