@@ -1699,9 +1699,9 @@ static HAL_BOOL ath_hw_reset(struct ath_softc* sc, HAL_OPMODE opmode,
 		}
 	}
 #ifdef ATH_CAP_TPC
-	if (sc->sc_hastpc && hal_tpc != ath_hal_gettpc(sc->sc_ah)) {
+	if (sc->sc_hastpc && (hal_tpc != ath_hal_gettpc(sc->sc_ah))) {
 		EPRINTF(sc, "ERROR: TPC HAL capability out of sync.  Got %d!\n", ath_hal_gettpc(sc->sc_ah));
-		ath_hal_settpc(sc->sc_ah, 1);
+		ath_hal_settpc(sc->sc_ah, hal_tpc);
 	}
 #endif
 /* XXX: Any other features they clobber? */
