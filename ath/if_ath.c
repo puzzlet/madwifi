@@ -1694,13 +1694,13 @@ static HAL_BOOL ath_hw_reset(struct ath_softc* sc, HAL_OPMODE opmode,
 		u_int32_t intmit_on = 0;
 		ath_hal_getintmit(sc->sc_ah, &intmit_on);
 		if (intmit_on != sc->sc_useintmit) {
-			EPRINTF(sc, "ERROR: INTMIT HAL capability out of sync.  Got %d!\n", intmit);
+			WPRINTF(sc, "INTMIT HAL capability out of sync.  Got %d!\n", intmit);
 			ath_hal_setintmit(sc->sc_ah, (sc->sc_hasintmit && sc->sc_useintmit));
 		}
 	}
 #ifdef ATH_CAP_TPC
 	if (sc->sc_hastpc && (hal_tpc != ath_hal_gettpc(sc->sc_ah))) {
-		EPRINTF(sc, "ERROR: TPC HAL capability out of sync.  Got %d!\n", ath_hal_gettpc(sc->sc_ah));
+		EPRINTF(sc, "TPC HAL capability out of sync.  Got %d!\n", ath_hal_gettpc(sc->sc_ah));
 		ath_hal_settpc(sc->sc_ah, hal_tpc);
 	}
 #endif
