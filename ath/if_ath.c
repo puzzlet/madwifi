@@ -1694,7 +1694,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc* sc, HAL_OPMODE opmode,
 		u_int32_t intmit_on = 0;
 		ath_hal_getintmit(sc->sc_ah, &intmit_on);
 		if (intmit_on != sc->sc_useintmit) {
-			WPRINTF(sc, "INTMIT HAL capability out of sync.  Got %d!\n", intmit);
+			WPRINTF(sc, "Int. Mit. HAL capability out of sync.  Got %d!\n", intmit);
 			ath_hal_setintmit(sc->sc_ah, (sc->sc_hasintmit && sc->sc_useintmit));
 		}
 	}
