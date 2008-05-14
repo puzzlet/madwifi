@@ -145,7 +145,7 @@ typedef spinlock_t ieee80211com_lock_t;
 #define	IEEE80211_LOCK_CHECK(_ic) do { \
 	if (spin_is_locked(&(_ic)->ic_comlock)) \
 		printk("%s:%d - about to block on ieee80211com lock!\n", __func__, __LINE__); \
-} while(0)
+} while (0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	IEEE80211_LOCK_CHECK(_ic)
 #endif 
@@ -174,7 +174,7 @@ typedef spinlock_t ieee80211com_lock_t;
 #define	IEEE80211_VAPS_LOCK_CHECK(_ic) do { \
 	if (spin_is_locked(&(_ic)->ic_vapslock)) \
 		printk("%s:%d - about to block on ieee80211com_vaps lock!\n", __func__, __LINE__); \
-} while(0)
+} while (0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define IEEE80211_VAPS_LOCK_CHECK(_ic)
 #endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
@@ -203,7 +203,7 @@ typedef spinlock_t ieee80211_node_lock_t;
 #define IEEE80211_NODE_LOCK_IRQ_INSIDE(_tq) do { \
 	IEEE80211_NODE_LOCK_CHECK(_ni); 	\
 	spin_lock(&(_ni)->ni_nodelock);
-} while(0)
+} while (0)
 #define IEEE80211_NODE_UNLOCK_IRQ_INSIDE(_tq) do { \
 	IEEE80211_NODE_LOCK_ASSERT(_ni); \
 	spin_unlock(&(_ni)->ni_nodelock); \
@@ -220,7 +220,7 @@ typedef spinlock_t ieee80211_node_lock_t;
 #define	IEEE80211_NODE_LOCK_CHECK(_ni) do { \
 	if (spin_is_locked(&(_ni)->ni_nodelock)) \
 		printk("%s:%d - about to block on node lock!\n", __func__, __LINE__); \
-} while(0)
+} while (0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	IEEE80211_NODE_LOCK_CHECK(_ni)
 #endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
@@ -294,7 +294,7 @@ typedef spinlock_t acl_lock_t;
 #define	ACL_UNLOCK(_as)				\
 	ACL_LOCK_ASSERT(_as); 			\
 	spin_unlock(&(_as)->as_lock); 		\
-} while(0)
+} while (0)
 #define ACL_UNLOCK_EARLY(_as)			\
 	ACL_LOCK_ASSERT(_as); 			\
 	spin_unlock(&(_as)->as_lock);
@@ -306,7 +306,7 @@ typedef spinlock_t acl_lock_t;
 #define	ACL_LOCK_CHECK(_as) do { \
 	if (spin_is_locked(&(_as)->as_lock)) \
 		printk("%s:%d - about to block on ACL lock!\n", __func__, __LINE__); \
-} while(0)
+} while (0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define	ACL_LOCK_CHECK(_as)
 #endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
@@ -335,11 +335,11 @@ typedef spinlock_t acl_lock_t;
 #define IEEE80211_NODE_SAVEQ_LOCK_IRQ_INSIDE(_ni)   do { 	\
 	IEEE80211_NODE_SAVEQ_LOCK_CHECK(_ni);			\
 	spin_lock(&(_ni)->ni_savedq.lock);			\
-} while(0)
+} while (0)
 #define IEEE80211_NODE_SAVEQ_UNLOCK_IRQ_INSIDE(_ni) do { 	\
 	IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ni);			\
 	spin_unlock(&(_ni)->ni_savedq.lock);			\
-} while(0)
+} while (0)
 #define	IEEE80211_NODE_SAVEQ_UNLOCK_IRQ_EARLY(_ni)		\
 	IEEE80211_NODE_SAVEQ_LOCK_ASSERT(_ni);			\
 	spin_unlock_irqrestore(&(_ni)->ni_savedq.lock, __qlockflags);
@@ -352,7 +352,7 @@ typedef spinlock_t acl_lock_t;
 #define IEEE80211_NODE_SAVEQ_LOCK_CHECK(_ni) do { \
 	if (spin_is_locked(&(_ni)->ni_savedq.lock)) \
 		printk("%s:%d - about to block on node saveq lock!\n", __func__, __LINE__); \
-} while(0)
+} while (0)
 #else /* #if (defined(ATH_DEBUG_SPINLOCKS)) */
 #define IEEE80211_NODE_SAVEQ_LOCK_CHECK(_ni)
 #endif /* #if (defined(ATH_DEBUG_SPINLOCKS)) */

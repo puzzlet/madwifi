@@ -839,7 +839,7 @@ pick_channel(struct ieee80211_scan_state *ss, struct ieee80211vap *vap,
 			continue;
 
 		/* Verify mode matches any fixed mode specified */
-		if((c->chan->ic_flags & as->as_required_mode) != 
+		if ((c->chan->ic_flags & as->as_required_mode) != 
 				as->as_required_mode)
 			continue;
 

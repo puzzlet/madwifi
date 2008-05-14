@@ -1690,7 +1690,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc* sc, HAL_OPMODE opmode,
 	  }
 	}
 
-	if(sc->sc_hasintmit) {
+	if (sc->sc_hasintmit) {
 		u_int32_t intmit_on = 0;
 		ath_hal_getintmit(sc->sc_ah, &intmit_on);
 		if (intmit_on != sc->sc_useintmit) {
@@ -6469,7 +6469,7 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	case IEEE80211_FC0_SUBTYPE_BEACON:
 		/* Update beacon RSSI statistics, (apply to "pure" STA only)
 		 * AND only for our AP's beacons */
-		if(vap->iv_opmode == IEEE80211_M_STA && 
+		if (vap->iv_opmode == IEEE80211_M_STA && 
 		   sc->sc_ic.ic_opmode == IEEE80211_M_STA && 
 		   ni == vap->iv_bss) 
 			ATH_RSSI_LPF(sc->sc_halstats.ns_avgbrssi, rssi);
@@ -8965,7 +8965,7 @@ ath_calibrate(unsigned long arg)
 			ath_set_txcont(ic, txcont_was_active);
 
 	}
-	else if(ath_hal_getrfgain(ah) == HAL_RFGAIN_READ_REQUESTED) {
+	else if (ath_hal_getrfgain(ah) == HAL_RFGAIN_READ_REQUESTED) {
 		/* With current HAL, I've never seen this so I'm going to log it
 		 * as an error and see if it ever shows up with newer HAL. */
 #if 0
@@ -10722,7 +10722,7 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 		if (ret == 0) {
 			switch ((long)ctl->extra2) {
 			case ATH_DISTANCE:
-				if(val > 0) {
+				if (val > 0) {
 					sc->sc_slottimeconf    = ath_distance2slottime(sc, val);
 					sc->sc_acktimeoutconf  = ath_distance2timeout(sc, val);
 					sc->sc_ctstimeoutconf  = ath_distance2timeout(sc, val);
@@ -12631,7 +12631,7 @@ static int ath_debug_iwpriv(struct ieee80211com *ic,
 		      unsigned int param, unsigned int value)
 {
 	struct ath_softc *sc = ic->ic_dev->priv;
-	switch(param) {
+	switch (param) {
 	case IEEE80211_PARAM_DRAINTXQ:
 		printk("Draining tx queue...\n");
 		ath_draintxq(sc);
@@ -12663,8 +12663,8 @@ static int ath_debug_iwpriv(struct ieee80211com *ic,
 	case IEEE80211_PARAM_LEAKTXBUFS:
 		{
 			int j;
-			for(j = 0; j < value; j++) {
-				if(!ath_take_txbuf_mgmt(sc)) {
+			for (j = 0; j < value; j++) {
+				if (!ath_take_txbuf_mgmt(sc)) {
 					printk("Leaked %d tx buffers (of the %d tx buffers requested).\n", j, value);
 					return 0;
 				}
@@ -12753,7 +12753,7 @@ ath_scanbufs_in_vap_locked(struct ath_softc *sc, struct ath_descdma* dd,
 		ath_scanbufs_found_buf_locked(sc, dd, dd_bufs_found, 
 						av->av_bcbuf, context);
 	}
-	else if(dd == &sc->sc_txdma) {
+	else if (dd == &sc->sc_txdma) {
 		struct ath_buf *tbf = NULL;
 
 		snprintf(context, sizeof(context), "vap %s %p[" MAC_FMT
@@ -12839,7 +12839,7 @@ ath_scanbufs_print_leaks(struct ath_softc *sc,
 {
 	int index;
 	struct ath_buf *lostbf;
-	for(index = 0; index < dd->dd_nbuf; index++) {
+	for (index = 0; index < dd->dd_nbuf; index++) {
 		if (!test_bit(index, dd_bufs_found)) {
 			lostbf = descdma_get_buffer(dd, index);
 			/* XXX: Full alloc backtrace */
@@ -12895,31 +12895,31 @@ ath_scanbufs(struct ath_softc *sc)
 	}
 
 	/* NB: We have all you base... */
-	for(i = 0; i < ARRAY_SIZE(descdma); i++) {
+	for (i = 0; i < ARRAY_SIZE(descdma); i++) {
 		printk("\n");
 		dd = descdma[i];
 		if (dd->dd_bufptr) {
 			printk("Analyzing %s DMA buffers...\n", dd->dd_name);
 			dd_bufs_found = kzalloc(BITS_TO_LONGS(dd->dd_nbuf) * 
 						sizeof(unsigned long), GFP_KERNEL);
-			if(dd == &sc->sc_txdma) {
+			if (dd == &sc->sc_txdma) {
 				ath_scanbufs_in_buflist_locked(sc, dd, dd_bufs_found, 
 							       &sc->sc_txbuf, "free list");
 				ath_scanbufs_in_all_hwtxq_locked(sc, dd, dd_bufs_found);
 				ath_scanbufs_in_all_vaps_locked(sc, dd, dd_bufs_found);
 				ath_scanbufs_in_all_nodetable_locked(sc, dd, dd_bufs_found, nt);
 			}
-			else if(dd == &sc->sc_rxdma) {
+			else if (dd == &sc->sc_rxdma) {
 				ath_scanbufs_in_buflist_locked(sc, dd, dd_bufs_found, 
 							       &sc->sc_rxbuf, "queue");
 			}
-			else if(dd == &sc->sc_bdma) {
+			else if (dd == &sc->sc_bdma) {
 				ath_scanbufs_in_buflist_locked(sc, dd, dd_bufs_found, 
 							       &sc->sc_bbuf, "free list");
 				ath_scanbufs_in_all_vaps_locked(sc, dd, dd_bufs_found);
 				ath_scanbufs_in_all_hwtxq_locked(sc, dd, dd_bufs_found);
 			}
-			else if(dd == &sc->sc_grppolldma) {
+			else if (dd == &sc->sc_grppolldma) {
 				ath_scanbufs_in_buflist_locked(sc, dd, dd_bufs_found, 
 							       &sc->sc_grppollbuf, "free list");
 				ath_scanbufs_in_txq_locked(sc, dd, dd_bufs_found, 

@@ -975,7 +975,7 @@ ieee80211_init(struct net_device *dev, int forcescan)
 	 */
 	if (IS_RUNNING(ic->ic_dev)) {
 		if (vap->iv_opmode == IEEE80211_M_STA) {
-			if(ic->ic_roaming != IEEE80211_ROAMING_MANUAL) {
+			if (ic->ic_roaming != IEEE80211_ROAMING_MANUAL) {
 				/* Try to be intelligent about clocking the 
 				 * state machine.  If we're currently in RUN 
 				 * state then we should be able to apply any 
@@ -1763,9 +1763,9 @@ ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int ar
 	case IEEE80211_S_SCAN:
 		switch (dstate) {
 		case IEEE80211_S_RUN:
-			if(vap->iv_opmode == IEEE80211_M_MONITOR || 
-			   vap->iv_opmode == IEEE80211_M_WDS ||
-			   vap->iv_opmode == IEEE80211_M_HOSTAP) {
+			if (vap->iv_opmode == IEEE80211_M_MONITOR || 
+			    vap->iv_opmode == IEEE80211_M_WDS ||
+			    vap->iv_opmode == IEEE80211_M_HOSTAP) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_STATE, 
 						"%s: Jumping directly to RUN "
 						"on VAP %p [%s].\n", 
@@ -1902,11 +1902,11 @@ ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int ar
 								tmpvap->iv_nickname);
 						tmpvap->iv_flags_ext &= 
 							~IEEE80211_FEXT_SCAN_PENDING;
-						if(tmpvap->iv_state != 
+						if (tmpvap->iv_state != 
 								IEEE80211_S_RUN) {
 							tmpvap->iv_newstate(tmpvap, 
 									IEEE80211_S_RUN, 0);
-						} else if(tmpvap->iv_opmode == 
+						} else if (tmpvap->iv_opmode == 
 								IEEE80211_M_HOSTAP) {
 							/* Force other AP through 
 							 * -> INIT -> RUN to make

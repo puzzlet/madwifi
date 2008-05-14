@@ -59,7 +59,7 @@
 #define ATH_HAL_UNLOCK_IRQ(_sc) \
    ATH_HAL_LOCK_ASSERT(_sc); 					   \
    spin_unlock_irqrestore(&(_sc)->sc_hal_lock, __sc_halLockflags); \
-   } while(0)
+   } while (0)
 #define ATH_HAL_UNLOCK_IRQ_EARLY(_sc) \
    ATH_HAL_LOCK_ASSERT(_sc); 					   \
    spin_unlock_irqrestore(&(_sc)->sc_hal_lock, __sc_halLockflags);

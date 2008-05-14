@@ -529,7 +529,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 				 * may manage memory */
 				skb_put(skb, sizeof(*csa_ie));
 				len_changed = 1;
-			} else if(csa_ie->csa_count)
+			} else if (csa_ie->csa_count)
 				csa_ie->csa_count--;
 			
 			vap->iv_chanchange_count++;

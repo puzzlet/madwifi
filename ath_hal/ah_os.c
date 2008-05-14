@@ -880,8 +880,7 @@ static inline void
 _trace_regop(struct ath_hal *ah, int regop, u_int address, u_int32_t value)
 {
 #ifdef AH_DEBUG
-	switch(ath_hal_debug)
-	{
+	switch (ath_hal_debug) {
 	case HAL_DEBUG_OFF:
 		break;
 	case HAL_DEBUG_REGOPS:

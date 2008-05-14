@@ -181,12 +181,12 @@ typedef unsigned long resource_size_t;
 #define skb_end_pointer(_skb) ((_skb)->end)
 #define skb_tail_pointer(_skb) ((_skb)->tail)
 #define skb_set_network_header(_skb, _offset) \
-	do { (_skb)->nh.raw = (_skb)->data + (_offset); } while(0)
+	do { (_skb)->nh.raw = (_skb)->data + (_offset); } while (0)
 #define skb_reset_network_header(_skb) \
-	do { (_skb)->nh.raw = (_skb)->data; } while(0)
+	do { (_skb)->nh.raw = (_skb)->data; } while (0)
 #define skb_mac_header(_skb) ((_skb)->mac.raw)
 #define skb_reset_mac_header(_skb) \
-	do { (_skb)->mac.raw = (_skb)->data; } while(0)
+	do { (_skb)->mac.raw = (_skb)->data; } while (0)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24)
