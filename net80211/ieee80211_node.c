@@ -920,11 +920,13 @@ node_cleanup(struct ieee80211_node *ni)
 	ni->ni_rxkeyoff = 0;
 }
 
-static void node_print_message(
+#ifdef IEEE80211_DEBUG
+static void
+node_print_message(
 		u_int32_t flags,
-		int show_counter, 
+		int show_counter,
 		int refcnt_adjust,
-		const struct ieee80211_node *ni, 
+		const struct ieee80211_node *ni,
 #ifdef IEEE80211_DEBUG_REFCNT
 		const char* func1, int line1,
 #endif
@@ -957,14 +959,14 @@ static void node_print_message(
 	printk(KERN_DEBUG "%s/%s: %s%s:%d %s [node %p<" MAC_FMT ">%s%s%s%s, refs=%02d]\n",
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 			ni->ni_ic->ic_dev->name,
-			ni->ni_vap->iv_dev->name, 
+			ni->ni_vap->iv_dev->name,
 			node_count,
 #ifdef IEEE80211_DEBUG_REFCNT
-			func1, line1, 
+			func1, line1,
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
-			func2, line2, 
+			func2, line2,
 			expanded_message,
-			ni, MAC_ADDR(ni->ni_macaddr), 
+			ni, MAC_ADDR(ni->ni_macaddr),
 			ni->ni_table != NULL ? " in " : "",
 			ni->ni_table != NULL ? ni->ni_table->nt_name : "",
 			ni->ni_table != NULL ? " table" : "",
@@ -973,6 +975,7 @@ static void node_print_message(
 	va_end(args);
 }
 EXPORT_SYMBOL(node_print_message);
+#endif
 
 static void
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -1109,6 +1112,7 @@ ieee80211_alloc_node(struct ieee80211vap *vap, const u_int8_t *macaddr)
 		ni->ni_vap = vap;
 		ni->ni_ic = ic;
 		atomic_inc(&ni->ni_ic->ic_node_counter);
+#ifdef IEEE80211_DEBUG
 		node_print_message(IEEE80211_MSG_NODE|IEEE80211_MSG_NODE_REF,
 				   1 /* show counter */, 
 				   0 /* adjust refcount */, 
@@ -1118,6 +1122,7 @@ ieee80211_alloc_node(struct ieee80211vap *vap, const u_int8_t *macaddr)
 #endif
 				   __func__, __LINE__, 
 				   "alloc" /* message */);
+#endif
 	} else {
 		/* XXX msg */
 		vap->iv_stats.is_rx_nodealloc++;
@@ -1667,6 +1672,7 @@ ieee80211_free_node(struct ieee80211_node *ni)
 	struct ieee80211vap *vap = ni->ni_vap;
 
 	atomic_dec(&ni->ni_ic->ic_node_counter);
+#ifdef IEEE80211_DEBUG
 	node_print_message(IEEE80211_MSG_NODE|IEEE80211_MSG_NODE_REF,
 			   1 /* show counter */, 
 			   0 /* adjust refcount */, 
@@ -1676,6 +1682,7 @@ ieee80211_free_node(struct ieee80211_node *ni)
 #endif
 			   __func__, __LINE__, 
 			   "free" /* message */);
+#endif
 	if (vap->iv_aid_bitmap != NULL)
 		IEEE80211_AID_CLR(vap, ni->ni_associd);
 
@@ -2402,6 +2409,7 @@ ieee80211_ref_node(struct ieee80211_node *ni)
 		return ni;
 	}
 	if (atomic_read(&ni->ni_refcnt) < 1) {
+#ifdef IEEE80211_DEBUG
 		node_print_message(IEEE80211_MSG_ANY,
 				   0 /* show counter */, 
 				   0 /* adjust refcount */, 
@@ -2413,10 +2421,12 @@ ieee80211_ref_node(struct ieee80211_node *ni)
 				   "attempt to access node with invalid refcount of %d."
 				   "  No changes made." /* message */,
 				   atomic_read(&ni->ni_refcnt));
+#endif
 		dump_stack();
 		return ni;
 	}
 	atomic_inc(&ni->ni_refcnt);
+#ifdef IEEE80211_DEBUG
 	node_print_message(IEEE80211_MSG_NODE_REF,
 			   0 /* show counter */, 
 			   0 /* adjust refcount */, 
@@ -2426,6 +2436,7 @@ ieee80211_ref_node(struct ieee80211_node *ni)
 #endif
 			   __func__, __LINE__, 
 			   "ref" /* message */);
+#endif
 	return ni;
 }
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -2454,6 +2465,7 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 		return;
 	}
 	if (atomic_read(&ni->ni_refcnt) < 1) {
+#ifdef IEEE80211_DEBUG
 		node_print_message(IEEE80211_MSG_ANY,
 				   0 /* show counter */, 
 				   0 /* adjust refcount */, 
@@ -2465,10 +2477,11 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 				   "attempt to access node with invalid refcount of %d."
 				   "  No changes made." /* message */,
 				   atomic_read(&ni->ni_refcnt));
+#endif
 		dump_stack();
 		return;
 	}
-
+#ifdef IEEE80211_DEBUG
 	node_print_message(IEEE80211_MSG_NODE_REF, 
 			   0 /* show counter */, 
 			   -1 /* adjust refcount */, 
@@ -2478,6 +2491,7 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 #endif
 			   __func__, __LINE__, 
 			   "unref" /* message */);
+#endif
 
 	if (atomic_dec_and_test(&ni->ni_refcnt)) {
 #ifdef IEEE80211_DEBUG_REFCNT
