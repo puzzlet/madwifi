@@ -121,6 +121,16 @@
 	  "MadWifi" : \
 	  DEV_NAME(_v->iv_ic->ic_dev))
 
+/*
+ * TU conversions:
+ *
+ * TU is a 32bit value and defined by IEEE802.11 (page 6) as "A measurement of
+ * time equal to 1024 usec (microseconds)".
+ *
+ * TSF is a 64bit value in usec, therefore if we right shift it by 10 bit this
+ * will directly convert it to TU. The rest is truncated to fit into 32 bit.
+ */
+#define	IEEE80211_TSF_TO_TU(_tsf)	((u_int32_t)((_tsf) >> 10))
 #define	IEEE80211_MS_TO_TU(x)	(((x) * 1000) / 1024)
 #define	IEEE80211_TU_TO_MS(x)	(((x) * 1024) / 1000)
 #define	IEEE80211_TU_TO_JIFFIES(x) ((IEEE80211_TU_TO_MS(x) * HZ) / 1000)

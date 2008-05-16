@@ -5258,7 +5258,7 @@ ath_beacon_send(struct ath_softc *sc, int *needmark, uint64_t hw_tsf)
 		struct ieee80211com *ic = &sc->sc_ic;
 		u_int32_t tsftu;
 
-		tsftu = hw_tsf >> 10; /* NB: 64 -> 32: See note far above. */
+		tsftu = IEEE80211_TSF_TO_TU(hw_tsf);
 		slot = ((tsftu % ic->ic_lintval) * ath_maxvaps) / ic->ic_lintval;
 		vap = sc->sc_bslot[(slot + 1) % ath_maxvaps];
 		DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
@@ -5452,11 +5452,6 @@ ath_beacon_free(struct ath_softc *sc)
  *
  * Note : TBTT is Target Beacon Transmission Time (see IEEE 802.11-1999: 4 &
  * 11.2.1.3).
- *
- * Note: TSF is right shifter by 10 and then put into a 32-bit int, which will 
- * truncate. This does not affect the calculation as long as no more than one 
- * overflow/wraparound occurs between beacons. This is not going to happen as
- * (2^(32 + 10 - 1) - 1)us is a really long time.
  */
 static void
 ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
@@ -5476,8 +5471,8 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 
 	hw_tsf = ath_hal_gettsf64(ah);
 	tsf = le64_to_cpu(ni->ni_tstamp.tsf);
-	hw_tsftu = hw_tsf >> 10;
-	tsftu = tsf >> 10; /* NB: 64 -> 32. See note above. */
+	hw_tsftu = IEEE80211_TSF_TO_TU(hw_tsf);
+	tsftu = IEEE80211_TSF_TO_TU(tsf);
 
 	/* We should reset hw TSF only once, so we increment
 	 * ni_tstamp.tsf to avoid resetting the hw TSF multiple
@@ -6501,10 +6496,10 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 			 * ath_newstate as the state machine will go from
 			 * RUN -> RUN when this happens. */
 			hw_tsf = ath_hal_gettsf64(sc->sc_ah);
-			hw_tu  = hw_tsf >> 10;
+			hw_tu  = IEEE80211_TSF_TO_TU(hw_tsf);
 
 			beacon_tsf = le64_to_cpu(ni->ni_tstamp.tsf);
-			beacon_tu  = beacon_tsf >> 10;
+			beacon_tu  = IEEE80211_TSF_TO_TU(beacon_tsf);
 
 			DPRINTF(sc, ATH_DEBUG_BEACON,
 					"Beacon transmitted at %10llx, "
