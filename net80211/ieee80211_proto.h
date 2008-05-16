@@ -70,7 +70,7 @@ int ieee80211_setup_rates(struct ieee80211_node *, const u_int8_t *,
 	const u_int8_t *, int);
 void ieee80211_saveie(u_int8_t **, const u_int8_t *);
 void ieee80211_saveath(struct ieee80211_node *, u_int8_t *);
-void ieee80211_recv_mgmt(struct ieee80211vap *, struct ieee80211_node *,
+int ieee80211_recv_mgmt(struct ieee80211vap *, struct ieee80211_node *,
 	struct sk_buff *, int, int, u_int64_t);
 void ieee80211_sta_pwrsave(struct ieee80211vap *, int);
 int ieee80211_hardstart(struct sk_buff *, struct net_device *);

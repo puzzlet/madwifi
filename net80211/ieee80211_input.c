@@ -1678,7 +1678,7 @@ bad:
 				IEEE80211_FC0_SUBTYPE_SHIFT],		\
 			"%s", "no " #__elem);				\
 		vap->iv_stats.is_rx_elem_missing++;			\
-		return;							\
+		return 0;						\
 	}								\
 	if ((__elem)[1] > (__maxlen)) {					\
 		IEEE80211_DISCARD(vap, IEEE80211_MSG_ELEMID,		\
@@ -1686,7 +1686,7 @@ bad:
 				IEEE80211_FC0_SUBTYPE_SHIFT],		\
 			"bad " #__elem " len %d", (__elem)[1]);		\
 		vap->iv_stats.is_rx_elem_toobig++;			\
-		return;							\
+		return 0;						\
 	}								\
 } while (0)
 
@@ -1697,7 +1697,7 @@ bad:
 				IEEE80211_FC0_SUBTYPE_SHIFT],		\
 			"%s", "ie too short");				\
 		vap->iv_stats.is_rx_elem_toosmall++;			\
-		return;							\
+		return 0;						\
 	}								\
 } while (0)
 
@@ -1722,7 +1722,7 @@ ieee80211_ssid_mismatch(struct ieee80211vap *vap, const char *tag,
 					IEEE80211_FC0_SUBTYPE_SHIFT],	\
 				wh->i_addr2, _ssid);			\
 		vap->iv_stats.is_rx_ssidmismatch++;			\
-		return;							\
+		return 0;						\
 	}								\
 } while (0)
 #else /* !IEEE80211_DEBUG */
@@ -1731,7 +1731,7 @@ ieee80211_ssid_mismatch(struct ieee80211vap *vap, const char *tag,
 	    ((_ssid)[1] != (_ni)->ni_esslen ||				\
 	    memcmp((_ssid) + 2, (_ni)->ni_essid, (_ssid)[1]) != 0)) {	\
 		vap->iv_stats.is_rx_ssidmismatch++;			\
-		return;							\
+		return 0;						\
 	}								\
 } while (0)
 #endif /* !IEEE80211_DEBUG */
@@ -3040,7 +3040,7 @@ startbgscan(struct ieee80211vap *vap)
 /*
  * Context: SoftIRQ
  */
-void
+int
 ieee80211_recv_mgmt(struct ieee80211vap *vap,
 	struct ieee80211_node *ni_or_null, struct sk_buff *skb,
 	int subtype, int rssi, u_int64_t rtsf)
@@ -3089,7 +3089,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		    (vap->iv_opmode == IEEE80211_M_STA && ni->ni_associd) ||
 		    vap->iv_opmode == IEEE80211_M_IBSS)) {
 			vap->iv_stats.is_rx_mgtdiscard++;
-			return;
+			return 0;
 		}
 		/*
 		 * beacon/probe response frame format
@@ -3197,7 +3197,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			frm += frm[1] + 2;
 		}
 		if (frm > efrm)
-			return;
+		  return 0;  /* reached past the end */
 		IEEE80211_VERIFY_ELEMENT(scan.rates, IEEE80211_RATE_MAXSIZE);
 		IEEE80211_VERIFY_ELEMENT(scan.ssid, IEEE80211_NWID_LEN);
 #if IEEE80211_CHAN_MAX < 255
@@ -3207,7 +3207,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					IEEE80211_FC0_SUBTYPE_SHIFT],
 				"invalid channel %u", scan.chan);
 			vap->iv_stats.is_rx_badchan++;
-			return;
+			return 0;
 		}
 #endif
 		if (scan.chan != scan.bchan &&
@@ -3227,7 +3227,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					IEEE80211_FC0_SUBTYPE_SHIFT],
 				"for off-channel %u", scan.chan);
 			vap->iv_stats.is_rx_chanmismatch++;
-			return;
+			return 0;
 		}
 
 		/* IEEE802.11 does not specify the allowed range for 
@@ -3239,7 +3239,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_SCAN,
 				wh, "beacon", "invalid beacon interval (%u)",
 				scan.bintval);
-			return;
+			return 0;
 		}
 
 		/*
@@ -3406,20 +3406,22 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					subtype, rssi, rtsf);
 			else if (contbgscan(vap) || startbgscan(vap))
 				ieee80211_bg_scan(vap);
-			return;
+			return 0;
 		}
 		/*
 		 * If scanning, just pass information to the scan module.
 		 */
 		if (ic->ic_flags & IEEE80211_F_SCAN) {
 			ieee80211_add_scan(vap, &scan, wh, subtype, rssi, rtsf);
-			return;
+			return 0;
 		}
 		if ((vap->iv_opmode == IEEE80211_M_IBSS) && 
 				(scan.capinfo & IEEE80211_CAPINFO_IBSS)) {
 			if (ni_or_null == NULL) {
 				/* Create a new entry in the neighbor table. */
 				ni = ieee80211_add_neighbor(vap, wh, &scan);
+				if (ni == NULL)
+					return 0;
 			} else {
 				/*
 				 * Copy data from beacon to neighbor table.
@@ -3467,12 +3469,12 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		    vap->iv_opmode == IEEE80211_M_AHDEMO ||
 		    vap->iv_state != IEEE80211_S_RUN) {
 			vap->iv_stats.is_rx_mgtdiscard++;
-			return;
+			return 0;
 		}
 		if (IEEE80211_IS_MULTICAST(wh->i_addr2)) {
 			/* frame must be directed */
 			vap->iv_stats.is_rx_mgtdiscard++;	/* XXX: stat */
-			return;
+			return 0;
 		}
 
 /*
@@ -3480,7 +3482,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
  */
 #ifdef ATH_SUPERG_XR
 	if (vap->iv_flags & IEEE80211_F_XR)
-		return;
+		return 0;
 #endif
 		/*
 		 * prreq frame format
@@ -3511,7 +3513,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			frm += frm[1] + 2;
 		}
 		if (frm > efrm)
-			return;
+		  return 0; /* reached past the end */
 		IEEE80211_VERIFY_ELEMENT(rates, IEEE80211_RATE_MAXSIZE);
 		IEEE80211_VERIFY_ELEMENT(ssid, IEEE80211_NWID_LEN);
 		IEEE80211_VERIFY_SSID(vap->iv_bss, ssid);
@@ -3521,7 +3523,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					IEEE80211_FC0_SUBTYPE_SHIFT],
 			    	"%s", "no ssid with ssid suppression enabled");
 			vap->iv_stats.is_rx_ssidmismatch++; /*XXX*/
-			return;
+			return 0;
 		}
 		if (ni == vap->iv_bss) {
 			if (vap->iv_opmode == IEEE80211_M_IBSS) {
@@ -3537,7 +3539,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				ni = ieee80211_dup_bss(vap, wh->i_addr2, 1);
 			}
 			if (ni == NULL)
-				return;
+				return 0;
 			allocbs = 1;
 		}
 
@@ -3602,7 +3604,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			} else {
 				IEEE80211_DISCARD(vap, IEEE80211_MSG_AUTH,
 					wh, "auth", "%s", "not to pier xr bssid");
-				return;
+				return 0;
 			}
 		}
 #endif
@@ -3614,7 +3616,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_ACL,
 				wh, "auth", "%s", "disallowed by ACL");
 			vap->iv_stats.is_rx_acl++;
-			return;
+			return 0;
 		}
 		if (vap->iv_flags & IEEE80211_F_COUNTERM) {
 			IEEE80211_DISCARD(vap,
@@ -3626,7 +3628,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					IEEE80211_FC0_SUBTYPE_AUTH,
 					IEEE80211_REASON_MIC_FAILURE);
 			}
-			return;
+			return 0;
 		}
 		if (algo == IEEE80211_AUTH_ALG_SHARED)
 			ieee80211_auth_shared(ni, wh, frm + 6, efrm, rssi,
@@ -3644,7 +3646,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					(seq + 1) | 
 					(IEEE80211_STATUS_ALG << 16));
 			}
-			return;
+			return 0;
 		}
 		break;
 	}
@@ -3658,7 +3660,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		if (vap->iv_opmode != IEEE80211_M_HOSTAP ||
 		    vap->iv_state != IEEE80211_S_RUN) {
 			vap->iv_stats.is_rx_mgtdiscard++;
-			return;
+			return 0;
 		}
 
 		if (subtype == IEEE80211_FC0_SUBTYPE_REASSOC_REQ) {
@@ -3689,7 +3691,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					IEEE80211_FC0_SUBTYPE_SHIFT],
 				"%s", "wrong bssid");
 			vap->iv_stats.is_rx_assoc_bss++;
-			return;
+			return 0;
 		}
 		capinfo = le16toh(*(__le16 *)frm);
 		frm += 2;
@@ -3745,7 +3747,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			frm += frm[1] + 2;
 		}
 		if (frm > efrm)
-			return;
+			return 0; /* reached past the end */
 
 		IEEE80211_VERIFY_ELEMENT(rates, IEEE80211_RATE_MAXSIZE);
 		IEEE80211_VERIFY_ELEMENT(ssid, IEEE80211_NWID_LEN);
@@ -3759,7 +3761,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				IEEE80211_FC0_SUBTYPE_DEAUTH,
 				IEEE80211_REASON_ASSOC_NOT_AUTHED);
 			vap->iv_stats.is_rx_assoc_notauth++;
-			return;
+			return 0;
 		}
 
 		if (ni->ni_needed_chans != NULL) {
@@ -3775,7 +3777,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				IEEE80211_SEND_MGMT(ni, resp, status);
 				ieee80211_node_leave(ni); /* XXX */
 				vap->iv_stats.is_rx_assoc_badscie++; /* XXX */
-				return;
+				return 0;
 			}
 		}
 
@@ -3792,7 +3794,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			ieee80211_node_leave(ni);
 			/* XXX distinguish WPA/RSN? */
 			vap->iv_stats.is_rx_assoc_badwpaie++;
-			return;
+			return 0;
 		}
 
 		if (rsn != NULL) {
@@ -3810,7 +3812,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				ieee80211_node_leave(ni);
 				/* XXX distinguish WPA/RSN? */
 				vap->iv_stats.is_rx_assoc_badwpaie++;
-				return;
+				return 0;
 			}
 			IEEE80211_NOTE_MAC(vap,
 				IEEE80211_MSG_ASSOC | IEEE80211_MSG_WPA,
@@ -3834,7 +3836,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			IEEE80211_SEND_MGMT(ni, resp, IEEE80211_STATUS_CAPINFO);
 			ieee80211_node_leave(ni);
 			vap->iv_stats.is_rx_assoc_capmismatch++;
-			return;
+			return 0;
 		}
 		rate = ieee80211_setup_rates(ni, rates, xrates,
 			IEEE80211_F_DOSORT | IEEE80211_F_DOFRATE |
@@ -3854,7 +3856,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				IEEE80211_STATUS_BASIC_RATE);
 			ieee80211_node_leave(ni);
 			vap->iv_stats.is_rx_assoc_norate++;
-			return;
+			return 0;
 		}
 
 		if (ni->ni_associd != 0 &&
@@ -3870,7 +3872,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 					IEEE80211_STATUS_CAPINFO);
 				ieee80211_node_leave(ni);
 				vap->iv_stats.is_rx_assoc_capmismatch++;
-				return;
+				return 0;
 			}
 		}
 
@@ -3924,7 +3926,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		if (vap->iv_opmode != IEEE80211_M_STA ||
 		    vap->iv_state != IEEE80211_S_ASSOC) {
 			vap->iv_stats.is_rx_mgtdiscard++;
-			return;
+			return 0;
 		}
 
 		/*
@@ -3950,7 +3952,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			vap->iv_stats.is_rx_auth_fail++;	/* XXX */
 			ieee80211_new_state(vap, IEEE80211_S_SCAN,
 				IEEE80211_SCAN_FAIL_STATUS);
-			return;
+			return 0;
 		}
 		associd = le16toh(*(__le16 *)frm);
 		frm += 2;
@@ -3986,7 +3988,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			frm += frm[1] + 2;
 		}
 		if (frm > efrm)
-			return;
+			return 0; /* reached past the end */
 		IEEE80211_VERIFY_ELEMENT(rates, IEEE80211_RATE_MAXSIZE);
 		rate = ieee80211_setup_rates(ni, rates, xrates,
 			IEEE80211_F_DOSORT | IEEE80211_F_DOFRATE |
@@ -3999,7 +4001,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			vap->iv_stats.is_rx_assoc_norate++;
 			ieee80211_new_state(vap, IEEE80211_S_SCAN,
 				IEEE80211_SCAN_FAIL_STATUS);
-			return;
+			return 0;
 		}
 
 		ni->ni_capinfo = capinfo;
@@ -4067,7 +4069,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 
 		if (vap->iv_state == IEEE80211_S_SCAN) {
 			vap->iv_stats.is_rx_mgtdiscard++;
-			return;
+			return 0;
 		}
 		/*
 		 * deauth frame format
@@ -4103,7 +4105,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		    vap->iv_state != IEEE80211_S_ASSOC &&
 		    vap->iv_state != IEEE80211_S_AUTH) {
 			vap->iv_stats.is_rx_mgtdiscard++;
-			return;
+			return 0;
 		}
 		/*
 		 * disassoc frame format
@@ -4138,6 +4140,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 	}
 #undef ISREASSOC
 #undef ISPROBE
+	return 1;
 }
 #undef IEEE80211_VERIFY_LENGTH
 #undef IEEE80211_VERIFY_ELEMENT

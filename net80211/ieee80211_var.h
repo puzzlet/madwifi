@@ -436,7 +436,7 @@ struct ieee80211com {
 
 	/* Send/recv 802.11 management frame */
 	int (*ic_send_mgmt)(struct ieee80211_node *, int, int);
-	void (*ic_recv_mgmt)(struct ieee80211vap *, struct ieee80211_node *,
+	int (*ic_recv_mgmt)(struct ieee80211vap *, struct ieee80211_node *,
 		struct sk_buff *, int, int, u_int64_t);
 
 	/* Send management frame to driver (like hardstart) */

@@ -181,7 +181,7 @@ static void ath_node_free(struct ieee80211_node *);
 static u_int8_t ath_node_getrssi(const struct ieee80211_node *);
 static struct sk_buff *ath_rxbuf_take_skb(struct ath_softc *, struct ath_buf *);
 static int ath_rxbuf_init(struct ath_softc *, struct ath_buf *);
-static void ath_recv_mgmt(struct ieee80211vap *, struct ieee80211_node *,
+static int ath_recv_mgmt(struct ieee80211vap *, struct ieee80211_node *,
 	struct sk_buff *, int, int, u_int64_t);
 static void ath_setdefantenna(struct ath_softc *, u_int);
 static struct ath_txq *ath_txq_setup(struct ath_softc *, int, int);
@@ -6436,7 +6436,7 @@ ath_capture(struct net_device *dev, const struct ath_buf *bf,
  * ibss merges. This function is called for all management frames,
  * including those belonging to other BSS.
  */
-static void
+static int
 ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	struct sk_buff *skb, int subtype, int rssi, u_int64_t rtsf)
 {
@@ -6455,14 +6455,15 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 
 	/* Call up first so subsequent work can use information
 	 * potentially stored in the node (e.g. for ibss merge). */
-	sc->sc_recv_mgmt(vap, ni_or_null, skb, subtype, rssi, rtsf);
+	if (sc->sc_recv_mgmt(vap, ni_or_null, skb, subtype, rssi, rtsf) == 0)
+		return 0;
 
 	/* Lookup the new node if any (this grabs a reference to it). */
 	ni = ieee80211_find_rxnode(vap->iv_ic,
 	         (const struct ieee80211_frame_min *)skb->data);
 	if (ni == NULL) {
 		DPRINTF(sc, ATH_DEBUG_BEACON, "Dropping; node unknown.\n");
-		return;
+		return 0;
 	}
 
 	switch (subtype) {
@@ -6538,6 +6539,7 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	}
 
 	ieee80211_unref_node(&ni);
+	return 0;
 }
 
 static void
@@ -6837,12 +6839,12 @@ rx_next:
 	if (sc->sc_useintmit) 
 		ath_hal_rxmonitor(ah, &sc->sc_halstats, &sc->sc_curchan);
 	if (!bf_processed)
-		DPRINTF(sc, ATH_DEBUG_RX_PROC, 
-			"Warning: %s got scheduled when no recieve "
-			    "buffers were ready.  Were they cleared?\n", 
+		DPRINTF(sc, ATH_DEBUG_RX_PROC,
+			"Warning: %s got scheduled when no receive "
+			    "buffers were ready. Were they cleared?\n",
 			__func__);
-	DPRINTF(sc, ATH_DEBUG_RX_PROC, "%s: cycle completed.  "
-		" %d rx buf processed.  %d were errors.  %d skb accepted.\n", 
+	DPRINTF(sc, ATH_DEBUG_RX_PROC, "%s: cycle completed. "
+		" %d rx buf processed. %d were errors. %d skb accepted.\n",
 		__func__, bf_processed, errors, skb_accepted);
 #undef PA2DESC
 }

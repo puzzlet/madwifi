@@ -946,9 +946,9 @@ node_print_message(
 		show_counter = 1;
 
 	if (show_counter) {
-		snprintf(node_count, 
-			 sizeof(node_count), 
-			 "[#NODES=%05d] ", 
+		snprintf(node_count,
+			 sizeof(node_count),
+			 "[#NODES=%05d] ",
 			 atomic_read(&ni->ni_ic->ic_node_counter));
 	}
 	va_start(args, message);
