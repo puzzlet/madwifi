@@ -616,17 +616,14 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	 * In modes other than HAL_M_STA, it causes receive sensitivity
 	 * problems for OFDM. */
 	sc->sc_hasintmit = ath_hal_hasintmit(ah);
-	if (!sc->sc_hasintmit) {
-		if (intmit) {
-			WPRINTF(sc, "Interference mitigation was requested, "
-				    "but is not supported by the "
-				    "HAL/hardware.\n");
-			intmit = 0;
-		}
-		sc->sc_useintmit = 0;
+	sc->sc_useintmit = (intmit && sc->sc_hasintmit);
+	if (!sc->sc_hasintmit && intmit) {
+		WPRINTF(sc, "Interference mitigation was requested, but is not"
+				"supported by the HAL/hardware.\n");
+		intmit = 0; /* Stop use in future ath_attach(). */
 	}
 	else {
-		ath_hal_setintmit(ah, (sc->sc_useintmit = intmit));
+		ath_hal_setintmit(ah, sc->sc_useintmit);
 		IPRINTF(sc, "Interference mitigation is supported.  Currently %s.\n",
 			(sc->sc_useintmit ? "enabled" : "disabled"));
 	}
@@ -1602,31 +1599,31 @@ ath_resume(struct net_device *dev)
 	ath_init(dev);
 }
 
-/* NB: INTMIT was not implemented so that it could be enabled/disabled,
+/* NB: Int. mit. was not implemented so that it could be enabled/disabled,
  * and actually in 0.9.30.13 HAL it really can't even be disabled because
  * it will start adjusting registers even when we turn off the capability
  * in the HAL.
  *
  * NB: This helper function basically clobbers all the related registers
- * if we have disabled INTMIT cap, allowing us to turn it on and off and
+ * if we have disabled int. mit. cap, allowing us to turn it on and off and
  * work around the bug preventing it from being disabled. */
 static inline void ath_override_intmit_if_disabled(struct ath_softc *sc) {
-	/* Restore intmit registers if we turned off intmit! */
+	/* Restore int. mit. registers if they were turned off. */
 	if (sc->sc_hasintmit && !sc->sc_useintmit)
 		ath_hal_restore_default_intmit(sc->sc_ah);
-	/* Sanity check...remove later */
+	/* Sanity check... remove later. */
 	if (!sc->sc_useintmit) {
 		ath_hal_verify_default_intmit(sc->sc_ah);
-		/* If we don't have INTMIT and we don't have DFS on channel,
-		 * it is safe to filter error packets! */
+		/* If we don't have int. mit. and we don't have DFS on channel,
+		 * it is safe to filter error packets. */
 		if (!ath_radar_is_dfs_required(sc, &sc->sc_curchan)) {
-			ath_hal_setrxfilter(sc->sc_ah, 
+			ath_hal_setrxfilter(sc->sc_ah,
 				ath_hal_getrxfilter(sc->sc_ah) & 
-					    ~HAL_RX_FILTER_PHYERR);
+				~HAL_RX_FILTER_PHYERR);
 		}
 	}
 	else {
-		/* Make sure that we have errors in rx filter cause ANI needs 
+		/* Make sure that we have errors in RX filter because ANI needs
 		 * them. */
 		ath_hal_setrxfilter(sc->sc_ah, 
 			ath_hal_getrxfilter(sc->sc_ah) | HAL_RX_FILTER_PHYERR);
@@ -1690,27 +1687,24 @@ static HAL_BOOL ath_hw_reset(struct ath_softc* sc, HAL_OPMODE opmode,
 	  }
 	}
 
-	if (sc->sc_hasintmit) {
-		u_int32_t intmit_on = 0;
-		ath_hal_getintmit(sc->sc_ah, &intmit_on);
-		if (intmit_on != sc->sc_useintmit) {
-			WPRINTF(sc, "Int. Mit. HAL capability out of sync.  Got %d!\n", intmit);
-			ath_hal_setintmit(sc->sc_ah, (sc->sc_hasintmit && sc->sc_useintmit));
-		}
-	}
 #ifdef ATH_CAP_TPC
 	if (sc->sc_hastpc && (hal_tpc != ath_hal_gettpc(sc->sc_ah))) {
 		EPRINTF(sc, "TPC HAL capability out of sync.  Got %d!\n", ath_hal_gettpc(sc->sc_ah));
 		ath_hal_settpc(sc->sc_ah, hal_tpc);
 	}
 #endif
-/* XXX: Any other features they clobber? */
+#if 0 /* Setting via HAL does not work, so it is done manually below. */
+	if (sc->sc_hasintmit)
+		ath_hal_setintmit(sc->sc_ah, sc->sc_useintmit);
+#endif
 	ath_override_intmit_if_disabled(sc);
 	if (sc->sc_softled)
 		ath_hal_gpioCfgOutput(sc->sc_ah, sc->sc_ledpin);
-	ath_update_txpow(sc);		/* update tx power state */
-	ath_radar_update(sc);
+	ath_update_txpow(sc);		/* Update TX power state. */
 	ath_setdefantenna(sc, sc->sc_defant);
+	/* XXX: Any other clobbered features? */
+
+	ath_radar_update(sc);
 	ath_rp_flush(sc);
 
 	return ret;
@@ -10698,7 +10692,6 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 	u_int val;
 	u_int tab_3_val[3];
 	int ret = 0;
-	int oldval = 0;
 
 	ctl->data = &val;
 	ctl->maxlen = sizeof(val);
@@ -10921,22 +10914,24 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				sc->sc_radar_ignored = val;
 				break;
 			case ATH_INTMIT:
-				oldval = sc->sc_useintmit;
-				sc->sc_useintmit = (sc->sc_hasintmit && val); 
+				if (!sc->sc_hasintmit) {
+					ret = -EOPNOTSUPP;
+					break;
+				}
+				if (sc->sc_useintmit == val)
+					break;
+				sc->sc_useintmit = val; 
 				sc->sc_needmib = ath_hal_hwphycounters(ah) && 
-					sc->sc_hasintmit && 
 					sc->sc_useintmit;
 				/* Update the HAL and MIB interrupt mask bits */
-				ath_hal_setintmit(ah, val ? 1 : 0); 
+				ath_hal_setintmit(ah, !!val); 
 				sc->sc_imask = (sc->sc_imask & ~HAL_INT_MIB) | 
 					(sc->sc_needmib ? HAL_INT_MIB : 0);
 				ath_hal_intrset(sc->sc_ah, sc->sc_imask);
 				/* Only do a reset if device is valid and UP 
 				 * and we just made a change to the settings. */
-				if ((oldval != sc->sc_useintmit) &&
-				    NULL != sc->sc_dev && !sc->sc_invalid &&
-				    (sc->sc_dev->flags & IFF_RUNNING) && 
-				    sc->sc_hasintmit)
+				if (sc->sc_dev && !sc->sc_invalid &&
+				    (sc->sc_dev->flags & IFF_RUNNING))
 					ath_reset(sc->sc_dev); 
 				/* NB: Run this step to cleanup if HAL doesn't 
 				 * obey capability flags and hangs onto ANI
