@@ -3197,7 +3197,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			frm += frm[1] + 2;
 		}
 		if (frm > efrm)
-		  return 0;  /* reached past the end */
+			return 0;  /* reached past the end */
 		IEEE80211_VERIFY_ELEMENT(scan.rates, IEEE80211_RATE_MAXSIZE);
 		IEEE80211_VERIFY_ELEMENT(scan.ssid, IEEE80211_NWID_LEN);
 #if IEEE80211_CHAN_MAX < 255
@@ -3513,7 +3513,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 			frm += frm[1] + 2;
 		}
 		if (frm > efrm)
-		  return 0; /* reached past the end */
+			return 0; /* reached past the end */
 		IEEE80211_VERIFY_ELEMENT(rates, IEEE80211_RATE_MAXSIZE);
 		IEEE80211_VERIFY_ELEMENT(ssid, IEEE80211_NWID_LEN);
 		IEEE80211_VERIFY_SSID(vap->iv_bss, ssid);
