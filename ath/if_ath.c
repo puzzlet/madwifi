@@ -627,6 +627,9 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 		IPRINTF(sc, "Interference mitigation is supported.  Currently %s.\n",
 			(sc->sc_useintmit ? "enabled" : "disabled"));
 	}
+
+	sc->sc_dmasize_stomp = 0;
+
 	/*
 	 * Check if the MAC has multi-rate retry support.
 	 * We do this by trying to setup a fake extended
@@ -1698,6 +1701,8 @@ static HAL_BOOL ath_hw_reset(struct ath_softc* sc, HAL_OPMODE opmode,
 		ath_hal_setintmit(sc->sc_ah, sc->sc_useintmit);
 #endif
 	ath_override_intmit_if_disabled(sc);
+	if (sc->sc_dmasize_stomp)
+		ath_hal_set_dmasize_pcie(sc->sc_ah);
 	if (sc->sc_softled)
 		ath_hal_gpioCfgOutput(sc->sc_ah, sc->sc_ledpin);
 	ath_update_txpow(sc);		/* Update TX power state. */

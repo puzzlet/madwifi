@@ -143,6 +143,34 @@
 #define DEFAULT_AR5K_PHY_SPUR_THRESH		2
 #define DEFAULT_AR5K_PHY_SIG_FIRSTEP		0
 
+/*
+ * Transmit configuration register
+ */
+#define AR5K_TXCFG		0x0030			/* Register Address */
+#define AR5K_TXCFG_SDMAMR	0x00000007	/* DMA size */
+#define AR5K_TXCFG_SDMAMR_S	0
+
+/*
+ * Receive configuration register
+ */
+#define AR5K_RXCFG		0x0034			/* Register Address */
+#define AR5K_RXCFG_SDMAMW	0x00000007	/* DMA size */
+#define AR5K_RXCFG_SDMAMW_S	0
+
+/*
+ * DMA size definitions (2^(n+2))
+ */
+enum ath5k_dmasize {
+	AR5K_DMASIZE_4B	= 0,
+	AR5K_DMASIZE_8B,
+	AR5K_DMASIZE_16B,
+	AR5K_DMASIZE_32B,
+	AR5K_DMASIZE_64B,
+	AR5K_DMASIZE_128B,
+	AR5K_DMASIZE_256B,
+	AR5K_DMASIZE_512B
+};
+
 static inline unsigned long field_width(unsigned long mask, unsigned long shift)
 {
 	unsigned long r = 0;
@@ -427,6 +455,11 @@ static inline void ath_hal_verify_default_intmit(struct ath_hal *ah) {
 	VERIFICATION_WARNING_SW(ah, AR5K_PHY_WEAK_CCK, AR5K_PHY_WEAK_CCK_THRESH, 0);
 	VERIFICATION_WARNING(ah, AR5K_PHY_SIG, AR5K_PHY_SIG_FIRSTEP, 0);
 	VERIFICATION_WARNING(ah, AR5K_PHY_SPUR, AR5K_PHY_SPUR_THRESH, 0);
+}
+
+static inline void ath_hal_set_dmasize_pcie(struct ath_hal *ah) {
+	SET_FIELD(ah, AR5K_TXCFG, AR5K_TXCFG_SDMAMR, AR5K_DMASIZE_128B);
+	SET_FIELD(ah, AR5K_RXCFG, AR5K_RXCFG_SDMAMW, AR5K_DMASIZE_128B);
 }
 
 #endif /* _IF_ATH_HAL_EXTENSIONS_H_ */

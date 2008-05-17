@@ -252,6 +252,9 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		dev_info, dev->name, athname ? athname : "Atheros ???",
 		(unsigned long long)phymem, dev->irq);
 
+	if (vdevice == AR5418_DEVID)
+		sc->aps_sc.sc_dmasize_stomp = 1;
+
 	/* ready to process interrupts */
 	sc->aps_sc.sc_invalid = 0;
 
