@@ -2709,7 +2709,6 @@ static void ath_set_beacon_cal(struct ath_softc *sc, int val)
 		del_timer_sync(&sc->sc_cal_ch);
 	} else {
 		mod_timer(&sc->sc_cal_ch, jiffies + (sc->sc_calinterval_sec * HZ));
-		add_timer(&sc->sc_cal_ch);
 	}
 	sc->sc_beacon_cal = (val && beacon_cal);
 }
