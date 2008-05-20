@@ -198,7 +198,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 	struct sk_buff *skb, int rssi, u_int64_t rtsf)
 {
 #define	HAS_SEQ(type)	((type & 0x4) == 0)
-	struct ieee80211_node * ni = ni_or_null;
+	struct ieee80211_node *ni = ni_or_null;
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *dev = vap->iv_dev;
 	struct ieee80211_frame *wh;
@@ -674,7 +674,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 		}
 		eh = (struct ether_header *) skb->data;
 
-		if (! accept_data_frame(vap, ni, key, skb, eh))
+		if (!accept_data_frame(vap, ni, key, skb, eh))
 			goto out;
 
 		vap->iv_devstats.rx_packets++;
@@ -907,13 +907,13 @@ static int accept_data_frame(struct ieee80211vap *vap,
 		if (key)
 			return 1;
 		/* cleartext eapol is OK if we don't have pairwise keys yet */
-		if (! PAIRWISE_SET(vap))
+		if (!PAIRWISE_SET(vap))
 			return 1;
 		/* cleartext eapol is OK if configured to allow it */
-		if (! IEEE80211_VAP_DROPUNENC_EAPOL(vap))
+		if (!IEEE80211_VAP_DROPUNENC_EAPOL(vap))
 			return 1;
 		/* cleartext eapol is OK if other unencrypted is OK */
-		if (! (vap->iv_flags & IEEE80211_F_DROPUNENC))
+		if (!(vap->iv_flags & IEEE80211_F_DROPUNENC))
 			return 1;
 		/* not OK */
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
