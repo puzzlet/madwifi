@@ -217,6 +217,8 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 #define ATH_MAXVAPS_DEFAULT 		4
 /* number of TX buffers reserved for mgt frames */
 #define ATH_TXBUF_MGT_RESERVED		20
+/* maximum number of queued frames allowed per WME queue */
+#define ATH_QUEUE_DROP_COUNT		150
 
 /*
  * dynamic turbo specific macros.

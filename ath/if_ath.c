@@ -3456,6 +3456,18 @@ ath_hardstart(struct sk_buff *__skb, struct net_device *dev)
 
 	txq = sc->sc_ac2q[skb->priority];
 
+	if (txq->axq_depth > ATH_QUEUE_DROP_COUNT) {
+		/*
+		 * WME queue too long, drop packet
+		 *
+		 * this is necessary to achieve prioritization of packets between
+		 * different queues. otherwise the lower priority queue (BK)
+		 * would consume all tx buffers, while higher priority queues
+		 * (e.g. VO) would be empty
+		 */
+		requeue = 0;
+		goto hardstart_fail;
+	}
 #endif
 
 
