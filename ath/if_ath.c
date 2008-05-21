@@ -129,7 +129,6 @@ static struct ieee80211vap *ath_vap_create(struct ieee80211com *,
 	const char *, int, int, struct net_device *);
 static void ath_vap_delete(struct ieee80211vap *);
 static int ath_init(struct net_device *);
-static int ath_set_ack_bitrate(struct ath_softc *, int);
 static int ath_reset(struct net_device *);
 static void ath_fatal_tasklet(TQUEUE_ARG);
 static void ath_rxorn_tasklet(TQUEUE_ARG);
@@ -2751,75 +2750,6 @@ ath_stop(struct net_device *dev)
 	return error;
 }
 
-int
-ar_device(int devid)
-{
-	switch (devid) {
-	case AR5210_DEFAULT:
-	case AR5210_PROD:
-	case AR5210_AP:
-		return 5210;
-	case AR5211_DEFAULT:
-	case AR5311_DEVID:
-	case AR5211_LEGACY:
-	case AR5211_FPGA11B:
-		return 5211;
-	case AR5212_DEFAULT:
-	case AR5212_DEVID:
-	case AR5212_FPGA:
-	case AR5212_DEVID_IBM:
-	case AR5212_AR5312_REV2:
-	case AR5212_AR5312_REV7:
-	case AR5212_AR2313_REV8:
-	case AR5212_AR2315_REV6:
-	case AR5212_AR2315_REV7:
-	case AR5212_AR2317_REV1:
-	case AR5212_DEVID_0014:
-	case AR5212_DEVID_0015:
-	case AR5212_DEVID_0016:
-	case AR5212_DEVID_0017:
-	case AR5212_DEVID_0018:
-	case AR5212_DEVID_0019:
-	case AR5212_AR2413:
-	case AR5212_AR5413:
-	case AR5212_AR5424:
-	case AR5212_DEVID_FF19:
-		return 5212;
-	case AR5213_SREV_1_0:
-	case AR5213_SREV_REG:
-	case AR_SUBVENDOR_ID_NOG:
-	case AR_SUBVENDOR_ID_NEW_A:
-		return 5213;
-	default:
-		return 0; /* unknown */
-	}
-}
-
-
-static int
-ath_set_ack_bitrate(struct ath_softc *sc, int high)
-{
-	if (ar_device(sc->devid) == 5212 || ar_device(sc->devid) == 5213) {
-		/* set ack to be sent at low bit-rate */
-		/* registers taken from the OpenBSD 5212 HAL */
-#define AR5K_AR5212_STA_ID1                     0x8004
-#define AR5K_AR5212_STA_ID1_ACKCTS_6MB          0x01000000
-#define AR5K_AR5212_STA_ID1_BASE_RATE_11B       0x02000000
-		u_int32_t v = AR5K_AR5212_STA_ID1_BASE_RATE_11B | 
-			AR5K_AR5212_STA_ID1_ACKCTS_6MB;
-		if (high)
-			ath_reg_write(sc, AR5K_AR5212_STA_ID1, 
-					ath_reg_read(sc, AR5K_AR5212_STA_ID1) & ~v);
-		else
-			ath_reg_write(sc, AR5K_AR5212_STA_ID1, 
-					ath_reg_read(sc, AR5K_AR5212_STA_ID1) | v);
-#undef AR5K_AR5212_STA_ID1
-#undef AR5K_AR5212_STA_ID1_BASE_RATE_11B
-#undef AR5K_AR5212_STA_ID1_ACKCTS_6MB
-		return 0;
-	}
-	return 1;
-}
 
 /*
  * Reset the hardware w/o losing operational state.  This is

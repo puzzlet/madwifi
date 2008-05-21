@@ -158,6 +158,26 @@
 #define AR5K_RXCFG_SDMAMW_S	0
 
 /*
+ * Second station id register (MAC address in upper 16 bits)
+ */
+#define AR5K_STA_ID1			0x8004			/* Register Address */
+#define AR5K_STA_ID1_AP			0x00010000	/* Set AP mode */
+#define AR5K_STA_ID1_ADHOC		0x00020000	/* Set Ad-Hoc mode */
+#define AR5K_STA_ID1_PWR_SV		0x00040000	/* Power save reporting (?) */
+#define AR5K_STA_ID1_NO_KEYSRCH		0x00080000	/* No key search */
+#define AR5K_STA_ID1_NO_PSPOLL		0x00100000	/* No power save polling [5210] */
+#define AR5K_STA_ID1_PCF_5211		0x00100000	/* Enable PCF on [5211+] */
+#define AR5K_STA_ID1_PCF_5210		0x00200000	/* Enable PCF on [5210]*/
+#define	AR5K_STA_ID1_PCF		(ah->ah_version == AR5K_AR5210 ? \
+					AR5K_STA_ID1_PCF_5210 : AR5K_STA_ID1_PCF_5211)
+#define AR5K_STA_ID1_DEFAULT_ANTENNA	0x00200000	/* Use default antenna */
+#define AR5K_STA_ID1_DESC_ANTENNA	0x00400000	/* Update antenna from descriptor */
+#define AR5K_STA_ID1_RTS_DEF_ANTENNA	0x00800000	/* Use default antenna for RTS (?) */
+#define AR5K_STA_ID1_ACKCTS_6MB		0x01000000	/* Use 6Mbit/s for ACK/CTS (?) */
+#define AR5K_STA_ID1_BASE_RATE_11B	0x02000000	/* Use 11b base rate (for ACK/CTS ?) [5211+] */
+
+
+/*
  * DMA size definitions (2^(n+2))
  */
 enum ath5k_dmasize {
@@ -170,6 +190,11 @@ enum ath5k_dmasize {
 	AR5K_DMASIZE_256B,
 	AR5K_DMASIZE_512B
 };
+
+
+int ath_set_ack_bitrate(struct ath_softc* sc, int);
+int ar_device(int devid);
+
 
 static inline unsigned long field_width(unsigned long mask, unsigned long shift)
 {
