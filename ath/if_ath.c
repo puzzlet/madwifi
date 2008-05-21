@@ -11236,17 +11236,13 @@ ath_announce(struct net_device *dev)
 	struct ath_softc *sc = dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 	u_int modes, cc;
-	static const int MLEN = 1024;
-	static const int BLEN = 64;
-	char m[MLEN + 1], b[BLEN + 1];
-	m[MLEN] = '\0';
-	b[BLEN] = '\0';
+	unsigned int i;
 
 	printk(KERN_INFO "%s: Atheros AR%s chip found (MAC %d.%d, ",
 		DEV_NAME(dev),
 		ath5k_chip_name(AR5K_VERSION_VER, ATH_SREV_FROM_AH(ah)),
 		ah->ah_macVersion, ah->ah_macRev);
-	printk("PHY %s %d.%d)\n",
+	printk("PHY %s %d.%d, ",
 		ath5k_chip_name(AR5K_VERSION_RAD, ah->ah_phyRev),
 		ah->ah_phyRev >> 4, ah->ah_phyRev & 0xf);
 
@@ -11259,47 +11255,44 @@ ath_announce(struct net_device *dev)
 	modes = ath_hal_getwirelessmodes(ah, cc);
 	if ((modes & HAL_MODE_DUALBAND) == HAL_MODE_DUALBAND) {
 		if (ah->ah_analog5GhzRev && ah->ah_analog2GhzRev) {
-			snprintf(b, BLEN, 
-				" 5 GHz radio %d.%d 2 GHz radio %d.%d",
+			printk("5 GHz Radio %d.%d 2 GHz Radio %d.%d)\n",
 				ah->ah_analog5GhzRev >> 4,
 				ah->ah_analog5GhzRev & 0xf,
 				ah->ah_analog2GhzRev >> 4,
 				ah->ah_analog2GhzRev & 0xf);
-			strncat(m, b, MLEN);
 		}
 		else {
-			snprintf(b, BLEN, 
-				" radio %d.%d", ah->ah_analog5GhzRev >> 4,
+			printk("Radio %d.%d)\n",
+				ah->ah_analog5GhzRev >> 4,
 				ah->ah_analog5GhzRev & 0xf);
-			strncat(m, b, MLEN);
 		}
 	} else {
-		snprintf(b, BLEN,
-			 " radio %d.%d", ah->ah_analog5GhzRev >> 4,
-			 ah->ah_analog5GhzRev & 0xf);
-		strncat(m, b, MLEN);
+		printk("Radio %d.%d)\n",
+			ah->ah_analog5GhzRev >> 4,
+			ah->ah_analog5GhzRev & 0xf);
 	}
-	strncat(m, "\n", MLEN);
-	if (1 /* bootverbose */) {
-		unsigned int i;
-		for (i = 0; i <= WME_AC_VO; i++) {
-			struct ath_txq *txq = sc->sc_ac2q[i];
-			IPRINTF(sc, "Use hw queue %u for %s traffic\n",
-				txq->axq_qnum,
-				ieee80211_wme_acnames[i]);
-		}
+
+	for (i = 0; i <= WME_AC_VO; i++) {
+		struct ath_txq *txq = sc->sc_ac2q[i];
+		printk(KERN_INFO "%s: Use hw queue %u for %s traffic\n",
+			DEV_NAME(dev),
+			txq->axq_qnum,
+			ieee80211_wme_acnames[i]);
+	}
 #ifdef ATH_SUPERG_XR
-		IPRINTF(sc, "Use hw queue %u for XR traffic\n",
-			sc->sc_xrtxq->axq_qnum);
+	printk(KERN_INFO "%s: Use hw queue %u for XR traffic\n",
+		DEV_NAME(dev),
+		sc->sc_xrtxq->axq_qnum);
 #endif
-		if (sc->sc_uapsdq != NULL) {
-			IPRINTF(sc, "Use hw queue %u for UAPSD traffic\n",
-				sc->sc_uapsdq->axq_qnum);
-		}
-		IPRINTF(sc, "Use hw queue %u for CAB traffic\n",
-			sc->sc_cabq->axq_qnum);
-		IPRINTF(sc, "Use hw queue %u for beacons\n", sc->sc_bhalq);
+	if (sc->sc_uapsdq != NULL) {
+		printk(KERN_INFO "%s: Use hw queue %u for UAPSD traffic\n",
+			DEV_NAME(dev),
+			sc->sc_uapsdq->axq_qnum);
 	}
+	printk(KERN_INFO "%s: Use hw queue %u for CAB traffic\n",
+		DEV_NAME(dev), sc->sc_cabq->axq_qnum);
+	printk(KERN_INFO "%s: Use hw queue %u for beacons\n",
+		DEV_NAME(dev), sc->sc_bhalq);
 #undef HAL_MODE_DUALBAND
 }
  
