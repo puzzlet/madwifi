@@ -11242,10 +11242,14 @@ ath_announce(struct net_device *dev)
 	m[MLEN] = '\0';
 	b[BLEN] = '\0';
 
-	snprintf(b, BLEN, "MAC %d.%d PHY %d.%d", 
-		ah->ah_macVersion, ah->ah_macRev,
+	printk(KERN_INFO "%s: Atheros AR%s chip found (MAC %d.%d, ",
+		DEV_NAME(dev),
+		ath5k_chip_name(AR5K_VERSION_VER, ATH_SREV_FROM_AH(ah)),
+		ah->ah_macVersion, ah->ah_macRev);
+	printk("PHY %s %d.%d)\n",
+		ath5k_chip_name(AR5K_VERSION_RAD, ah->ah_phyRev),
 		ah->ah_phyRev >> 4, ah->ah_phyRev & 0xf);
-	strncat(m, b, MLEN);
+
 	/*
 	 * Print radio revision(s).  We check the wireless modes
 	 * to avoid falsely printing revs for inoperable parts.

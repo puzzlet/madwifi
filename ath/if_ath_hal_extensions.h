@@ -177,6 +177,52 @@
 #define AR5K_STA_ID1_BASE_RATE_11B	0x02000000	/* Use 11b base rate (for ACK/CTS ?) [5211+] */
 
 
+enum ath5k_srev_type {
+	AR5K_VERSION_VER,
+	AR5K_VERSION_RAD,
+};
+
+struct ath5k_srev_name {
+	const char		*sr_name;
+	enum ath5k_srev_type	sr_type;
+	u_int			sr_val;
+};
+
+#define AR5K_SREV_UNKNOWN	0xffff
+
+#define AR5K_SREV_VER_AR5210	0x00
+#define AR5K_SREV_VER_AR5311	0x10
+#define AR5K_SREV_VER_AR5311A	0x20
+#define AR5K_SREV_VER_AR5311B	0x30
+#define AR5K_SREV_VER_AR5211	0x40
+#define AR5K_SREV_VER_AR5212	0x50
+#define AR5K_SREV_VER_AR5213	0x55
+#define AR5K_SREV_VER_AR5213A	0x59
+#define AR5K_SREV_VER_AR2413	0x78
+#define AR5K_SREV_VER_AR2414	0x79
+#define AR5K_SREV_VER_AR2424	0xa0 /* PCI-E */
+#define AR5K_SREV_VER_AR5424	0xa3 /* PCI-E */
+#define AR5K_SREV_VER_AR5413	0xa4
+#define AR5K_SREV_VER_AR5414	0xa5
+#define AR5K_SREV_VER_AR5416	0xc0 /* PCI-E */
+#define AR5K_SREV_VER_AR5418	0xca /* PCI-E */
+#define AR5K_SREV_VER_AR2425	0xe2 /* PCI-E */
+
+#define AR5K_SREV_RAD_5110	0x00
+#define AR5K_SREV_RAD_5111	0x10
+#define AR5K_SREV_RAD_5111A	0x15
+#define AR5K_SREV_RAD_2111	0x20
+#define AR5K_SREV_RAD_5112	0x30
+#define AR5K_SREV_RAD_5112A	0x35
+#define AR5K_SREV_RAD_2112	0x40
+#define AR5K_SREV_RAD_2112A	0x45
+#define AR5K_SREV_RAD_SC0	0x56	/* Found on 2413/2414 */
+#define AR5K_SREV_RAD_SC1	0x63	/* Found on 5413/5414 */
+#define AR5K_SREV_RAD_SC2	0xa2	/* Found on 2424-5/5424 */
+#define AR5K_SREV_RAD_5133	0xc0	/* MIMO found on 5418 */
+
+#define ATH_SREV_FROM_AH(_ah)	((_ah)->ah_macVersion << 4 | (_ah)->ah_macRev)
+
 /*
  * DMA size definitions (2^(n+2))
  */
@@ -194,7 +240,7 @@ enum ath5k_dmasize {
 
 int ath_set_ack_bitrate(struct ath_softc* sc, int);
 int ar_device(int devid);
-
+const char * ath5k_chip_name(enum ath5k_srev_type type, u_int16_t val);
 
 static inline unsigned long field_width(unsigned long mask, unsigned long shift)
 {

@@ -46,6 +46,41 @@
 #include "if_ath_hal_extensions.h"
 
 
+/* Known SREVs */
+static struct ath5k_srev_name srev_names[] = {
+	{ "5210",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5210 },
+	{ "5311",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5311 },
+	{ "5311A",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5311A },
+	{ "5311B",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5311B },
+	{ "5211",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5211 },
+	{ "5212",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5212 },
+	{ "5213",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5213 },
+	{ "5213A",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5213A },
+	{ "2413",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR2413 },
+	{ "2414",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR2414 },
+	{ "2424",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR2424 },
+	{ "5424",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5424 },
+	{ "5413",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5413 },
+	{ "5414",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5414 },
+	{ "5416",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5416 },
+	{ "5418",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5418 },
+	{ "2425",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR2425 },
+	{ "xxxxx",	AR5K_VERSION_VER,	AR5K_SREV_UNKNOWN },
+	{ "5110",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_5110 },
+	{ "5111",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_5111 },
+	{ "2111",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_2111 },
+	{ "5112",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_5112 },
+	{ "5112A",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_5112A },
+	{ "2112",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_2112 },
+	{ "2112A",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_2112A },
+	{ "SChip",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_SC0 },
+	{ "SChip",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_SC1 },
+	{ "SChip",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_SC2 },
+	{ "5133",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_5133 },
+	{ "xxxxx",	AR5K_VERSION_RAD,	AR5K_SREV_UNKNOWN },
+};
+
+
 int
 ar_device(int devid)
 {
@@ -109,3 +144,20 @@ ath_set_ack_bitrate(struct ath_softc *sc, int high)
 }
 
 
+const char *
+ath5k_chip_name(enum ath5k_srev_type type, u_int16_t val)
+{
+	const char *name = "xxxxx";
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(srev_names); i++) {
+		if (srev_names[i].sr_type != type)
+			continue;
+		if ((val & 0xff) < srev_names[i + 1].sr_val) {
+			name = srev_names[i].sr_name;
+			break;
+		}
+	}
+
+	return name;
+}
