@@ -6637,7 +6637,7 @@ rx_accept:
 
 		if (mic_fail) {
 			struct ieee80211_frame_min *wh_m =
-				(struct ieee80211_frame *)skb->data;
+				(struct ieee80211_frame_min *)skb->data;
   			/* Ignore control frames which are reported with MIC 
   			 * error. */
 			if ((wh_m->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != 
