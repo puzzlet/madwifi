@@ -6504,7 +6504,7 @@ ath_rx_tasklet(TQUEUE_ARG data)
 	struct ath_desc *ds;
 	struct ath_rx_status *rs;
 	struct ieee80211_node *ni;
-	struct sk_buff* skb;
+	struct sk_buff* skb = NULL;
 	unsigned int len, phyerr, mic_fail = 0;
 	int type = -1; /* undefined */
 	int init_ret = 0;
@@ -6629,17 +6629,15 @@ rx_accept:
 		/* Finished monitor mode handling, now reject error frames 
 		 * before passing to other VAPs. Ignore MIC failures here, as 
 		 * we need to recheck them. */
-		if (rs->rs_status & ~(HAL_RXERR_MIC | HAL_RXERR_DECRYPT)) {
-			ieee80211_dev_kfree_skb(&skb);
+		if (rs->rs_status & ~(HAL_RXERR_MIC | HAL_RXERR_DECRYPT))
 			goto rx_next;
-		}
 
 		/* Remove the CRC. */
 		skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
 
 		if (mic_fail) {
-			struct ieee80211_frame *frm = (struct ieee80211_frame *)
-				skb->data;
+			struct ieee80211_frame *frm =
+				(struct ieee80211_frame *)skb->data;
   			/* Ignore control frames which are reported with MIC 
   			 * error. */
 			if ((frm->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != 
@@ -6654,8 +6652,6 @@ rx_accept:
 			}
 
 			mic_fail = 0;
-
-			ieee80211_dev_kfree_skb(&skb);
 			goto rx_next;
 		}
 
@@ -6666,7 +6662,6 @@ rx_accept:
 				len);
 			sc->sc_stats.ast_rx_tooshort++;
 			errors++;
-			ieee80211_dev_kfree_skb(&skb);
 			goto rx_next;
 		}
 
@@ -6736,7 +6731,7 @@ rx_accept:
 			type = ieee80211_input_all(ic, skb,
 					rs->rs_rssi, bf->bf_tsf);
 		}
-		skb = NULL;
+		skb = NULL; /* SKB is no longer ours. */
 
 		if (sc->sc_diversity) {
 			/* When using hardware fast diversity, change the default RX
@@ -6761,6 +6756,9 @@ rx_accept:
 				ath_led_event(sc, ATH_LED_POLL);
 		}
 rx_next:
+		/* SKBs that have not in a buf, and are not passed on. */
+		ieee80211_dev_kfree_skb(&skb);
+
 		KASSERT(bf != NULL, ("null bf"));
 
 		if ((init_ret = ath_rxbuf_init(sc, bf)) != 0) {
