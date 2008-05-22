@@ -6504,7 +6504,7 @@ ath_rx_tasklet(TQUEUE_ARG data)
 	struct ath_desc *ds;
 	struct ath_rx_status *rs;
 	struct ieee80211_node *ni;
-	struct sk_buff* skb = NULL;
+	struct sk_buff *skb = NULL;
 	unsigned int len, phyerr, mic_fail = 0;
 	int type = -1; /* undefined */
 	int init_ret = 0;
@@ -6636,14 +6636,13 @@ rx_accept:
 		skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
 
 		if (mic_fail) {
-			struct ieee80211_frame *frm =
+			struct ieee80211_frame_min *wh_m =
 				(struct ieee80211_frame *)skb->data;
   			/* Ignore control frames which are reported with MIC 
   			 * error. */
-			if ((frm->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != 
+			if ((wh_m->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != 
 						IEEE80211_FC0_TYPE_CTL) {
-				ni = ieee80211_find_rxnode(ic,
-						(struct ieee80211_frame_min *)frm);
+				ni = ieee80211_find_rxnode(ic, wh_m);
 				if (ni) {
 					if (ni->ni_table)
 						ieee80211_check_mic(ni, skb);
@@ -6672,7 +6671,7 @@ rx_accept:
 				   rs->rs_rssi);
 
 		{
-			struct ieee80211_frame * wh =
+			struct ieee80211_frame *wh =
 				(struct ieee80211_frame *)skb->data;
 
 			/* Only print beacons. */
