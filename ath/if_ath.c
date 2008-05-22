@@ -6629,8 +6629,10 @@ rx_accept:
 		/* Finished monitor mode handling, now reject error frames 
 		 * before passing to other VAPs. Ignore MIC failures here, as 
 		 * we need to recheck them. */
-		if (rs->rs_status & ~(HAL_RXERR_MIC | HAL_RXERR_DECRYPT))
+		if (rs->rs_status & ~(HAL_RXERR_MIC | HAL_RXERR_DECRYPT)) {
+			ieee80211_dev_kfree_skb(&skb);
 			goto rx_next;
+		}
 
 		/* Remove the CRC. */
 		skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
@@ -6653,6 +6655,8 @@ rx_accept:
 
 drop_micfail:
 			mic_fail = 0;
+
+			ieee80211_dev_kfree_skb(&skb);
 			goto rx_next;
 		}
 
@@ -6663,6 +6667,7 @@ drop_micfail:
 				len);
 			sc->sc_stats.ast_rx_tooshort++;
 			errors++;
+			ieee80211_dev_kfree_skb(&skb);
 			goto rx_next;
 		}
 
