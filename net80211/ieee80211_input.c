@@ -1171,6 +1171,10 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 	}
 
 	if (skb != NULL) {
+		vap->iv_devstats.rx_packets++;
+		vap->iv_devstats.rx_bytes += skb->len;
+		dev->last_rx = jiffies;
+
 		skb->dev = dev;
 #ifdef USE_HEADERLEN_RESV
 		skb->protocol = ath_eth_type_trans(skb, dev);
@@ -1191,10 +1195,6 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 			vap->iv_devstats.rx_dropped++;
 		}
 		skb = NULL; /* SKB is no longer ours */
-
-		vap->iv_devstats.rx_packets++;
-		vap->iv_devstats.rx_bytes += skb->len;
-		dev->last_rx = jiffies;
 	}
 }
 
