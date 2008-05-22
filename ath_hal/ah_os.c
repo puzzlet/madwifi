@@ -904,6 +904,7 @@ _trace_regop(struct ath_hal *ah, int regop, u_int address, u_int32_t value)
 #endif /* AH_DEBUG */
 }
 
+#if defined(AH_DEBUG) || defined(AH_REGOPS_FUNC) || defined(AH_DEBUG_ALQ)
 /*
  * Memory-mapped device register read/write.  These are here
  * as routines when debugging support is enabled and/or when
@@ -933,6 +934,7 @@ ath_hal_reg_read(struct ath_hal *ah, u_int address)
 	return val;
 }
 EXPORT_SYMBOL(ath_hal_reg_read);
+#endif
 
 /*
  * Delay n microseconds.
