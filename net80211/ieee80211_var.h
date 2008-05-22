@@ -229,7 +229,7 @@ struct ieee80211vap {
 	u_int iv_scanvalid;				/* scan cache valid threshold */
 	struct ieee80211_roam iv_roam;			/* sta-mode roaming state */
 
-	u_int32_t iv_csa_jiffies;			/* last csa recv jiffies */
+	unsigned long iv_csa_jiffies;			/* last csa recv jiffies */
 	u_int8_t iv_csa_count;				/* last csa count */
 	struct ieee80211_channel *iv_csa_chan;		/* last csa channel */
 	u_int8_t iv_csa_mode;				/* last csa mode */

@@ -447,8 +447,7 @@ ath_ratectl(unsigned long data)
 	interval = ath_rateinterval;
 	if (ic->ic_opmode == IEEE80211_M_STA)
 		interval /= 2;
-	asc->timer.expires = jiffies + ((HZ * interval) / 1000);
-	add_timer(&asc->timer);
+	mod_timer(&asc->timer, jiffies + ((HZ * interval) / 1000));
 }
 
 static struct ath_ratectrl *

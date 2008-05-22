@@ -1041,9 +1041,9 @@ proc_read_nodes(struct ieee80211vap *vap, const int size, char *buf, int space)
 
 			p += sprintf(p, "\t%u.%02u\t\t", t / a, (t * 100 / a) % 100);
 			if (sn->stats[size_bin][ndx].last_tx) {
-  				unsigned int d = jiffies - 
+  				unsigned long d = jiffies - 
 					sn->stats[size_bin][ndx].last_tx;
-				p += sprintf(p, "%u.%02u", d / HZ, d % HZ);
+				p += sprintf(p, "%lu.%02lu", d / HZ, d % HZ);
 			} else {
 				p += sprintf(p, "-");
 			}

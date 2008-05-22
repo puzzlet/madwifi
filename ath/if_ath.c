@@ -9873,8 +9873,7 @@ ath_led_off(unsigned long arg)
 
 	ath_hal_gpioset(sc->sc_ah, sc->sc_ledpin, !sc->sc_ledon);
 	sc->sc_ledtimer.function = ath_led_done;
-	sc->sc_ledtimer.expires = jiffies + sc->sc_ledoff;
-	add_timer(&sc->sc_ledtimer);
+	mod_timer(&sc->sc_ledtimer, jiffies + sc->sc_ledoff);
 }
 
 /*
@@ -9888,8 +9887,7 @@ ath_led_blink(struct ath_softc *sc, int on, int off)
 	sc->sc_blinking = 1;
 	sc->sc_ledoff = off;
 	sc->sc_ledtimer.function = ath_led_off;
-	sc->sc_ledtimer.expires = jiffies + on;
-	add_timer(&sc->sc_ledtimer);
+	mod_timer(&sc->sc_ledtimer, jiffies + on);
 }
 
 static void

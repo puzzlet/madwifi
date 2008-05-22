@@ -53,17 +53,17 @@ struct onoe_node {
 	u_int on_tx_err; 		/* tx !ok pkt */
 	u_int on_tx_retr;		/* tx retry count */
 	int on_tx_upper; 		/* tx upper rate req cnt */
-	u_int8_t	on_tx_rix0; 		/* series 0 rate index */
-	u_int8_t	on_tx_try0; 		/* series 0 try count */
-	u_int8_t	on_tx_rate0;		/* series 0 h/w rate */
-	u_int8_t	on_tx_rate1;		/* series 1 h/w rate */
-	u_int8_t	on_tx_rate2;		/* series 2 h/w rate */
-	u_int8_t	on_tx_rate3;		/* series 3 h/w rate */
-	u_int8_t	on_tx_rate0sp;		/* series 0 short preamble h/w rate */
-	u_int8_t	on_tx_rate1sp;		/* series 1 short preamble h/w rate */
-	u_int8_t	on_tx_rate2sp;		/* series 2 short preamble h/w rate */
-	u_int8_t	on_tx_rate3sp;		/* series 3 short preamble h/w rate */
-	long unsigned int on_nextcheck;		/* time of next check for rate drop */
+	u_int8_t	on_tx_rix0; 	/* series 0 rate index */
+	u_int8_t	on_tx_try0; 	/* series 0 try count */
+	u_int8_t	on_tx_rate0;	/* series 0 h/w rate */
+	u_int8_t	on_tx_rate1;	/* series 1 h/w rate */
+	u_int8_t	on_tx_rate2;	/* series 2 h/w rate */
+	u_int8_t	on_tx_rate3;	/* series 3 h/w rate */
+	u_int8_t	on_tx_rate0sp;	/* series 0 short preamble h/w rate */
+	u_int8_t	on_tx_rate1sp;	/* series 1 short preamble h/w rate */
+	u_int8_t	on_tx_rate2sp;	/* series 2 short preamble h/w rate */
+	u_int8_t	on_tx_rate3sp;	/* series 3 short preamble h/w rate */
+	unsigned long on_nextcheck;	/* time of next check for rate drop */
 };
 #define	ATH_NODE_ONOE(an)	((struct onoe_node *)&an[1])
 #endif /* _DEV_ATH_RATE_ONOE_H */

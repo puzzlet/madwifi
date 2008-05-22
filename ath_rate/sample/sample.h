@@ -65,7 +65,7 @@ struct rate_stats {
 	int total_packets;
 	int packets_acked;
 	unsigned perfect_tx_time; 	/* transmit time for 0 retries */
-	unsigned long int last_tx;
+	unsigned long last_tx;
 };
 
 
@@ -91,7 +91,7 @@ struct sample_node {
 
 	int current_rate[NUM_PACKET_SIZE_BINS];
 	int packets_since_switch[NUM_PACKET_SIZE_BINS];
-	unsigned long int jiffies_since_switch[NUM_PACKET_SIZE_BINS];
+	unsigned long jiffies_since_switch[NUM_PACKET_SIZE_BINS];
 
 	int packets_since_sample[NUM_PACKET_SIZE_BINS];
 	unsigned sample_tt[NUM_PACKET_SIZE_BINS];

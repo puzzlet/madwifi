@@ -133,8 +133,7 @@ ieee80211_node_attach(struct ieee80211com *ic)
 	init_timer(&ic->ic_inact);
 	ic->ic_inact.function = ieee80211_node_timeout;
 	ic->ic_inact.data = (unsigned long) ic;
-	ic->ic_inact.expires = jiffies + IEEE80211_INACT_WAIT * HZ;
-	add_timer(&ic->ic_inact);
+	mod_timer(&ic->ic_inact, jiffies + IEEE80211_INACT_WAIT * HZ);
 
 #ifdef IEEE80211_DEBUG_REFCNT
 	ic->ic_node_alloc_debug = node_alloc_debug;
@@ -1881,8 +1880,7 @@ ieee80211_node_timeout(unsigned long arg)
 	ieee80211_scan_timeout(ic);
 	ieee80211_timeout_stations(&ic->ic_sta);
 
-	ic->ic_inact.expires = jiffies + IEEE80211_INACT_WAIT * HZ;
-	add_timer(&ic->ic_inact);
+	mod_timer(&ic->ic_inact, jiffies + IEEE80211_INACT_WAIT * HZ);
 }
 
 void

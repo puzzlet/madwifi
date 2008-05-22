@@ -2902,9 +2902,8 @@ ieee80211_parse_csaie(struct ieee80211_node *ni, u_int8_t *frm,
 
 		vap->iv_csa_timer.function = ieee80211_doth_switch_channel_tmr;
 		vap->iv_csa_timer.data = (unsigned long)vap;
-		vap->iv_csa_timer.expires = jiffies + IEEE80211_TU_TO_JIFFIES(
-		    vap->iv_csa_count * ni->ni_intval + 10);
-		add_timer(&vap->iv_csa_timer);
+		mod_timer(&vap->iv_csa_timer, jiffies + IEEE80211_TU_TO_JIFFIES(
+			vap->iv_csa_count * ni->ni_intval + 10));
 	}
 
 	vap->iv_csa_jiffies = jiffies;
