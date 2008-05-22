@@ -207,20 +207,19 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	struct ieee80211_node *ni = NULL;
 	struct ether_header *eh;
 
-	/* reset the skb of new frames reaching this layer BEFORE
+	/* Reset the SKB of new frames reaching this layer BEFORE
 	 * we invoke ieee80211_skb_track. */
 	memset(SKB_CB(skb), 0, sizeof(struct ieee80211_cb));
 
-	/* If an skb is passed in directly from the kernel, 
-	 * we take responsibility for the reference */
+	/* If an SKB is passed in directly from the kernel, 
+	 * we take responsibility for the reference. */
 	ieee80211_skb_track(skb);
 
-	/* NB: parent must be up and running */
+	/* NB: parent must be up and running. */
 	if ((parent->flags & (IFF_RUNNING|IFF_UP)) != (IFF_RUNNING|IFF_UP))
 		goto bad;
-	/*
-	 * No data frames go out unless we're running.
-	 */
+
+	/* No data frames go out unless we're running. */
 	if (vap->iv_state != IEEE80211_S_RUN) {
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
 			"%s: ignore data packet, state %u\n",
@@ -240,10 +239,8 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 	/* Cancel any running BG scan */
 	ieee80211_cancel_scan(vap);
 
-	/* 
-	 * Find the node for the destination so we can do
-	 * things like power save.
-	 */
+	/* Find the node for the destination so we can do
+	 * things like power save. */
 	eh = (struct ether_header *)skb->data;
 	if (vap->iv_opmode == IEEE80211_M_WDS)
 		ni = ieee80211_find_txnode(vap, vap->wds_mac);
@@ -254,7 +251,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		goto bad;
 	}
 
-	/* calculate priority so drivers can find the TX queue */
+	/* Calculate priority so drivers can find the TX queue. */
 	if (ieee80211_classify(ni, skb)) {
 		IEEE80211_NOTE(vap, IEEE80211_MSG_OUTPUT, ni,
 			"%s: discard, classification failure", __func__);
@@ -263,7 +260,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 
 	SKB_NI(skb) = ieee80211_ref_node(ni);
 
-	/* power-save checks */
+	/* Power-save checks. */
 	if (WME_UAPSD_AC_CAN_TRIGGER(skb->priority, ni)) {
 		/* U-APSD power save queue */
 		/* XXXAPSD: assuming triggerable means deliverable */
@@ -289,7 +286,7 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 #ifdef IEEE80211_DEBUG_REFCNT
 			M_FLAG_SET(skb1, M_SKB_TRACKED);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
-			SKB_CB(skb1)->ni = ieee80211_find_txnode(vap->iv_xrvap, 
+			SKB_NI(skb1) = ieee80211_find_txnode(vap->iv_xrvap, 
 						       eh->ether_dhost);
 			/* Ignore this return code. */
 			ieee80211_parent_queue_xmit(skb1);
@@ -309,9 +306,8 @@ bad:
 }
 
 /*
- * skb is consumed in all cases
+ * SKB is consumed in all cases.
  */
-
 void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
 	struct ieee80211vap *vap = skb->dev->priv;
 

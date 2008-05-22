@@ -6638,22 +6638,21 @@ rx_accept:
 		skb_trim(skb, skb->len - IEEE80211_CRC_LEN);
 
 		if (mic_fail) {
-			/* Ignore control frames which are reported with MIC 
-			 * error. */
-			if ((((struct ieee80211_frame *)skb->data)->i_fc[0] &
-						 IEEE80211_FC0_TYPE_MASK) == 
-						IEEE80211_FC0_TYPE_CTL)
-				goto drop_micfail;
-
-			ni = ieee80211_find_rxnode(ic, (const struct 
-						ieee80211_frame_min *)skb->data);
-			if (ni) {
-				if (ni->ni_table)
-					ieee80211_check_mic(ni, skb);
-				ieee80211_unref_node(&ni);
+			struct ieee80211_frame *frm = (struct ieee80211_frame *)
+				skb->data;
+  			/* Ignore control frames which are reported with MIC 
+  			 * error. */
+			if ((frm->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != 
+						IEEE80211_FC0_TYPE_CTL) {
+				ni = ieee80211_find_rxnode(ic,
+						(struct ieee80211_frame_min *)frm);
+				if (ni) {
+					if (ni->ni_table)
+						ieee80211_check_mic(ni, skb);
+					ieee80211_unref_node(&ni);
+				}
 			}
 
-drop_micfail:
 			mic_fail = 0;
 
 			ieee80211_dev_kfree_skb(&skb);

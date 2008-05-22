@@ -578,8 +578,8 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 				/* If netif_rx dropped the packet because 
 				 * device was too busy, reclaim the ref. in 
 				 * the skb. */
-				if (SKB_CB(skb1)->ni != NULL)
-					ieee80211_unref_node(&SKB_CB(skb1)->ni);
+				if (SKB_NI(skb1) != NULL)
+					ieee80211_unref_node(&SKB_NI(skb1));
 				vap->iv_devstats.rx_dropped++;
 			}
 

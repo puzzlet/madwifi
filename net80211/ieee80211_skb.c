@@ -199,11 +199,11 @@ ref_skb(struct sk_buff *skb,
 static void skb_destructor(struct sk_buff* skb) {
 	/* Report any node reference leaks - caused by kernel net device queue 
 	 * dropping buffer, rather than passing it to the driver. */
-	if (SKB_CB(skb)->ni != NULL) {
+	if (SKB_NI(skb) != NULL) {
 		printk(KERN_ERR "%s:%d - ERROR: non-NULL node pointer in %p, %p<" MAC_FMT ">!  "
 				"Leak Detected!\n", 
 		       __func__, __LINE__, 
-		       skb, SKB_CB(skb)->ni, MAC_ADDR(SKB_CB(skb)->ni->ni_macaddr));
+		       skb, SKB_NI(skb), MAC_ADDR(SKB_NI(skb)->ni_macaddr));
 		dump_stack();
 	}
 	if (SKB_CB(skb)->next_destructor != NULL) {

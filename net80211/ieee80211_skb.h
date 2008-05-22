@@ -92,8 +92,8 @@ void ieee80211_dev_kfree_skb(struct sk_buff** pskb);
 static inline void ieee80211_skb_copy_noderef(struct sk_buff *src, 
 		struct sk_buff *dst)
 {
-	if (SKB_CB(src)->ni != NULL)
-		SKB_CB(dst)->ni = ieee80211_ref_node(SKB_CB(src)->ni);
+	if (SKB_NI(src) != NULL)
+		SKB_NI(dst) = ieee80211_ref_node(SKB_NI(src));
 }
 
 /*

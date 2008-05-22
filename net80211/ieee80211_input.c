@@ -745,11 +745,11 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 				goto err;
 			}
 
-			/* deliver the frames */
+			/* Deliver the frames. */
 			ieee80211_deliver_data(ni, skb);
 			ieee80211_deliver_data(ni, skb1);
 		} else {
-			/* assume non-atheros llc type */
+			/* Assume non-atheros LLC type. */
 			ieee80211_deliver_data(ni, skb);
 		}
 #else /* !ATH_SUPERG_FF */
@@ -757,14 +757,13 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 #endif
 		if (ni_or_null == NULL)
 			ieee80211_unref_node(&ni);
-		/* XXX: Why doesn't this use goto out? 
-		 *      If I do, we access skb after we have given it to
-		 *       ieee80211_deliver_data and we get crashes/errors. */
+		/* XXX: Why doesn't this use 'goto out'? 
+		 *      If it did, then the SKB would be accessed after we
+		 *      have given it to ieee80211_deliver_data and we get
+		 *      crashes/errors. */
 		return IEEE80211_FC0_TYPE_DATA;
 	case IEEE80211_FC0_TYPE_MGT:
-		/*
-		 * WDS opmode do not support management frames
-		 */
+		/* WDS opmode does not support management frames. */
 		if (vap->iv_opmode == IEEE80211_M_WDS) {
 			vap->iv_stats.is_rx_mgtdiscard++;
 			goto out;
@@ -1105,6 +1104,8 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct net_device *dev = vap->iv_dev;
 	struct ether_header *eh = (struct ether_header *) skb->data;
+	struct ieee80211_node *tni;
+	int ret;
 
 #ifdef ATH_SUPERG_XR
 	/*
@@ -1126,87 +1127,73 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 			/* Create a SKB for the BSS to send out. */
 			skb1 = skb_copy(skb, GFP_ATOMIC);
 			if (skb1)
-				SKB_CB(skb1)->ni = ieee80211_ref_node(vap->iv_bss); 
+				SKB_NI(skb1) = ieee80211_ref_node(vap->iv_bss); 
 		}
 		else {
-			/*
-			 * Check if destination is associated with the
-			 * same vap and authorized to receive traffic.
-			 * Beware of traffic destined for the vap itself;
+			/* Check if destination is associated with the
+			 * same VAP and authorized to receive traffic.
+			 * Beware of traffic destined for the VAP itself;
 			 * sending it will not work; just let it be
-			 * delivered normally.
-			 */
+			 * delivered normally. */
 			struct ieee80211_node *ni1 = ieee80211_find_node(
 				&vap->iv_ic->ic_sta, eh->ether_dhost);
 			if (ni1 != NULL) {
-				if (ni1->ni_vap == vap &&
-				    ieee80211_node_is_authorized(ni1) &&
-				    ni1 != vap->iv_bss) {
+				if ((ni1->ni_vap == vap) &&
+				    (ni1 != vap->iv_bss) &&
+				    ieee80211_node_is_authorized(ni1)) {
 					skb1 = skb;
 					skb = NULL;
 				}
-				/* XXX statistic? */
+				/* XXX: statistic? */
 				ieee80211_unref_node(&ni1);
 			}
 		}
 		if (skb1 != NULL) {
-			struct ieee80211_node *ni_tmp;
+			struct ieee80211_node *tni;
 			skb1->dev = dev;
 			skb_reset_mac_header(skb1);
 			skb_set_network_header(skb1, sizeof(struct ether_header));
 
 			skb1->protocol = __constant_htons(ETH_P_802_2);
-			/* XXX insert vlan tag before queue it? */
-			ni_tmp = SKB_CB(skb1)->ni; /* remember node so we can free it */
+			/* XXX: Insert vlan tag before queuing it? */
+			tni = SKB_NI(skb1); /* Remember node so we can free it. */
 			if (dev_queue_xmit(skb1) == NET_XMIT_DROP) {
-				/* If queue dropped the packet because device was
-				 * too busy */
+				/* If queue dropped the packet because device
+				 * was too busy */
 				vap->iv_devstats.tx_dropped++;
 				/* node reference was leaked */
-				if (ni_tmp != NULL)
-					ieee80211_unref_node(&ni_tmp);
+				if (tni != NULL)
+					ieee80211_unref_node(&tni);
 			}
-			/* skb is no longer ours, either way after dev_queue_xmit */
+			/* SKB is no longer ours, either way after dev_queue_xmit. */
 			skb1 = NULL; 
 		}
 	}
 
 	if (skb != NULL) {
 		skb->dev = dev;
-
 #ifdef USE_HEADERLEN_RESV
 		skb->protocol = ath_eth_type_trans(skb, dev);
 #else
 		skb->protocol = eth_type_trans(skb, dev);
 #endif
+		tni = SKB_NI(skb);
+		if ((ni->ni_vlan != 0) && (vap->iv_vlgrp != NULL))
+			/* Attach VLAN tag. */
+			ret = vlan_hwaccel_receive_skb(skb,
+					vap->iv_vlgrp, ni->ni_vlan);
+		else
+			ret = netif_rx(skb);
+		if (ret == NET_RX_DROP) {
+			/* Cleanup if passing SKB to ourselves failed. */
+			if (tni != NULL)
+				ieee80211_unref_node(&tni);
+			vap->iv_devstats.rx_dropped++;
+		}
+		skb = NULL; /* SKB is no longer ours */
+
 		vap->iv_devstats.rx_packets++;
 		vap->iv_devstats.rx_bytes += skb->len;
-		if (ni->ni_vlan != 0 && vap->iv_vlgrp != NULL) {
-			/* attach vlan tag */
-			struct ieee80211_node *ni_tmp = SKB_NI(skb);
-			if (vlan_hwaccel_receive_skb(skb, vap->iv_vlgrp, ni->ni_vlan) == NET_RX_DROP) {
-				/* If netif_rx dropped the packet because 
-				 * device was too busy */
-				if (ni_tmp != NULL) {
-					/* node reference was leaked */
-					ieee80211_unref_node(&ni_tmp);
-				}
-				vap->iv_devstats.rx_dropped++;
-			}
-			skb = NULL; /* SKB is no longer ours */
-		} else {
-			struct ieee80211_node *ni_tmp = SKB_NI(skb);
-			if (netif_rx(skb) == NET_RX_DROP) {
-				/* If netif_rx dropped the packet because 
-				 * device was too busy */
-				if (ni_tmp != NULL) {
-					/* node reference was leaked */
-					ieee80211_unref_node(&ni_tmp);
-				}
-				vap->iv_devstats.rx_dropped++;
-			}
-			skb = NULL; /* SKB is no longer ours */
-		}
 		dev->last_rx = jiffies;
 	}
 }
@@ -2294,7 +2281,7 @@ forward_mgmt_to_app(struct ieee80211vap *vap, int subtype, struct sk_buff *skb,
 
 	if (filter_type && ((vap->app_filter & filter_type) == filter_type)) {
 		struct sk_buff *skb1;
-		struct ieee80211_node *ni_tmp;
+		struct ieee80211_node *tni;
 
 		skb1 = skb_copy(skb, GFP_ATOMIC);
 		if (skb1 == NULL)
@@ -2308,13 +2295,13 @@ forward_mgmt_to_app(struct ieee80211vap *vap, int subtype, struct sk_buff *skb,
 		skb1->pkt_type = PACKET_OTHERHOST;
 		skb1->protocol = __constant_htons(0x0019);  /* ETH_P_80211_RAW */
 
-		ni_tmp = SKB_CB(skb1)->ni;
+		tni = SKB_NI(skb1);
 		if (netif_rx(skb1) == NET_RX_DROP) {
 			/* If netif_rx dropped the packet because 
 			 * device was too busy */
-			if (ni_tmp != NULL) {
+			if (tni != NULL) {
 				/* node reference was leaked */
-				ieee80211_unref_node(&ni_tmp);
+				ieee80211_unref_node(&tni);
 			}
 			vap->iv_devstats.rx_dropped++;
 		}
