@@ -49,8 +49,10 @@ endif
 
 obj-y := ath/ ath_hal/ ath_rate/ net80211/
 
+.PHONY: all
 all: modules tools
 
+.PHONY: modules
 modules: configcheck svnversion.h
 ifdef LINUX24
 	for i in $(obj-y); do \
@@ -81,8 +83,10 @@ svnversion.h:
 tools:
 	$(MAKE) -C $(TOOLS) all || exit 1
 
+.PHONY: install
 install: install-modules install-tools
 
+.PHONY: install-modules
 install-modules: modules
 	@# check if there are modules left from an old installation
 	@# might cause make to abort the build
@@ -95,24 +99,30 @@ ifeq ($(DESTDIR),)
 	(export KMODPATH=$(KMODPATH); /sbin/depmod -ae $(KERNELRELEASE))
 endif
 
+.PHONY: install-tools
 install-tools: tools
 	$(MAKE) -C $(TOOLS) install || exit 1
 
+.PHONY: uninstall ininstall-modules
 uninstall: uninstall-tools uninstall-modules
 uninstall-modules:
 	sh scripts/find-madwifi-modules.sh -r $(KERNELRELEASE) $(DESTDIR)
 
+.PHONY: list-modules find-modules
 list-modules: find-modules
 find-modules:
 	sh scripts/find-madwifi-modules.sh -l $(KERNELRELEASE)
 
+.PHONY: uninstall-tools
 uninstall-tools:
 	$(MAKE) -C $(TOOLS) uninstall
 
+.PHONY: reinstall reinstall-tools reinstall-modules
 reinstall: uninstall install
 reinstall-tools: uninstall-tools install-tools
 reinstall-modules: uninstall-modules install-modules
 
+.PHONY: clean
 clean:
 	for i in $(obj-y); do \
 		$(MAKE) -C $$i clean; \
@@ -121,6 +131,7 @@ clean:
 	rm -rf .tmp_versions
 	rm -f *.symvers svnversion.h
 
+.PHONY: info
 info:
 	@echo "The following settings will be used for compilation:"
 	@echo "TARGET       : $(TARGET)"
@@ -135,6 +146,7 @@ info:
 	@echo "KMODPATH     : $(KMODPATH)"
 	@echo "KMODSUF      : $(KMODSUF)"
 
+.PHONY: sanitycheck
 sanitycheck:
 	@echo -n "Checking requirements... "
 	
@@ -155,6 +167,7 @@ release:
 unload:
 	bash scripts/madwifi-unload
 
+.PHONY: configcheck
 configcheck: sanitycheck
 	@echo -n "Checking kernel configuration... "
 	

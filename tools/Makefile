@@ -50,14 +50,13 @@ endif
 ALL=	athstats 80211stats athkey athchans athctrl \
 	athdebug 80211debug wlanconfig
 
+.PHONY: all
 all:	$(ALL)
 
 INCS=	-I. -I$(HAL) -I$(TOP) -I$(ATH_HAL)
 CFLAGS=	-g -O2 -Wall
 ALL_CFLAGS= $(CFLAGS) $(INCS)
 LDFLAGS=
-
-all:	$(ALL)
 
 athstats: athstats.c
 	$(CC) -o athstats $(ALL_CFLAGS) -I$(TOP)/ath $(LDFLAGS) athstats.c
@@ -77,6 +76,7 @@ wlanconfig: wlanconfig.c
 	$(CC) -o 80211debug $(ALL_CFLAGS) $(LDFLAGS) 80211debug.c
 
 
+.PHONY: install
 install: $(ALL) 
 	install -d $(DESTDIR)$(BINDIR)
 	for i in $(ALL); do \
@@ -87,6 +87,7 @@ install: $(ALL)
 	install -m 0644 man/*.8 $(DESTDIR)$(MANDIR)/man8
 	install $(TOP)/scripts/madwifi-unload $(DESTDIR)$(BINDIR)/madwifi-unload
 
+.PHONY: uninstall
 uninstall:
 	for i in $(ALL); do \
 		rm -f $(DESTDIR)$(BINDIR)/$$i; \
@@ -95,5 +96,6 @@ uninstall:
 		rm -f $(DESTDIR)$(MANDIR)/man8/$$i; \
 	done
 
+.PHONY: clean
 clean:
 	rm -f $(ALL) core a.out

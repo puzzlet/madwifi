@@ -82,6 +82,7 @@ EXTRA_CFLAGS+=$(INCS) $(COPTS) -DOPT_AH_H=\"public/$(TARGET).opt_ah.h\"
 
 -include $(TOPDIR)/Rules.make
 
+.PHONY: all
 all:
 	$(MAKE) -C $(KERNELPATH) SUBDIRS=$(shell pwd) modules
 
@@ -102,6 +103,7 @@ wlan_xauth.o:	$(wlan_xauth-objs)
 wlan_acl.o:	$(wlan_acl-objs)
 	$(LD) $(LDOPTS) -o wlan_acl.$(KMODSUF) -r $(wlan_acl-objs)
 
+.PHONY: install
 install:
 	test -d $(DESTDIR)/$(KMODPATH) || mkdir -p $(DESTDIR)/$(KMODPATH)
 	for i in $(MOD_INSTALL); do \
@@ -109,6 +111,7 @@ install:
 		install -m 0644  $$f.$(KMODSUF) $(DESTDIR)/$(KMODPATH); \
 	done
 
+.PHONY: clean
 clean:
 	-rm -f *~ *.o *.ko *.mod.c
 	-rm -f .depend .version .*.o.flags .*.o.d .*.o.cmd .*.ko.cmd

@@ -65,13 +65,16 @@ EXTRA_CFLAGS+= $(INCS) $(COPTS) -DOPT_AH_H=\"public/$(TARGET).opt_ah.h\"
 
 -include $(TOPDIR)/Rules.make
 
+.PHONY: all
 all:
 	$(MAKE) -C $(KERNELPATH) SUBDIRS=$(shell pwd) modules
 
+.PHONY: install
 install:
 	test -d $(DESTDIR)/$(KMODPATH) || mkdir -p $(DESTDIR)/$(KMODPATH)
 	install -m 0644 ath_$(BUSNAME).$(KMODSUF) $(DESTDIR)/$(KMODPATH)
 
+.PHONY: clean
 clean:
 	rm -f *~ *.o *.ko *.mod.c .*.cmd
 	rm -f .depend .version .*.o.flags .*.o.d
