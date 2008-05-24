@@ -1779,6 +1779,12 @@ ath_ds_link_swap(u_int32_t dp) {
 #endif
 }
 
+static __inline u_int32_t
+ath_get_last_ds_link(struct ath_txq *txq) {
+	struct ath_desc *ds = ath_txq_last_desc(txq);
+	return (ds ? ds->ds_link : 0);
+}
+
 static void
 ath_intr_process_rx_descriptors(struct ath_softc *sc, int* pneedmark, u_int64_t hw_tsf)
 {
@@ -2949,7 +2955,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 		DPRINTF(sc, ATH_DEBUG_XMIT,
 				"link[%u] (%08x)=%08llx (%p)\n",
 				txq->axq_qnum, 
-				ATH_TXQ_LAST_DESC(txq)->ds_link,
+				ath_get_last_ds_link(txq),
 				(u_int64_t)bf->bf_daddr, bf->bf_desc);
 
 		ath_hal_txstart(ah, txq->axq_qnum);
@@ -8156,7 +8162,7 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 
 	DPRINTF(sc, ATH_DEBUG_TX_PROC, "TX queue: %d (0x%x), link: %08x\n", 
 		txq->axq_qnum, ath_hal_gettxbuf(sc->sc_ah, txq->axq_qnum),
-		ATH_TXQ_LAST_DESC(txq)->ds_link);
+		ath_get_last_ds_link(txq));
 
 	if (txq == sc->sc_uapsdq) {
 		DPRINTF(sc, ATH_DEBUG_UAPSD, "Reaping U-APSD txq\n");
@@ -8534,7 +8540,7 @@ ath_tx_stopdma(struct ath_softc *sc, struct ath_txq *txq)
 	DPRINTF(sc, ATH_DEBUG_RESET, "TX queue [%u] 0x%x, link %08x\n",
 		txq->axq_qnum,
 		ath_hal_gettxbuf(ah, txq->axq_qnum),
-		ATH_TXQ_LAST_DESC(txq)->ds_link);
+		ath_get_last_ds_link(txq));
 }
 
 /*

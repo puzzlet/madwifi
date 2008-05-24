@@ -587,8 +587,11 @@ struct ath_vap {
 
 #define ATH_TXQ_LAST(_txq) \
 	STAILQ_LAST(&(_txq)->axq_q, ath_buf, bf_list)
-#define ATH_TXQ_LAST_DESC(_txq) \
-	ATH_BUF_LAST_DESC(ATH_TXQ_LAST((_txq)))
+static __inline struct ath_desc *ath_txq_last_desc(struct ath_txq *txq)
+{
+	struct ath_buf *tbf = ATH_TXQ_LAST(txq);
+	return tbf ? ATH_BUF_LAST_DESC(tbf) : NULL;
+}
 #define ATH_TXQ_INSERT_TAIL(_tq, _elm, _field) do { \
 	STAILQ_INSERT_TAIL(&(_tq)->axq_q, (_elm), _field); \
 	(_tq)->axq_depth++; \
