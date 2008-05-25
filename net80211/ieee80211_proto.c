@@ -322,22 +322,22 @@ ieee80211_dump_pkt(struct ieee80211com *ic,
 	wh = (const struct ieee80211_frame *)buf;
 	switch (wh->i_fc[1] & IEEE80211_FC1_DIR_MASK) {
 	case IEEE80211_FC1_DIR_NODS:
-		printk("NODS " MAC_FMT, MAC_ADDR(wh->i_addr2));
+		printk("NoDS " MAC_FMT, MAC_ADDR(wh->i_addr2));
 		printk("->" MAC_FMT, MAC_ADDR(wh->i_addr1));
 		printk("(" MAC_FMT ")", MAC_ADDR(wh->i_addr3));
 		break;
 	case IEEE80211_FC1_DIR_TODS:
-		printk("TODS " MAC_FMT, MAC_ADDR(wh->i_addr2));
+		printk("ToDS " MAC_FMT, MAC_ADDR(wh->i_addr2));
 		printk("->" MAC_FMT, MAC_ADDR(wh->i_addr3));
 		printk("(" MAC_FMT ")", MAC_ADDR(wh->i_addr1));
 		break;
 	case IEEE80211_FC1_DIR_FROMDS:
-		printk("FRDS " MAC_FMT, MAC_ADDR(wh->i_addr3));
+		printk("FrDS " MAC_FMT, MAC_ADDR(wh->i_addr3));
 		printk("->" MAC_FMT, MAC_ADDR(wh->i_addr1));
 		printk("(" MAC_FMT ")", MAC_ADDR(wh->i_addr2));
 		break;
 	case IEEE80211_FC1_DIR_DSTODS:
-		printk("DSDS " MAC_FMT, MAC_ADDR((u_int8_t *)&wh[1]));
+		printk("InDS " MAC_FMT, MAC_ADDR((u_int8_t *)&wh[1]));
 		printk("->" MAC_FMT, MAC_ADDR(wh->i_addr3));
 		printk("(" MAC_FMT, MAC_ADDR(wh->i_addr2));
 		printk("->" MAC_FMT ")", MAC_ADDR(wh->i_addr1));
@@ -366,12 +366,12 @@ ieee80211_dump_pkt(struct ieee80211com *ic,
 		int off;
 
 		off = ieee80211_anyhdrspace(ic, wh);
-		printk(" WEP [IV %.02x %.02x %.02x",
-			buf[off+0], buf[off+1], buf[off+2]);
-		if (buf[off+IEEE80211_WEP_IVLEN] & IEEE80211_WEP_EXTIV)
+		printk(" Prot. [IV %.02x %.02x %.02x",
+			buf[off + 0], buf[off + 1], buf[off + 2]);
+		if (buf[off + IEEE80211_WEP_IVLEN] & IEEE80211_WEP_EXTIV)
 			printk(" %.02x %.02x %.02x",
-				buf[off+4], buf[off+5], buf[off+6]);
-		printk(" KID %u]", buf[off+IEEE80211_WEP_IVLEN] >> 6);
+				buf[off + 4], buf[off + 5], buf[off + 6]);
+		printk(" KID %u]", buf[off + IEEE80211_WEP_IVLEN] >> 6);
 	}
 	if (rate >= 0)
 		printk(" %dM", rate / 2);
