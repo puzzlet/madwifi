@@ -43,20 +43,26 @@ ATH_HAL = $(TOP)/ath_hal
 # Path to the HAL source code.
 #
 ifeq ($(HAL),)
-HAL=   $(TOP)/hal
+HAL = $(TOP)/hal
 endif
 
 
-ALL=	athstats 80211stats athkey athchans athctrl \
-	athdebug 80211debug wlanconfig
+PROGRAMS = athstats 80211stats athkey athchans athctrl \
+	athdebug 80211debug wlanconfig wpakey
 
-.PHONY: all
-all:	$(ALL)
+SUBDIRS = ath_info
 
-INCS=	-I. -I$(HAL) -I$(TOP) -I$(ATH_HAL)
-CFLAGS=	-g -O2 -Wall
-ALL_CFLAGS= $(CFLAGS) $(INCS)
-LDFLAGS=
+INCS = -I. -I$(HAL) -I$(TOP) -I$(ATH_HAL)
+CFLAGS = -g -O2 -Wall
+ALL_CFLAGS = $(CFLAGS) $(INCS)
+LDFLAGS =
+
+all: all-subdirs $(PROGRAMS)
+
+all-subdirs:
+	for d in $(SUBDIRS); do \
+		$(MAKE) -C $$d || exit 1; \
+	done
 
 athstats: athstats.c
 	$(CC) -o athstats $(ALL_CFLAGS) -I$(TOP)/ath $(LDFLAGS) athstats.c
@@ -74,10 +80,10 @@ wlanconfig: wlanconfig.c
 	$(CC) -o wlanconfig $(ALL_CFLAGS) $(LDFLAGS) wlanconfig.c
 80211debug: 80211debug.c
 	$(CC) -o 80211debug $(ALL_CFLAGS) $(LDFLAGS) 80211debug.c
+wpakey: wpakey.c
+	$(CC) -o wpakey $(ALL_CFLAGS) $(LDFLAGS) wpakey.c
 
-
-.PHONY: install
-install: $(ALL) 
+install: all
 	install -d $(DESTDIR)$(BINDIR)
 	for i in $(ALL); do \
 		install $$i $(DESTDIR)$(BINDIR)/$$i; \
@@ -86,8 +92,10 @@ install: $(ALL)
 	install -d $(DESTDIR)$(MANDIR)/man8
 	install -m 0644 man/*.8 $(DESTDIR)$(MANDIR)/man8
 	install $(TOP)/scripts/madwifi-unload $(DESTDIR)$(BINDIR)/madwifi-unload
+	for d in $(SUBDIRS); do \
+		$(MAKE) -C $$d install || exit 1; \
+	done
 
-.PHONY: uninstall
 uninstall:
 	for i in $(ALL); do \
 		rm -f $(DESTDIR)$(BINDIR)/$$i; \
@@ -95,7 +103,14 @@ uninstall:
 	for i in $(ALL:=.8); do \
 		rm -f $(DESTDIR)$(MANDIR)/man8/$$i; \
 	done
+	for d in $(SUBDIRS); do \
+		$(MAKE) -C $$d uninstall || exit 1; \
+	done
 
-.PHONY: clean
 clean:
 	rm -f $(ALL) core a.out
+	for d in $(SUBDIRS); do \
+		$(MAKE) -C $$d clean; \
+	done
+
+.PHONY: all all-subdirs clean install uninstall
