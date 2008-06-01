@@ -85,7 +85,7 @@ wpakey: wpakey.c
 
 install: all
 	install -d $(DESTDIR)$(BINDIR)
-	for i in $(ALL); do \
+	for i in $(PROGRAMS); do \
 		install $$i $(DESTDIR)$(BINDIR)/$$i; \
 		$(STRIP) $(DESTDIR)$(BINDIR)/$$i; \
 	done
@@ -97,10 +97,10 @@ install: all
 	done
 
 uninstall:
-	for i in $(ALL); do \
+	for i in $(PROGRAMS); do \
 		rm -f $(DESTDIR)$(BINDIR)/$$i; \
 	done
-	for i in $(ALL:=.8); do \
+	for i in $(PROGRAMS:=.8); do \
 		rm -f $(DESTDIR)$(MANDIR)/man8/$$i; \
 	done
 	for d in $(SUBDIRS); do \
@@ -108,7 +108,7 @@ uninstall:
 	done
 
 clean:
-	rm -f $(ALL) core a.out
+	rm -f $(PROGRAMS) core a.out
 	for d in $(SUBDIRS); do \
 		$(MAKE) -C $$d clean; \
 	done
