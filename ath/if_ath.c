@@ -2696,7 +2696,7 @@ ath_stop_locked(struct net_device *dev)
 		if (!sc->sc_invalid) {
 			del_timer_sync(&sc->sc_dfs_cac_timer);
 			if (!sc->sc_beacon_cal)
-				del_timer(&sc->sc_cal_ch);
+				del_timer_sync(&sc->sc_cal_ch);
 		}
 		ath_draintxq(sc);
 		if (!sc->sc_invalid) {
