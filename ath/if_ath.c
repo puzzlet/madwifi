@@ -962,9 +962,17 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 			sc->sc_splitmic = 1;
 	}
 	sc->sc_hasclrkey = ath_hal_ciphersupported(ah, HAL_CIPHER_CLR);
-#if 0
-	sc->sc_mcastkey = ath_hal_getmcastkeysearch(ah);
-#endif
+
+	/* If hardware has multicast key search capabilities, disable it. It
+	 * is not currently supported by the driver. It seems we can properly
+	 * enable things in the HAL, however multicast packets are still
+	 * decoded using keys located at index 0..3, so current code is no
+	 * longer working */
+	if (ath_hal_hasmcastkeysearch(ah)) {
+		ath_hal_setmcastkeysearch(ah, AH_FALSE);
+	}
+	sc->sc_mcastkey  = ath_hal_getmcastkeysearch(ah);
+
 	/*
 	 * Mark key cache slots associated with global keys
 	 * as in use.  If we knew TKIP was not to be used we

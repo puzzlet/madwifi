@@ -45,6 +45,8 @@
 #ifndef _IF_ATH_HAL_WRAPPERS_H_
 #define _IF_ATH_HAL_WRAPPERS_H_
 
+/* ath_reg_write & ath_reg_read */
+
 static inline void ath_reg_write(struct ath_softc *sc, u_int reg, u_int32_t val)
 {
 	ATH_HAL_LOCK_IRQ(sc);
@@ -61,9 +63,12 @@ static inline u_int32_t ath_reg_read(struct ath_softc *sc, u_int reg)
 	return ret;
 }
 
-static inline HAL_BOOL ath_hal_burstsupported(struct ath_hal *ah)
+/* ath_hal_getcapability & ath_hal_setcapability sorted by
+ * HAL_CAPABILITY_TYPE */
+
+static inline HAL_BOOL ath_hal_getregdomain(struct ath_hal *ah, u_int32_t *destination)
 {
-	return (ath_hal_getcapability(ah, HAL_CAP_BURST, 0, NULL) == HAL_OK);
+	return (ath_hal_getcapability(ah, HAL_CAP_REG_DMN, 0, destination) == HAL_OK);
 }
 
 static inline HAL_BOOL ath_hal_ciphersupported(struct ath_hal *ah, u_int32_t cipher)
@@ -71,44 +76,9 @@ static inline HAL_BOOL ath_hal_ciphersupported(struct ath_hal *ah, u_int32_t cip
 	return (ath_hal_getcapability(ah, HAL_CAP_CIPHER, cipher, NULL) == HAL_OK);
 }
 
-static inline HAL_BOOL ath_hal_compressionsupported(struct ath_hal *ah)
+static inline HAL_BOOL ath_hal_hastkipmic(struct ath_hal *ah)
 {
-	return (ath_hal_getcapability(ah, HAL_CAP_COMPRESSION, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_fastframesupported(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_FASTFRAME, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_getcountrycode(struct ath_hal *ah, u_int32_t *destination)
-{
-	return ((*(destination) = ah->ah_countryCode), AH_TRUE);
-}
-
-static inline HAL_BOOL ath_hal_getdiversity(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_DIVERSITY, 1, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_getmaxtxpow(struct ath_hal *ah, u_int32_t *destination)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_TXPOW, 2, destination) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_getmcastkeysearch(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_MCAST_KEYSRCH, 1, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_getnumtxqueues(struct ath_hal *ah, u_int32_t *destination)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_NUM_TXQUEUES, 0, destination) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_getregdomain(struct ath_hal *ah, u_int32_t *destination)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_REG_DMN, 0, destination) == HAL_OK);
+	return (ath_hal_getcapability(ah, HAL_CAP_TKIP_MIC, 0, NULL) == HAL_OK);
 }
 
 static inline HAL_BOOL ath_hal_gettkipmic(struct ath_hal *ah)
@@ -116,74 +86,9 @@ static inline HAL_BOOL ath_hal_gettkipmic(struct ath_hal *ah)
 	return (ath_hal_getcapability(ah, HAL_CAP_TKIP_MIC, 1, NULL) == HAL_OK);
 }
 
-static inline HAL_BOOL ath_hal_gettkipsplit(struct ath_hal *ah)
+static inline HAL_BOOL ath_hal_settkipmic(struct ath_hal *ah, u_int32_t v)
 {
-	return (ath_hal_getcapability(ah, HAL_CAP_TKIP_SPLIT, 1, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_gettpc(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_TPC, 1, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_gettpscale(struct ath_hal *ah, u_int32_t *destination)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_TXPOW, 3, destination) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_gettsfadjust(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_TSF_ADJUST, 1, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_gettxpowlimit(struct ath_hal *ah, u_int32_t *destination)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_TXPOW, 1, destination) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_halfrate_chansupported(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_CHAN_HALFRATE, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hasbssidmask(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_BSSIDMASK, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hasbursting(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_BURST, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hascompression(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_COMPRESSION, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hasdiversity(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_DIVERSITY, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hasfastframes(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_FASTFRAME, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hasmcastkeysearch(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_MCAST_KEYSRCH, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hasrfsilent(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_RFSILENT, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hastkipmic(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_TKIP_MIC, 0, NULL) == HAL_OK);
+	return (ath_hal_setcapability(ah, HAL_CAP_TKIP_MIC, 1, v, NULL));
 }
 
 static inline HAL_BOOL ath_hal_hastkipsplit(struct ath_hal *ah)
@@ -191,49 +96,9 @@ static inline HAL_BOOL ath_hal_hastkipsplit(struct ath_hal *ah)
 	return (ath_hal_getcapability(ah, HAL_CAP_TKIP_SPLIT, 0, NULL) == HAL_OK);
 }
 
-static inline HAL_BOOL ath_hal_hastpc(struct ath_hal *ah)
+static inline HAL_BOOL ath_hal_gettkipsplit(struct ath_hal *ah)
 {
-	return (ath_hal_getcapability(ah, HAL_CAP_TPC, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hastsfadjust(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_TSF_ADJUST, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hastxpowlimit(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_TXPOW, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hasveol(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_VEOL, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_hwphycounters(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_PHYCOUNTERS, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_quarterrate_chansupported(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_CHAN_QUARTERRATE, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_setdiversity(struct ath_hal *ah, int v)
-{
-	return (ath_hal_setcapability(ah, HAL_CAP_DIVERSITY, 1, v, NULL));
-}
-
-static inline HAL_BOOL ath_hal_setrfsilent(struct ath_hal *ah, u_int32_t v)
-{
-	return (ath_hal_setcapability(ah, HAL_CAP_RFSILENT, 1, v, NULL));
-}
-
-static inline HAL_BOOL ath_hal_settkipmic(struct ath_hal *ah, u_int32_t v)
-{
-	return (ath_hal_setcapability(ah, HAL_CAP_TKIP_MIC, 1, v, NULL));
+	return (ath_hal_getcapability(ah, HAL_CAP_TKIP_SPLIT, 1, NULL) == HAL_OK);
 }
 
 static inline HAL_BOOL ath_hal_settkipsplit(struct ath_hal *ah, int v)
@@ -241,9 +106,84 @@ static inline HAL_BOOL ath_hal_settkipsplit(struct ath_hal *ah, int v)
 	return (ath_hal_setcapability(ah, HAL_CAP_TKIP_SPLIT, 1, v, NULL));
 }
 
-static inline HAL_BOOL ath_hal_settpc(struct ath_hal *ah, u_int32_t v)
+static inline HAL_BOOL ath_hal_hwphycounters(struct ath_hal *ah)
 {
-	return (ath_hal_setcapability(ah, HAL_CAP_TPC, 1, v, NULL));
+	return (ath_hal_getcapability(ah, HAL_CAP_PHYCOUNTERS, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_hasdiversity(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_DIVERSITY, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_getdiversity(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_DIVERSITY, 1, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_setdiversity(struct ath_hal *ah, int v)
+{
+	return (ath_hal_setcapability(ah, HAL_CAP_DIVERSITY, 1, v, NULL));
+}
+
+static inline HAL_BOOL ath_hal_getnumtxqueues(struct ath_hal *ah, u_int32_t *destination)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_NUM_TXQUEUES, 0, destination) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_hasveol(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_VEOL, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_hascompression(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_COMPRESSION, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_compressionsupported(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_COMPRESSION, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_hasbursting(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_BURST, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_burstsupported(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_BURST, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_fastframesupported(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_FASTFRAME, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_hasfastframes(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_FASTFRAME, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_hastxpowlimit(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_TXPOW, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_gettxpowlimit(struct ath_hal *ah, u_int32_t *destination)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_TXPOW, 1, destination) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_getmaxtxpow(struct ath_hal *ah, u_int32_t *destination)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_TXPOW, 2, destination) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_gettpscale(struct ath_hal *ah, u_int32_t *destination)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_TXPOW, 3, destination) == HAL_OK);
 }
 
 static inline HAL_BOOL ath_hal_settpscale(struct ath_hal *ah, u_int32_t v)
@@ -251,14 +191,59 @@ static inline HAL_BOOL ath_hal_settpscale(struct ath_hal *ah, u_int32_t v)
 	return (ath_hal_setcapability(ah, HAL_CAP_TXPOW, 3, v, NULL));
 }
 
+static inline HAL_BOOL ath_hal_hastpc(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_TPC, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_gettpc(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_TPC, 1, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_settpc(struct ath_hal *ah, u_int32_t v)
+{
+	return (ath_hal_setcapability(ah, HAL_CAP_TPC, 1, v, NULL));
+}
+
+static inline HAL_BOOL ath_hal_hasbssidmask(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_BSSIDMASK, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_hasmcastkeysearch(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_MCAST_KEYSRCH, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_getmcastkeysearch(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_MCAST_KEYSRCH, 1, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_setmcastkeysearch(struct ath_hal *ah, u_int32_t v)
+{
+	return ath_hal_setcapability(ah, HAL_CAP_MCAST_KEYSRCH, 1, v, NULL);
+}
+
+static inline HAL_BOOL ath_hal_hastsfadjust(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_TSF_ADJUST, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_gettsfadjust(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_TSF_ADJUST, 1, NULL) == HAL_OK);
+}
+
 static inline HAL_BOOL ath_hal_settsfadjust(struct ath_hal *ah, u_int32_t v)
 {
 	return (ath_hal_setcapability(ah, HAL_CAP_TSF_ADJUST, 1, v, NULL));
 }
 
-static inline HAL_BOOL ath_hal_turboagsupported(struct ath_hal *ah, int countrycode)
+static inline HAL_BOOL ath_hal_xrsupported(struct ath_hal *ah)
 {
-	return (ath_hal_getwirelessmodes(ah, countrycode) & (HAL_MODE_108G | HAL_MODE_TURBO));
+	return ath_hal_getcapability(ah, HAL_CAP_XR, 0, NULL) == HAL_OK;
 }
 
 static inline HAL_BOOL ath_hal_wmetkipmic(struct ath_hal *ah)
@@ -266,9 +251,24 @@ static inline HAL_BOOL ath_hal_wmetkipmic(struct ath_hal *ah)
 	return (ath_hal_getcapability(ah, HAL_CAP_WME_TKIPMIC, 0, NULL) == HAL_OK);
 }
 
-static inline HAL_BOOL ath_hal_xrsupported(struct ath_hal *ah)
+static inline HAL_BOOL ath_hal_halfrate_chansupported(struct ath_hal *ah)
 {
-	return ath_hal_getcapability(ah, HAL_CAP_XR, 0, NULL) == HAL_OK;
+	return (ath_hal_getcapability(ah, HAL_CAP_CHAN_HALFRATE, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_quarterrate_chansupported(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_CHAN_QUARTERRATE, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_hasrfsilent(struct ath_hal *ah)
+{
+	return (ath_hal_getcapability(ah, HAL_CAP_RFSILENT, 0, NULL) == HAL_OK);
+}
+
+static inline HAL_BOOL ath_hal_setrfsilent(struct ath_hal *ah, u_int32_t v)
+{
+	return (ath_hal_setcapability(ah, HAL_CAP_RFSILENT, 1, v, NULL));
 }
 
 static inline HAL_BOOL ath_hal_hasintmit(struct ath_hal *ah)
@@ -284,6 +284,18 @@ static inline HAL_BOOL ath_hal_getintmit(struct ath_hal *ah, u_int32_t *dst)
 static inline HAL_BOOL ath_hal_setintmit(struct ath_hal *ah, u_int32_t v)
 {
 	return (ath_hal_setcapability(ah, HAL_CAP_INTMIT, 1, v, NULL));
+}
+
+/* misc */
+
+static inline HAL_BOOL ath_hal_getcountrycode(struct ath_hal *ah, u_int32_t *destination)
+{
+	return ((*(destination) = ah->ah_countryCode), AH_TRUE);
+}
+
+static inline HAL_BOOL ath_hal_turboagsupported(struct ath_hal *ah, int countrycode)
+{
+	return (ath_hal_getwirelessmodes(ah, countrycode) & (HAL_MODE_108G | HAL_MODE_TURBO));
 }
 
 #endif				/* #ifndef _IF_ATH_HAL_WRAPPERS_H_ */
