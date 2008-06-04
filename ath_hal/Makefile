@@ -102,7 +102,7 @@ endif
 .PHONY: clean
 clean:
 	rm -f *~ *.o *.ko *.mod.c uudecode .*.cmd
-	rm -f .depend .version .*.o.flags .*.o.d
+	rm -f modules.order .depend .version .*.o.flags .*.o.d
 	rm -rf .tmp_versions
 
 ath_hal.o: $(addprefix $(obj)/,$(ath_hal-objs))

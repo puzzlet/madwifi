@@ -26,3 +26,5 @@ clean:
 	for i in $(obj-y); do \
 		$(MAKE) -C $$i clean; \
 	done
+
+	rm -f modules.order

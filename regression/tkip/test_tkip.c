@@ -329,7 +329,7 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	/*
 	 * De-MIC decrypted frame.
 	 */
-	if (!ieee80211_crypto_demic(vap, key, skb, hdrlen)) {
+	if (!ieee80211_crypto_demic(vap, key, skb, hdrlen, 0)) {
 		printk("FAIL: tkip demic failed\n");
 		goto bad;
 	}

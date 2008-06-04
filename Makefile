@@ -129,7 +129,7 @@ clean:
 	done
 	-$(MAKE) -C $(TOOLS) clean
 	rm -rf .tmp_versions
-	rm -f *.symvers svnversion.h
+	rm -f modules.order *.symvers svnversion.h
 
 .PHONY: info
 info:

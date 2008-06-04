@@ -77,7 +77,7 @@ install:
 .PHONY: clean
 clean:
 	rm -f *~ *.o *.ko *.mod.c .*.cmd
-	rm -f .depend .version .*.o.flags .*.o.d
+	rm -f modules.order .depend .version .*.o.flags .*.o.d
 	rm -rf .tmp_versions
 
 ath_$(BUSNAME).o: $(ath_$(BUSNAME)-objs)
