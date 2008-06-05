@@ -187,7 +187,8 @@ extern void *__ahdecl ath_hal_memcpy(void *, const void *, size_t);
  * by the PCI clock domain registers.
  */
 #if (AH_BYTE_ORDER == AH_BIG_ENDIAN)
-#define is_reg_le(__reg) ((0x4000 <= (__reg) && (__reg) < 0x5000))
+#define is_reg_le(__reg) ((0x4000 <= (__reg) && (__reg) < 0x5000) || \
+			  (0x7000 <= (__reg) && (__reg) < 0x8000))
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)
 #define _OS_REG_WRITE(_ah, _reg, _val) do {			\
 	 is_reg_le(_reg) ?					\
