@@ -64,7 +64,7 @@ const char *ieee80211_phymode_name[] = {
 };
 EXPORT_SYMBOL(ieee80211_phymode_name);
 
-const char* ieee80211_opmode_name[] = {
+const char *ieee80211_opmode_name[] = {
 	"ibss", 	/* IEEE80211_M_IBSS     = 0 - IBSS (adhoc) station */            
 	"station", 	/* IEEE80211_M_STA      = 1 - infrastructure station */          
 	"wds", 		/* IEEE80211_M_WDS      = 2 - WDS link */                        
@@ -78,7 +78,7 @@ const char* ieee80211_opmode_name[] = {
 EXPORT_SYMBOL(ieee80211_opmode_name);
 
 
-static void ieee80211com_media_status(struct net_device*, struct ifmediareq *);
+static void ieee80211com_media_status(struct net_device *, struct ifmediareq *);
 static int ieee80211com_media_change(struct net_device *);
 static struct net_device_stats *ieee80211_getstats(struct net_device *);
 static int ieee80211_change_mtu(struct net_device *, int);
@@ -860,7 +860,7 @@ ieee80211_dfs_action(struct ieee80211com *ic) {
 void
 ieee80211_expire_excl_restrictions(struct ieee80211com *ic)
 {
-	struct ieee80211_channel* c = NULL;
+	struct ieee80211_channel *c  = NULL;
 	struct net_device *dev = ic->ic_dev;
 	struct timeval tv_now;
 	int i;
@@ -939,7 +939,7 @@ ieee80211_update_dfs_excl_timer(struct ieee80211com *ic)
 static void
 ieee80211_expire_dfs_excl_timer(unsigned long data)
 {
-	struct ieee80211com *ic = (struct ieee80211com *) data;
+	struct ieee80211com *ic = (struct ieee80211com *)data;
 	struct ieee80211vap *vap;
 
 	printk(KERN_INFO "%s: %s: expiring Non-Occupancy Period\n", 

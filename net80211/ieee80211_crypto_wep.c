@@ -358,7 +358,7 @@ wep_encrypt(struct ieee80211_key *key, struct sk_buff *skb0, int hdrlen)
 			if (data_len != 0) {		/* out of data */
 #ifdef IEEE80211_DEBUG
 				const struct ieee80211_frame *wh =
-				    (const struct ieee80211_frame *) skb0->data;
+				    (const struct ieee80211_frame *)skb0->data;
 #endif
 				IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_CRYPTO,
 					wh->i_addr2,
@@ -377,7 +377,7 @@ wep_encrypt(struct ieee80211_key *key, struct sk_buff *skb0, int hdrlen)
 	if (skb_tailroom(skb) < wep.ic_trailer) {
 #ifdef IEEE80211_DEBUG
 		const struct ieee80211_frame *wh =
-			(const struct ieee80211_frame *) skb0->data;
+			(const struct ieee80211_frame *)skb0->data;
 #endif
 		/* NB: should not happen */
 		IEEE80211_NOTE_MAC(ctx->wc_vap, IEEE80211_MSG_CRYPTO,
@@ -458,7 +458,7 @@ wep_decrypt(struct ieee80211_key *key, struct sk_buff *skb0, int hdrlen)
 			if (data_len != 0) {		/* out of data */
 #ifdef IEEE80211_DEBUG
 				const struct ieee80211_frame *wh =
-					(const struct ieee80211_frame *) skb0->data;
+					(const struct ieee80211_frame *)skb0->data;
 #endif
 				IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_CRYPTO,
 					wh->i_addr2,

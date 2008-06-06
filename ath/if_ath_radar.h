@@ -157,12 +157,12 @@ int ath_radar_update(struct ath_softc *sc);
 /* Returns true if radar detection is enabled. */
 int ath_radar_is_enabled(struct ath_softc *sc);
 /* Read the radar pulse detection parameters. */
-void ath_radar_get_params(struct ath_softc *sc, RADAR_PARAM* rp);
+void ath_radar_get_params(struct ath_softc *sc, RADAR_PARAM *rp);
 /* Update the radar pulse detection parameters. 
  * If rp is NULL, defaults are used for all fields.
  * If any member of rp is set to RADAR_PARAM_USE_DEFAULT, the default
  * is used for that field. */
-void ath_radar_set_params(struct ath_softc *sc, RADAR_PARAM* rp);
+void ath_radar_set_params(struct ath_softc *sc, RADAR_PARAM *rp);
 /* Update channel's DFS flags based upon whether DFS is reqired */
 int ath_radar_correct_dfs_flags(struct ath_softc *sc, HAL_CHANNEL *hchan);
 /* Returns true if DFS is required for the regulatory domain, country and 

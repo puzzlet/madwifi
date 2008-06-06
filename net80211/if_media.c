@@ -192,7 +192,7 @@ ifmedia_ioctl(struct net_device *dev, struct ifreq *ifr,
 	struct ifmedia *ifm, u_long cmd)
 {
 	struct ifmedia_entry *match;
-	struct ifmediareq *ifmr = (struct ifmediareq *) ifr;
+	struct ifmediareq *ifmr = (struct ifmediareq *)ifr;
 	int error = 0, sticky;
 
 	if (dev == NULL || ifr == NULL || ifm == NULL)

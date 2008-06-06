@@ -519,7 +519,7 @@ typedef __uint8_t __u8;
 /* Retry limits and lifetime flags available */
 #define IW_RETRY_ON		0x0000	/* No details... */
 #define IW_RETRY_TYPE		0xF000	/* Type of parameter */
-#define IW_RETRY_LIMIT		0x1000	/* Maximum number of retries*/
+#define IW_RETRY_LIMIT		0x1000	/* Maximum number of retries */
 #define IW_RETRY_LIFETIME	0x2000	/* Maximum duration of retries in us */
 #define IW_RETRY_MODIFIER	0x000F	/* Modify a parameter */
 #define IW_RETRY_MIN		0x0001	/* Value is a minimum  */
@@ -1083,8 +1083,8 @@ struct iw_event
 /* iw_point events are special. First, the payload (extra data) come at
  * the end of the event, so they are bigger than IW_EV_POINT_LEN. Second,
  * we omit the pointer, so start at an offset. */
-#define IW_EV_POINT_OFF (((char *) &(((struct iw_point *) NULL)->length)) - \
-			  (char *) NULL)
+#define IW_EV_POINT_OFF (((char *)&(((struct iw_point *)NULL)->length)) - \
+			  (char *)NULL)
 #define IW_EV_POINT_LEN	(IW_EV_LCP_LEN + sizeof(struct iw_point) - \
 			 IW_EV_POINT_OFF)
 

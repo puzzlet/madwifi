@@ -173,7 +173,7 @@ main(int argc, char *argv[])
 		free(if_base);
 		if_base = NULL;
 
-		ifr.ifr_data = (void *) &cp;
+		ifr.ifr_data = (void *)&cp;
 		vap_create(&ifr);
 		printf("%s\n", ifr.ifr_name);
 	} else if (streq(cmd, "destroy")) {
@@ -434,12 +434,12 @@ getstamode(u_int8_t opmode)
 }
 
 static void
-printie(const char* tag, const uint8_t *ie, size_t ielen, int maxlen)
+printie(const char *tag, const uint8_t *ie, size_t ielen, int maxlen)
 {
 	printf("%s", tag);
 	if (verbose) {
-		maxlen -= strlen(tag)+2;
-		if (2*ielen > maxlen)
+		maxlen -= strlen(tag) + 2;
+		if (2 * ielen > maxlen)
 			maxlen--;
 		printf("<");
 		for (; ielen > 0; ie++, ielen--) {
@@ -565,7 +565,7 @@ ieee80211_ntoa(const uint8_t mac[IEEE80211_ADDR_LEN])
 static void
 list_stations(const char *ifname)
 {
-	uint8_t buf[24*1024];
+	uint8_t buf[24 * 1024];
 	struct iwreq iwr;
 	uint8_t *cp;
 	int s, len;
@@ -576,7 +576,7 @@ list_stations(const char *ifname)
 
 	(void) memset(&iwr, 0, sizeof(iwr));
 	(void) strncpy(iwr.ifr_name, ifname, sizeof(iwr.ifr_name));
-	iwr.u.data.pointer = (void *) buf;
+	iwr.u.data.pointer = (void *)buf;
 	iwr.u.data.length = sizeof(buf);
 	if (ioctl(s, IEEE80211_IOCTL_STA_INFO, &iwr) < 0)
 		errx(1, "unable to get station information");
@@ -607,7 +607,7 @@ list_stations(const char *ifname)
 		struct ieee80211req_sta_info *si;
 		uint8_t *vp;
 
-		si = (struct ieee80211req_sta_info *) cp;
+		si = (struct ieee80211req_sta_info *)cp;
 		vp = (u_int8_t *)(si+1);
 		printf("%s %4u %4d %3dM %4d %4d %5d %6d %7d %6d %7d %-4.4s %-5.5s %3x %8x %8s",
 			ieee80211_ntoa(si->isi_macaddr),
@@ -683,8 +683,8 @@ list_scan(const char *ifname)
 		struct ieee80211req_scan_result *sr;
 		uint8_t *vp;
 
-		sr = (struct ieee80211req_scan_result *) cp;
-		vp = (u_int8_t *)(sr+1);
+		sr = (struct ieee80211req_scan_result *)cp;
+		vp = (u_int8_t *)(sr + 1);
 		printf("%-14.*s  %s  %3d  %3dM %2d:%-2d  %3d %-4.4s",
 			copy_essid(ssid, sizeof(ssid), vp, sr->isr_ssid_len),
 			ssid,

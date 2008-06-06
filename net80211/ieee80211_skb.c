@@ -100,10 +100,10 @@ static void skb_print_message(
 		int show_counter, 
 		const struct sk_buff *skb, 
 #ifdef IEEE80211_DEBUG_REFCNT
-		const char* func1, int line1,
+		const char *func1, int line1,
 #endif
-		const char* func2, int line2,
-		const char* message,
+		const char *func2, int line2,
+		const char *message,
 		...)
 {
 	va_list args;
@@ -146,34 +146,34 @@ static void skb_print_message(
 static void 
 print_skb_refchange_message(
 		const struct sk_buff *skb, int users_adjustment, 
-		const char* func1, int line1,
-		const char* func2, int line2);
+		const char *func1, int line1,
+		const char *func2, int line2);
 static void 
 print_skb_trackchange_message(
 		const struct sk_buff *skb, int users_adjustment, 
-		const char* func1, int line1,
-		const char* func2, int line2,
-		char* message);
+		const char *func1, int line1,
+		const char *func2, int line2,
+		char *message);
 
 /* Called automatically when an SKB reaches zero users, 
  * reporting any leaked node references. */
 #ifdef IEEE80211_DEBUG_REFCNT_SKBDEST
-static void skb_destructor(struct sk_buff* skb);
+static void skb_destructor(struct sk_buff *skb);
 #endif
-static void get_skb_description(char *dst, int dst_size, const char* label, const struct sk_buff *skb, int users_adjustment);
+static void get_skb_description(char *dst, int dst_size, const char *label, const struct sk_buff *skb, int users_adjustment);
 
 static struct sk_buff *
 clean_clone_or_copy(struct sk_buff *skb);
 
 static struct sk_buff *
 track_skb(struct sk_buff *skb, int users_adjustment, 
-		      const char* func1, int line1, 
-		      const char* func2, int line2);
+		      const char *func1, int line1, 
+		      const char *func2, int line2);
 
 static struct sk_buff *
 untrack_skb(struct sk_buff *skb, int users_adjustment, 
-	      const char* func1, int line1, 
-	      const char* func2, int line2);
+	      const char *func1, int line1, 
+	      const char *func2, int line2);
 
 #define UNREF_USE_KFREE_SKB 	   	0
 #define UNREF_USE_DEV_KFREE_SKB_ANY   	1
@@ -183,20 +183,20 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
 /* Assumes SKB is not yet freed at the time of the call and shows the new users
  * count as (users - 1). */
 static void unref_skb(struct sk_buff *skb, int type,
-	  const char* func1, int line1, 
-	  const char* func2, int line2);
+	  const char *func1, int line1, 
+	  const char *func2, int line2);
 
 /* Assumes SKB reference counter has already been updated and reports count as
  * atomic_read(&skb->users). */
 static struct sk_buff *
 ref_skb(struct sk_buff *skb, 
-	const char* func1, int line1, 
-	const char* func2, int line2);
+	const char *func1, int line1, 
+	const char *func2, int line2);
 
 
 #ifdef IEEE80211_DEBUG_REFCNT_SKBDEST
 /* Destructor for reporting node reference leaks */
-static void skb_destructor(struct sk_buff* skb) {
+static void skb_destructor(struct sk_buff *skb) {
 	/* Report any node reference leaks - caused by kernel net device queue 
 	 * dropping buffer, rather than passing it to the driver. */
 	if (SKB_NI(skb) != NULL) {
@@ -213,7 +213,7 @@ static void skb_destructor(struct sk_buff* skb) {
 EXPORT_SYMBOL(skb_destructor);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT_SKBDEST */
 
-static void get_skb_description(char *dst, int dst_size, const char* label, const struct sk_buff *skb, int users_adjustment) { 
+static void get_skb_description(char *dst, int dst_size, const char *label, const struct sk_buff *skb, int users_adjustment) { 
 	dst[0] = '\0';
 	if (NULL != skb) {
 		int adj_users = atomic_read(&skb->users) + users_adjustment;
@@ -248,8 +248,8 @@ static void get_skb_description(char *dst, int dst_size, const char* label, cons
 
 static void print_skb_refchange_message(
 		const struct sk_buff *skb, int users_adjustment, 
-		const char* func1, int line1,
-		const char* func2, int line2)
+		const char *func1, int line1,
+		const char *func2, int line2)
 {
 	char skb_desc[128] = { '\0' };
 	if (0 == (ath_debug_global & GLOBAL_DEBUG_SKB_REF))
@@ -263,9 +263,9 @@ static void print_skb_refchange_message(
 
 static void print_skb_trackchange_message(
 		const struct sk_buff *skb, int users_adjustment, 
-		const char* func1, int line1,
-		const char* func2, int line2,
-		char* message)
+		const char *func1, int line1,
+		const char *func2, int line2,
+		char *message)
 {
 	char skb_desc[128] = { '\0' };
 	if (0 == (ath_debug_global & GLOBAL_DEBUG_SKB))
@@ -286,8 +286,8 @@ clean_clone_or_copy(struct sk_buff *skb) {
 
 static struct sk_buff *
 track_skb(struct sk_buff *skb, int users_adjustment, 
-		      const char* func1, int line1, 
-		      const char* func2, int line2) 
+		      const char *func1, int line1, 
+		      const char *func2, int line2) 
 {
 	if (NULL == skb) {
 		skb_print_message(0 /* show_counter */, 
@@ -326,8 +326,8 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 
 static struct sk_buff *
 untrack_skb(struct sk_buff *skb, int users_adjustment, 
-	      const char* func1, int line1, 
-	      const char* func2, int line2)
+	      const char *func1, int line1, 
+	      const char *func2, int line2)
 {
 	if (NULL == skb) {
 		skb_print_message(0 /* show_counter */, 
@@ -373,8 +373,8 @@ untrack_skb(struct sk_buff *skb, int users_adjustment,
  * count as (users - 1). */
 static void
 unref_skb(struct sk_buff *skb, int type,
-	  const char* func1, int line1, 
-	  const char* func2, int line2) 
+	  const char *func1, int line1, 
+	  const char *func2, int line2) 
 {
 	if (NULL == skb) {
 		skb_print_message(0 /* show_counter */, 
@@ -453,8 +453,8 @@ unref_skb(struct sk_buff *skb, int type,
  * atomic_read(&skb->users). */
 static struct sk_buff *
 ref_skb(struct sk_buff *skb, 
-	const char* func1, int line1, 
-	const char* func2, int line2) 
+	const char *func1, int line1, 
+	const char *func2, int line2) 
 {
 	if (NULL == skb) {
 		skb_print_message(0 /* show_counter */, 
@@ -486,9 +486,9 @@ ref_skb(struct sk_buff *skb,
  *  - Free the node reference and set it to null.
  *  - Break the linked list, clearing next skb's prev pointer if possible. */
 #ifdef IEEE80211_DEBUG_REFCNT
-void ieee80211_dev_kfree_skb_debug(struct sk_buff** pskb, const char* func, int line) 
+void ieee80211_dev_kfree_skb_debug(struct sk_buff **pskb, const char *func, int line) 
 #else
-void ieee80211_dev_kfree_skb(struct sk_buff** pskb) 
+void ieee80211_dev_kfree_skb(struct sk_buff **pskb) 
 #endif
 {
 	struct sk_buff *skb;
@@ -527,10 +527,10 @@ void ieee80211_dev_kfree_skb(struct sk_buff** pskb)
  * a list of skbs, starting with the first. */
 #ifdef IEEE80211_DEBUG_REFCNT
 void
-ieee80211_dev_kfree_skb_list_debug(struct sk_buff** pskb, const char* func, int line) 
+ieee80211_dev_kfree_skb_list_debug(struct sk_buff **pskb, const char *func, int line) 
 #else
 void
-ieee80211_dev_kfree_skb_list(struct sk_buff** pskb) 
+ieee80211_dev_kfree_skb_list(struct sk_buff **pskb) 
 #endif
 {
 	struct sk_buff *skb, *tskb;
@@ -554,10 +554,10 @@ ieee80211_dev_kfree_skb_list(struct sk_buff** pskb)
 }
 
 #ifdef IEEE80211_DEBUG_REFCNT
-struct sk_buff*
-ieee80211_dev_alloc_skb_debug(int size, const char* func, int line) 
+struct sk_buff *
+ieee80211_dev_alloc_skb_debug(int size, const char *func, int line) 
 #else
-struct sk_buff*
+struct sk_buff *
 ieee80211_dev_alloc_skb(int size) 
 #endif
 {
@@ -584,7 +584,7 @@ ieee80211_dev_alloc_skb(int size)
 
 #ifdef IEEE80211_DEBUG_REFCNT
 void
-ieee80211_skb_track_debug(struct sk_buff *skb, const char* func, int line) {
+ieee80211_skb_track_debug(struct sk_buff *skb, const char *func, int line) {
 	track_skb(skb, 0 /* users_adjustment */, 
 		  func, line, __func__, __LINE__);
 }
@@ -598,7 +598,7 @@ ieee80211_skb_track(struct sk_buff *skb) {
 
 #ifdef IEEE80211_DEBUG_REFCNT
 void
-ieee80211_skb_untrack_debug(struct sk_buff *skb, const char* func, int line) {
+ieee80211_skb_untrack_debug(struct sk_buff *skb, const char *func, int line) {
 	untrack_skb(skb, 0 /* users_adjustment */, 
 		  func, line, __func__, __LINE__);
 }
@@ -632,13 +632,13 @@ ieee80211_skb_references(void) {
 
 int  vlan_hwaccel_rx_debug(struct sk_buff *skb, 
 			       struct vlan_group *grp, unsigned short vlan_tag, 
-			       const char* func, int line) {
+			       const char *func, int line) {
 	return vlan_hwaccel_rx(
 		untrack_skb(skb, 0, func, line, __func__, __LINE__),
 		grp, vlan_tag);
 }
 
-int netif_rx_debug(struct sk_buff *skb, const char* func, int line) {
+int netif_rx_debug(struct sk_buff *skb, const char *func, int line) {
 	return netif_rx(untrack_skb(skb, 0, func, line, __func__, __LINE__));
 }
 
@@ -725,7 +725,7 @@ struct sk_buff * skb_share_check_debug(struct sk_buff *skb, gfp_t pri,
 }
 
 void  kfree_skb_fast_debug(struct sk_buff *skb, 
-		     const char* func, int line)
+		     const char *func, int line)
 {
 	/* NOT so fast... */
 	unref_skb(skb, UNREF_USE_DEV_KFREE_SKB_ANY, func, line, __func__, __LINE__);

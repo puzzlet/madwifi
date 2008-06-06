@@ -468,7 +468,7 @@ extern void if_printf(struct net_device *, const char *, ...);
 #define ieee80211_getmgtframe(_ppfrm, _pktlen) \
 	ieee80211_getmgtframe_debug(_ppfrm, _pktlen, __func__, __LINE__)
 extern struct sk_buff * ieee80211_getmgtframe_debug(u_int8_t **frm, u_int pktlen, 
-						    const char* func, int line);
+						    const char *func, int line);
 #else
 extern struct sk_buff * ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen);
 #endif

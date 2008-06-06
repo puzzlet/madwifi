@@ -170,7 +170,7 @@ iwspy_event(struct ieee80211vap *vap, struct ieee80211_node *ni, u_int rssi)
 				set_quality(&thr.low, vap->iv_spy.thr_low, vap->iv_ic->ic_channoise);
 				set_quality(&thr.high, vap->iv_spy.thr_high, vap->iv_ic->ic_channoise);
 				wireless_send_event(vap->iv_dev,
-					SIOCGIWTHRSPY, &wrq, (char*) &thr);
+					SIOCGIWTHRSPY, &wrq, (char *)&thr);
 				break;
 			}
 		}
@@ -672,7 +672,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 			IEEE80211_NODE_STAT(ni, rx_decap);
 			goto err;
 		}
-		eh = (struct ether_header *) skb->data;
+		eh = (struct ether_header *)skb->data;
 
 		if (!accept_data_frame(vap, ni, key, skb, eh))
 			goto out;
@@ -685,7 +685,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 
 #ifdef ATH_SUPERG_FF
 		/* check for FF */
-		llc = (struct llc *) (skb->data + sizeof(struct ether_header));
+		llc = (struct llc *)(skb->data + sizeof(struct ether_header));
 		if (ntohs(llc->llc_snap.ether_type) == (u_int16_t)ATH_ETH_TYPE) {
 			struct sk_buff *skb1 = NULL;
 			struct ether_header *eh_tmp;
@@ -970,7 +970,7 @@ static int accept_data_frame(struct ieee80211vap *vap,
 static struct sk_buff *
 ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 {
-	struct ieee80211_frame *wh = (struct ieee80211_frame *) skb->data;
+	struct ieee80211_frame *wh = (struct ieee80211_frame *)skb->data;
 	u_int16_t rxseq, last_rxseq;
 	u_int8_t fragno, last_fragno;
 	u_int8_t more_frag = wh->i_fc[1] & IEEE80211_FC1_MORE_FRAG;
@@ -1015,7 +1015,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 	if (ni->ni_rxfrag) {
 		struct ieee80211_frame *lwh;
 
-		lwh = (struct ieee80211_frame *) ni->ni_rxfrag->data;
+		lwh = (struct ieee80211_frame *)ni->ni_rxfrag->data;
 		last_rxseq = le16_to_cpu(*(__le16 *)lwh->i_seq) >>
 			IEEE80211_SEQ_SEQ_SHIFT;
 		last_fragno = le16_to_cpu(*(__le16 *)lwh->i_seq) &
@@ -1081,7 +1081,7 @@ ieee80211_defrag(struct ieee80211_node *ni, struct sk_buff *skb, int hdrlen)
 			/* Update tail and length */
 			skb_put(ni->ni_rxfrag, skb->len - hdrlen);
 			/* Keep a copy of last sequence and fragno */
-			*(__le16 *) lwh->i_seq = *(__le16 *) wh->i_seq;
+			*(__le16 *)lwh->i_seq = *(__le16 *)wh->i_seq;
 		}
 		/* we're done with the fragment */
 		ieee80211_dev_kfree_skb(&skb);
@@ -1214,7 +1214,7 @@ ieee80211_decap(struct ieee80211vap *vap, struct sk_buff *skb, int hdrlen)
 
 	memcpy(&wh, skb->data, hdrlen);	/* Make a copy of the variably sized .11 header */
 
-	llc = (struct llc *) skb_pull(skb, hdrlen);
+	llc = (struct llc *)skb_pull(skb, hdrlen);
 	/* XXX: For some unknown reason some APs think they are from DEC and 
 	 * use an OUI of 00-00-f8. This should be killed as soon as sanity is 
 	 * restored. */
@@ -1226,7 +1226,7 @@ ieee80211_decap(struct ieee80211vap *vap, struct sk_buff *skb, int hdrlen)
 		llc = NULL;
 	}
 
-	eh = (struct ether_header *) skb_push(skb, sizeof(struct ether_header));
+	eh = (struct ether_header *)skb_push(skb, sizeof(struct ether_header));
 	switch (wh.i_fc[1] & IEEE80211_FC1_DIR_MASK) {
 	case IEEE80211_FC1_DIR_NODS:
 		IEEE80211_ADDR_COPY(eh->ether_dhost, wh.i_addr1);
@@ -2199,7 +2199,7 @@ ieee80211_parse_athParams(struct ieee80211_node *ni, u_int8_t *ie)
 	struct ieee80211com *ic = ni->ni_ic;
 #endif /* ATH_SUPERG_DYNTURBO */
 	struct ieee80211_ie_athAdvCap *athIe =
-		(struct ieee80211_ie_athAdvCap *) ie;
+		(struct ieee80211_ie_athAdvCap *)ie;
 
 	ni->ni_ath_flags = athIe->athAdvCap_capability;
 	if (ni->ni_ath_flags & IEEE80211_ATHC_COMP)
@@ -2298,7 +2298,7 @@ void
 ieee80211_saveath(struct ieee80211_node *ni, u_int8_t *ie)
 {
 	const struct ieee80211_ie_athAdvCap *athIe =
-		(const struct ieee80211_ie_athAdvCap *) ie;
+		(const struct ieee80211_ie_athAdvCap *)ie;
 
 	ieee80211_saveie(&ni->ni_ath_ie, ie);
 	if (athIe != NULL) {
@@ -3029,7 +3029,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 	if (ni_or_null == NULL)
 		ni = vap->iv_bss;
 
-	wh = (struct ieee80211_frame *) skb->data;
+	wh = (struct ieee80211_frame *)skb->data;
 	frm = (u_int8_t *)&wh[1];
 	efrm = skb->data + skb->len;
 
@@ -3339,7 +3339,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				 * power save mode for any reason.
 				 */
 				struct ieee80211_tim_ie *tim =
-				    (struct ieee80211_tim_ie *) scan.tim;
+				    (struct ieee80211_tim_ie *)scan.tim;
 				int aid = IEEE80211_AID(ni->ni_associd);
 				int ix = aid / NBBY;
 				int min = tim->tim_bitctl &~ 1;
@@ -4131,7 +4131,7 @@ ieee80211_recv_pspoll(struct ieee80211_node *ni, struct sk_buff *skb0)
 	if (ni->ni_associd == 0) {
 		IEEE80211_DISCARD(vap,
 			IEEE80211_MSG_POWER | IEEE80211_MSG_DEBUG,
-			(struct ieee80211_frame *) wh, "ps-poll",
+			(struct ieee80211_frame *)wh, "ps-poll",
 			"%s", "unassociated station");
 		vap->iv_stats.is_ps_unassoc++;
 		IEEE80211_SEND_MGMT(ni, IEEE80211_FC0_SUBTYPE_DEAUTH,
@@ -4143,7 +4143,7 @@ ieee80211_recv_pspoll(struct ieee80211_node *ni, struct sk_buff *skb0)
 	if (aid != ni->ni_associd) {
 		IEEE80211_DISCARD(vap,
 			IEEE80211_MSG_POWER | IEEE80211_MSG_DEBUG,
-			(struct ieee80211_frame *) wh, "ps-poll",
+			(struct ieee80211_frame *)wh, "ps-poll",
 			"aid mismatch: sta aid 0x%x poll aid 0x%x",
 			ni->ni_associd, aid);
 		vap->iv_stats.is_ps_badaid++;
@@ -4198,11 +4198,11 @@ athff_decap(struct sk_buff *skb)
 		return -1;
 
 	memcpy(&eh_src, skb->data, sizeof(struct ether_header));
-	llc = (struct llc *) skb_pull(skb, sizeof(struct ether_header));
+	llc = (struct llc *)skb_pull(skb, sizeof(struct ether_header));
 	eh_src.ether_type = llc->llc_un.type_snap.ether_type;
 	skb_pull(skb, LLC_SNAPFRAMELEN);
 
-	eh_dst = (struct ether_header *) skb_push(skb, sizeof(struct ether_header));
+	eh_dst = (struct ether_header *)skb_push(skb, sizeof(struct ether_header));
 	memcpy(eh_dst, &eh_src, sizeof(struct ether_header));
 
 	return 0;

@@ -770,7 +770,7 @@ ath_rate_newstate(struct ieee80211vap *vap, enum ieee80211_state newstate)
 static void
 ath_timer_function(unsigned long data)
 {
-	struct minstrel_softc *ssc = (struct minstrel_softc *) data;
+	struct minstrel_softc *ssc = (struct minstrel_softc *)data;
 	struct ath_softc *sc = ssc->sc;
 	struct ieee80211com *ic;
 	struct net_device *dev = ssc->sc_dev;
@@ -815,7 +815,7 @@ ath_timer_function(unsigned long data)
 static void
 ath_rate_statistics(void *arg, struct ieee80211_node *ni)
 {
-	struct ath_node *an = (struct ath_node *) ni;
+	struct ath_node *an = (struct ath_node *)ni;
 	struct ieee80211_rateset *rs = &ni->ni_rates;
 	struct minstrel_node *rn = ATH_NODE_MINSTREL(an);
 	unsigned int i;
@@ -933,7 +933,7 @@ ath_rate_attach(struct ath_softc *sc)
 static void
 ath_rate_detach(struct ath_ratectrl *arc)
 {
- 	struct minstrel_softc *osc = (struct minstrel_softc *) arc;
+ 	struct minstrel_softc *osc = (struct minstrel_softc *)arc;
 		osc->close_timer_now = 1;
 		del_timer(&osc->timer);
 		kfree(osc);
@@ -948,7 +948,7 @@ ath_proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 	struct ieee80211_node *ni;
 	struct minstrel_node *odst;
 	struct ieee80211_node_table *nt =
-		(struct ieee80211_node_table *) &vap->iv_ic->ic_sta;
+		(struct ieee80211_node_table *)&vap->iv_ic->ic_sta;
 	unsigned int x = 0;
 	unsigned int this_tp, this_prob, this_eprob;
 	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;;

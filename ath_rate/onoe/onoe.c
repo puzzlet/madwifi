@@ -423,7 +423,7 @@ ath_rate_attach(struct ath_softc *sc)
 static void
 ath_rate_detach(struct ath_ratectrl *arc)
 {
-	struct onoe_softc *osc = (struct onoe_softc *) arc;
+	struct onoe_softc *osc = (struct onoe_softc *)arc;
 
 	kfree(osc);
 	_MOD_DEC_USE(THIS_MODULE);

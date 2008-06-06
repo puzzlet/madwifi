@@ -644,7 +644,7 @@ ieee80211_crypto_decap(struct ieee80211_node *ni, struct sk_buff *skb, int hdrle
 	 * This assumes unicast keys are only configured when
 	 * the key id in the header is meaningless (typically 0).
 	 */
-	wh = (struct ieee80211_frame *) skb->data;
+	wh = (struct ieee80211_frame *)skb->data;
 	ivp = skb->data + hdrlen;
 	keyid = ivp[IEEE80211_WEP_IVLEN];
 	if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||

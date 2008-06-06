@@ -284,7 +284,7 @@ found:
 	ise->se_timoff = sp->timoff;
 	if (sp->tim != NULL) {
 		const struct ieee80211_tim_ie *tim =
-		    (const struct ieee80211_tim_ie *) sp->tim;
+			(const struct ieee80211_tim_ie *)sp->tim;
 		ise->se_dtimperiod = tim->tim_period;
 	}
 	saveie(&ise->se_wme_ie, sp->wme);
@@ -950,7 +950,8 @@ notfound:
  * a reference to an entry w/o holding the lock on the table.
  */
 static struct sta_entry *
-sta_lookup(struct sta_table *st, const u_int8_t macaddr[IEEE80211_ADDR_LEN], struct ieee80211_scan_ssid* essid)
+sta_lookup(struct sta_table *st, const u_int8_t macaddr[IEEE80211_ADDR_LEN],
+		struct ieee80211_scan_ssid *essid)
 {
 	struct sta_entry *se;
 	int hash = STA_HASH(macaddr);

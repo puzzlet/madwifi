@@ -87,7 +87,7 @@
 	 IEEE80211_BMISSTHRESH_BMIN : (_bmt))
 
 #define	IEEE80211_BGSCAN_INTVAL_MIN	15	/* min bg scan intvl (secs) */
-#define	IEEE80211_BGSCAN_INTVAL_DEFAULT	(5*60)	/* default bg scan intvl */
+#define	IEEE80211_BGSCAN_INTVAL_DEFAULT	(5 * 60)	/* default BG scan int. */
 
 #define	IEEE80211_BGSCAN_IDLE_MIN	100	/* min idle time (ms) */
 #define	IEEE80211_BGSCAN_IDLE_DEFAULT	250	/* default idle time (ms) */
@@ -239,7 +239,7 @@ struct ieee80211vap {
 	u_int16_t iv_sta_assoc;				/* stations associated */
 	u_int16_t iv_ps_sta;				/* stations in power save */
 	u_int16_t iv_ps_pending;			/* PS STAs w/ pending frames */
-	u_int8_t *iv_tim_bitmap;			/* power-save stations w/ data*/
+	u_int8_t *iv_tim_bitmap;			/* power-save stations w/ data */
 	u_int16_t iv_tim_len;				/* ic_tim_bitmap size (bytes) */
 	u_int8_t iv_dtim_period;			/* DTIM period */
 	u_int8_t iv_dtim_count;				/* DTIM count from last bcn */
@@ -317,7 +317,7 @@ struct ieee80211com {
 	u_int32_t ic_caps;			/* capabilities */
 	u_int8_t ic_ath_cap;			/* Atheros adv. capabilities */
 	u_int8_t ic_promisc;			/* VAPs needing promisc mode */
-	u_int8_t ic_allmulti;			/* VAPs needing all multicast*/
+	u_int8_t ic_allmulti;			/* VAPs needing all multicast */
 	u_int8_t ic_nopened;			/* VAPs been opened */
 	struct ieee80211_rateset ic_sup_rates[IEEE80211_MODE_MAX];
 	struct ieee80211_rateset ic_sup_xr_rates;
@@ -376,13 +376,13 @@ struct ieee80211com {
 	 *    association of the STA and disassociation of x other STAs (out of
 	 *    y associated STAs in total), the number of common channel
 	 *    increases by z, then such an action is performed if
-	 *    1000*x/y < z*ic_sc_slcg
+	 *    1000 * x/y < z * ic_sc_slcg
 	 * ic_sc_sldg is the permil of Stations Lost per rssi Db Gained, the
 	 *    parameter used by SC_LOOSE algorithm. If due to the switch,
 	 *    the maximum RSSI of received packets on the current channel would
 	 *    decrease by z decibels and x stations from the set of y stations
 	 *    would be lost, then such a switch will be performed if
-	 *    1000*x/y < z*ic_sc_sldg
+	 *    1000 * x/y < z * ic_sc_sldg
 	 * ic_sc_ie is the Supported Channels IE that is about to be sent along
 	 *    with (re)assoc requests (STA mode)
 	 */
@@ -466,11 +466,11 @@ struct ieee80211com {
 	int32_t (*ic_node_count)(struct ieee80211com *);
 #ifdef IEEE80211_DEBUG_REFCNT
 	struct ieee80211_node *(*ic_node_alloc_debug)(struct ieee80211vap *, 
-			const char* func, int line);
+			const char *func, int line);
 	void (*ic_node_cleanup_debug)(struct ieee80211_node *, 
-			const char* func, int line);
+			const char *func, int line);
 	void (*ic_node_free_debug)(struct ieee80211_node *, 
-			const char* func, int line);
+			const char *func, int line);
 #else
 	struct ieee80211_node *(*ic_node_alloc)(struct ieee80211vap *);
 	void (*ic_node_cleanup)(struct ieee80211_node *);

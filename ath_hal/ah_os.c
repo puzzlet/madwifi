@@ -117,7 +117,7 @@ _ath_hal_detach(struct ath_hal *ah)
 
 #ifdef AH_ASSERT
 void __ahdecl
-ath_hal_assert_failed(const char* filename, int lineno, const char *msg)
+ath_hal_assert_failed(const char *filename, int lineno, const char *msg)
 {
 	printk(KERN_ERR "Atheros HAL assertion failure: %s: line %u: %s\n",
 		filename, lineno, msg);
@@ -152,7 +152,7 @@ EXPORT_SYMBOL(ath_hal_device);
 static	struct alq *ath_hal_alq = NULL;
 static	u_int ath_hal_alq_lost;		/* count of lost records */
 static	const char *ath_hal_logfile = "/var/log/ath_hal.log";
-static	u_int ath_hal_alq_qsize = 8*1024;
+static	u_int ath_hal_alq_qsize = 8 * 1024;
 
 
 static int
@@ -209,7 +209,7 @@ sysctl_hw_ath_hal_log(AH_SYSCTL_ARGS_DECL)
 }
 
 static inline void
-ath_hal_logvprintf(struct ath_hal *ah, const char* fmt, va_list ap)
+ath_hal_logvprintf(struct ath_hal *ah, const char *fmt, va_list ap)
 {
 	struct ale *ale;
 	if (!ath_hal_alq) {
@@ -241,7 +241,7 @@ EXPORT_SYMBOL(ath_hal_logprintf);
 #endif /* AH_DEBUG_ALQ */
 
 static inline void
-_hal_vprintf(struct ath_hal *ah, HAL_BOOL prefer_alq, const char* fmt, va_list ap)
+_hal_vprintf(struct ath_hal *ah, HAL_BOOL prefer_alq, const char *fmt, va_list ap)
 {
 	char buf[MSG_MAXLEN];
 #ifdef AH_DEBUG_ALQ
@@ -255,7 +255,7 @@ _hal_vprintf(struct ath_hal *ah, HAL_BOOL prefer_alq, const char* fmt, va_list a
 }
 
 void __ahdecl 
-ath_hal_printf(struct ath_hal *ah, HAL_BOOL prefer_alq, const char* fmt, ...)
+ath_hal_printf(struct ath_hal *ah, HAL_BOOL prefer_alq, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -268,9 +268,9 @@ EXPORT_SYMBOL(ath_hal_printf);
  * for). Names were taken from openhal ar5212regs.h. Return AH_TRUE if the
  * name is a known ar5212 register, and AH_FALSE otherwise. */
 HAL_BOOL
-ath_hal_lookup_register_name(struct ath_hal *ah, char* buf, int buflen, 
+ath_hal_lookup_register_name(struct ath_hal *ah, char *buf, int buflen, 
 		u_int32_t address) {
-	const char* static_label = NULL;
+	const char *static_label = NULL;
 	memset(buf, 0, buflen);
 #if 0 /* Enable once for each new board/magic type */
 	printk("MAGIC: %x\n", ah->ah_magic);
@@ -459,7 +459,7 @@ ath_hal_lookup_register_name(struct ath_hal *ah, char* buf, int buflen,
 			int key = ((address - 0x8800) / keytable_entry_size);
 			int reg = ((address - 0x8800) % keytable_entry_size) / 
 				sizeof(u_int32_t);
-			char* format = NULL;
+			char *format = NULL;
 			switch (reg) {
 			case 0: format = "KEY(%3d).KEYBITS[031:000]"; break;
 			case 1: format = "KEY(%3d).KEYBITS[047:032]"; break;
@@ -572,7 +572,7 @@ ath_hal_lookup_register_name(struct ath_hal *ah, char* buf, int buflen,
 EXPORT_SYMBOL(ath_hal_lookup_register_name);
 
 static void
-_print_decoded_register_delta(struct ath_hal *ah, const char* device_name, 
+_print_decoded_register_delta(struct ath_hal *ah, const char *device_name, 
 			      HAL_BOOL prefer_alq, int regop,
 			      u_int32_t address, u_int32_t v_old, u_int32_t v_new,
 			      HAL_BOOL verbose)
@@ -655,7 +655,7 @@ _print_decoded_register_delta(struct ath_hal *ah, const char* device_name,
  * names) we can add it to this helper function and a subsequent line is
  * printed with the status in symbolic form. */
 static void
-_print_decoded_register_bitfields(struct ath_hal *ah, const char* device_name, 
+_print_decoded_register_bitfields(struct ath_hal *ah, const char *device_name, 
 				HAL_BOOL prefer_alq, int regop,
 				u_int32_t address, u_int32_t old_v, 
 				u_int32_t v, HAL_BOOL verbose)
@@ -824,7 +824,7 @@ _print_decoded_register_bitfields(struct ath_hal *ah, const char* device_name,
 
 /* Print out a single register name/address/value in hex and binary */
 static inline void
-_print_decoded_register(struct ath_hal *ah, const char* device_name, 
+_print_decoded_register(struct ath_hal *ah, const char *device_name, 
 			HAL_BOOL prefer_alq, int regop,
 			u_int32_t address, u_int32_t oldval, 
 			u_int32_t newval, HAL_BOOL verbose)
@@ -837,7 +837,7 @@ _print_decoded_register(struct ath_hal *ah, const char* device_name,
 
 /* Print out a single register name/address/value in hex and binary */
 static inline void
-_print_undecoded_register(struct ath_hal *ah, const char* device_name, 
+_print_undecoded_register(struct ath_hal *ah, const char *device_name, 
 			  HAL_BOOL prefer_alq, int regop,
 			  u_int32_t address, u_int32_t newval)
 {
@@ -855,7 +855,7 @@ _print_undecoded_register(struct ath_hal *ah, const char* device_name,
 /* Print out a single register name/address/value in hex and binary */
 void
 ath_hal_print_decoded_register(struct ath_hal *ah, 
-		       const char* device_name,
+		       const char *device_name,
 		       u_int32_t address, u_int32_t oldval, 
 		       u_int32_t newval, HAL_BOOL bitfields)
 {
@@ -867,7 +867,7 @@ EXPORT_SYMBOL(ath_hal_print_decoded_register);
 /* Print out a single register in simple undecoded form */
 void
 ath_hal_print_register(struct ath_hal *ah, 
-			       const char* device_name,
+			       const char *device_name,
 			       u_int32_t address, u_int32_t newval)
 {
 	_print_undecoded_register(ah, device_name, AH_FALSE /* don't use alq */, 
@@ -956,7 +956,7 @@ ath_hal_malloc(size_t size)
 }
 
 void __ahdecl
-ath_hal_free(void* p)
+ath_hal_free(void *p)
 {
 	kfree(p);
 }

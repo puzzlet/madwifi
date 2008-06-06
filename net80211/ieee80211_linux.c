@@ -136,7 +136,7 @@ if_printf(struct net_device *dev, const char *fmt, ...)
 struct sk_buff *
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_getmgtframe_debug(u_int8_t **frm, u_int pktlen, 
-		const char* func, int line)
+		const char *func, int line)
 #else
 ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 #endif
@@ -432,7 +432,8 @@ static ssize_t
 proc_ieee80211_read(struct file *file, char __user *buf, size_t len, loff_t *offset)
 {
 	loff_t pos = *offset;
-	struct proc_ieee80211_priv *pv = (struct proc_ieee80211_priv *) file->private_data;
+	struct proc_ieee80211_priv *pv =
+		(struct proc_ieee80211_priv *)file->private_data;
 
 	if (!pv->rbuf)
 		return -EINVAL;
@@ -485,7 +486,7 @@ proc_ieee80211_write(struct file *file, const char __user *buf, size_t len, loff
 {
 	loff_t pos = *offset;
 	struct proc_ieee80211_priv *pv =
-		(struct proc_ieee80211_priv *) file->private_data;
+		(struct proc_ieee80211_priv *)file->private_data;
 
 	if (!pv->wbuf)
 		return -EINVAL;
@@ -508,7 +509,7 @@ static int
 proc_ieee80211_close(struct inode *inode, struct file *file)
 {
 	struct proc_ieee80211_priv *pv =
-		(struct proc_ieee80211_priv *) file->private_data;
+		(struct proc_ieee80211_priv *)file->private_data;
 	if (pv->rbuf)
 		vfree(pv->rbuf);
 	if (pv->wbuf)
@@ -958,7 +959,7 @@ static int
 ieee80211_rcv_dev_event(struct notifier_block *this, unsigned long event,
 	void *ptr)
 {
-	struct net_device *dev = (struct net_device *) ptr;
+	struct net_device *dev = (struct net_device *)ptr;
 	if (!dev || dev->open != &ieee80211_open)
 		return 0;
 

@@ -86,8 +86,8 @@ typedef void *TQUEUE_ARG;
 #define flush_scheduled_work()		flush_scheduled_tasks()
 #define ATH_INIT_WORK(t, f) do { 			\
 	memset((t), 0, sizeof(struct tq_struct)); \
-	(t)->routine = (void (*)(void*)) (f); 	\
-	(t)->data=(void *) (t);			\
+	(t)->routine = (void (*)(void *)) (f); 	\
+	(t)->data = (void *)(t);		\
 } while (0)
 #else
 #include <linux/workqueue.h>
@@ -146,7 +146,7 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 	}
 
 	if (sizeof_priv)
-		dev->priv = (void *) (((long)(dev + 1) + 31) & ~31);
+		dev->priv = (void *)(((long)(dev + 1) + 31) & ~31);
 
 	setup(dev);
 	strcpy(dev->name, mask);
@@ -440,7 +440,7 @@ struct ath_buf {
 	struct ath_desc_status bf_dsstatus;		/* tx/rx descriptor status */
 	dma_addr_t bf_daddr;				/* physical addr of desc */
 	struct sk_buff *bf_skb;				/* skbuff for buf */
-	dma_addr_t bf_skbaddr;				/* physical addr of skb data - always used by one desc*/
+	dma_addr_t bf_skbaddr;				/* physical addr of skb data - always used by one desc */
 	u_int32_t bf_status;				/* status flags */
 	u_int16_t bf_flags;				/* tx descriptor flags */
 	u_int64_t bf_tsf;
@@ -454,7 +454,7 @@ struct ath_buf {
 	dma_addr_t bf_skbaddrff[ATH_TXDESC - 1]; 	/* extra addrs for FF */
 #endif
 	int bf_taken_at_line; 				/* XXX: Want full alloc backtrace */
-	const char* bf_taken_at_func;			
+	const char *bf_taken_at_func;			
 };
 
 /* The last descriptor for a buffer.
@@ -649,8 +649,8 @@ struct ath_softc {
 	int (*sc_recv_mgmt)(struct ieee80211vap *, struct ieee80211_node *,
 		struct sk_buff *, int, int, u_int64_t);
 #ifdef IEEE80211_DEBUG_REFCNT
-	void (*sc_node_cleanup_debug)(struct ieee80211_node *, const char* func, int line);
-	void (*sc_node_free_debug)(struct ieee80211_node *, const char* func, int line);
+	void (*sc_node_cleanup_debug)(struct ieee80211_node *, const char *func, int line);
+	void (*sc_node_free_debug)(struct ieee80211_node *, const char *func, int line);
 #else /* #ifdef IEEE80211_DEBUG_REFCNT */
 	void (*sc_node_cleanup)(struct ieee80211_node *);
 	void (*sc_node_free)(struct ieee80211_node *);
@@ -1018,6 +1018,6 @@ void ath_sysctl_unregister(void);
 	  "MadWifi" : \
 	  DEV_NAME(_v->iv_ic->ic_dev))
 
-void ath_radar_detected(struct ath_softc *sc, const char* message);
+void ath_radar_detected(struct ath_softc *sc, const char *message);
 
 #endif /* _DEV_ATH_ATHVAR_H */

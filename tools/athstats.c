@@ -68,7 +68,7 @@
 
 static const struct {
 	u_int		phyerr;
-	const char*	desc;
+	const char	*desc;
 } phyerrdescriptions[] = {
 	{ HAL_PHYERR_UNDERRUN,		"transmit underrun" },
 	{ HAL_PHYERR_TIMING,		"timing error" },
@@ -177,7 +177,7 @@ printstats(FILE *fd, const struct ath_stats *stats)
 }
 
 static u_int
-getifrate(int s, const char* ifname)
+getifrate(int s, const char *ifname)
 {
 	struct iwreq wrq;
 

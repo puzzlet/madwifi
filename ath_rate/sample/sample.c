@@ -983,7 +983,7 @@ ath_rate_attach(struct ath_softc *sc)
 static void
 ath_rate_detach(struct ath_ratectrl *arc)
 {
-	struct sample_softc *osc = (struct sample_softc *) arc;
+	struct sample_softc *osc = (struct sample_softc *)arc;
 	kfree(osc);
 	_MOD_DEC_USE(THIS_MODULE);
 }
@@ -996,7 +996,7 @@ proc_read_nodes(struct ieee80211vap *vap, const int size, char *buf, int space)
 	struct ath_node *an;
 	struct sample_node *sn;
 	struct ieee80211_node_table *nt =
-		(struct ieee80211_node_table *) &vap->iv_ic->ic_sta;
+		(struct ieee80211_node_table *)&vap->iv_ic->ic_sta;
 	unsigned int ndx;
 	unsigned int size_bin;
 

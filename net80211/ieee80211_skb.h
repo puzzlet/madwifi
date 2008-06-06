@@ -66,7 +66,7 @@ extern atomic_t skb_refs_counter;
 /* SKBs on the power save queue are tagged with an age and
  * timed out.  We reuse the hardware checksum field in the
  * mbuf packet header to store this data.
- * XXX: use private cb area. */
+ * XXX: use private CB area. */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
 #define skb_age csum_offset
 #else
@@ -84,9 +84,9 @@ extern atomic_t skb_refs_counter;
 #ifdef IEEE80211_DEBUG_REFCNT
 #define ieee80211_dev_kfree_skb(_pskb) \
 	ieee80211_dev_kfree_skb_debug(_pskb, __func__, __LINE__)
-void ieee80211_dev_kfree_skb_debug(struct sk_buff** pskb, const char* func, int line);
+void ieee80211_dev_kfree_skb_debug(struct sk_buff **pskb, const char *func, int line);
 #else
-void ieee80211_dev_kfree_skb(struct sk_buff** pskb);
+void ieee80211_dev_kfree_skb(struct sk_buff **pskb);
 #endif
 
 static inline void ieee80211_skb_copy_noderef(struct sk_buff *src, 
@@ -96,24 +96,22 @@ static inline void ieee80211_skb_copy_noderef(struct sk_buff *src,
 		SKB_NI(dst) = ieee80211_ref_node(SKB_NI(src));
 }
 
-/*
- * ieee80211_dev_kfree_skb_list will invoke ieee80211_dev_kfree_skb on each node in
- * a list of skbs, starting with the first.
-*/
+/* ieee80211_dev_kfree_skb_list will invoke ieee80211_dev_kfree_skb on each node in
+ * a list of skbs, starting with the first. */
 #ifdef IEEE80211_DEBUG_REFCNT
 #define ieee80211_dev_kfree_skb_list(_pskb) \
 	ieee80211_dev_kfree_skb_list_debug(_pskb, __func__, __LINE__)
-void ieee80211_dev_kfree_skb_list_debug(struct sk_buff** pskb, const char* func, int line);
+void ieee80211_dev_kfree_skb_list_debug(struct sk_buff **pskb, const char *func, int line);
 #else
-void ieee80211_dev_kfree_skb_list(struct sk_buff** pskb);
+void ieee80211_dev_kfree_skb_list(struct sk_buff **pskb);
 #endif
 
 #ifdef IEEE80211_DEBUG_REFCNT
 #define ieee80211_dev_alloc_skb(_size) \
 	ieee80211_dev_alloc_skb_debug(_size, __func__, __LINE__)
-struct sk_buff* ieee80211_dev_alloc_skb_debug(int size, const char* func, int line);
+struct sk_buff *ieee80211_dev_alloc_skb_debug(int size, const char *func, int line);
 #else
-struct sk_buff* ieee80211_dev_alloc_skb(int size);
+struct sk_buff *ieee80211_dev_alloc_skb(int size);
 #endif
 
 #ifdef IEEE80211_DEBUG_REFCNT
@@ -122,9 +120,9 @@ struct sk_buff* ieee80211_dev_alloc_skb(int size);
 #define ieee80211_skb_untrack(_skb) \
 	ieee80211_skb_untrack_debug(_skb, __func__, __LINE__)
 void ieee80211_skb_track_debug(struct sk_buff *skb, 
-					       const char* func, int line);
+					       const char *func, int line);
 void ieee80211_skb_untrack_debug(struct sk_buff *skb, 
-					       const char* func, int line);
+					       const char *func, int line);
 #else
 void ieee80211_skb_track(struct sk_buff *skb);
 void ieee80211_skb_untrack(struct sk_buff *skb);
@@ -145,33 +143,33 @@ int ieee80211_skb_references(void);
 #ifdef IEEE80211_DEBUG_REFCNT
 
 int vlan_hwaccel_rx_debug(struct sk_buff *skb, struct vlan_group *grp,
-		unsigned short vlan_tag, const char* func, int line);
-int netif_rx_debug(struct sk_buff *skb, const char* func, int line);
-struct sk_buff * alloc_skb_debug(unsigned int length, gfp_t gfp_mask,
-				 const char *func, int line);
-struct sk_buff * dev_alloc_skb_debug(unsigned int length,
-				     const char *func, int line);
-struct sk_buff * skb_clone_debug(struct sk_buff *skb, gfp_t pri, 
-				 const char *func, int line);
-struct sk_buff * skb_copy_debug(struct sk_buff *skb, gfp_t pri, 
-				const char *func, int line);
-struct sk_buff * skb_get_debug(struct sk_buff *skb, 
-			       const char *func, int line);
-struct sk_buff * skb_realloc_headroom_debug(struct sk_buff *skb, unsigned int headroom, 
-					    const char *func, int line);
-struct sk_buff * pskb_copy_debug(struct sk_buff *skb, gfp_t pri,
-				 const char *func, int line);
+		unsigned short vlan_tag, const char *func, int line);
+int netif_rx_debug(struct sk_buff *skb, const char *func, int line);
+struct sk_buff *alloc_skb_debug(unsigned int length, gfp_t gfp_mask,
+		const char *func, int line);
+struct sk_buff *dev_alloc_skb_debug(unsigned int length,
+		const char *func, int line);
+struct sk_buff *skb_clone_debug(struct sk_buff *skb, gfp_t pri, 
+		const char *func, int line);
+struct sk_buff *skb_copy_debug(struct sk_buff *skb, gfp_t pri, 
+		const char *func, int line);
+struct sk_buff *skb_get_debug(struct sk_buff *skb, 
+		const char *func, int line);
+struct sk_buff *skb_realloc_headroom_debug(struct sk_buff *skb, unsigned int headroom, 
+		const char *func, int line);
+struct sk_buff *pskb_copy_debug(struct sk_buff *skb, gfp_t pri,
+		const char *func, int line);
 int dev_queue_xmit_debug(struct sk_buff *skb,
-			 const char *func, int line);
-struct sk_buff * skb_share_check_debug(struct sk_buff *skb, gfp_t pri,
-				       const char *func, int line);
-void  kfree_skb_fast_debug(struct sk_buff *skb, 
-			   const char* func, int line);
-struct sk_buff * skb_unshare_debug(struct sk_buff *skb, gfp_t pri,
-				   const char *func, int line);
-struct sk_buff * skb_copy_expand_debug(const struct sk_buff *skb, int newheadroom, 
-				       int newtailroom, gfp_t gfp_mask, 
-				       const char *func, int line);
+		const char *func, int line);
+struct sk_buff *skb_share_check_debug(struct sk_buff *skb, gfp_t pri,
+		const char *func, int line);
+void kfree_skb_fast_debug(struct sk_buff *skb, 
+		const char *func, int line);
+struct sk_buff *skb_unshare_debug(struct sk_buff *skb, gfp_t pri,
+		const char *func, int line);
+struct sk_buff *skb_copy_expand_debug(const struct sk_buff *skb, int newheadroom, 
+		int newtailroom, gfp_t gfp_mask, 
+		const char *func, int line);
 
 #undef alloc_skb
 #undef dev_alloc_skb

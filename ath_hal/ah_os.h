@@ -289,16 +289,16 @@ extern void _ath_hal_detach(struct ath_hal *);
 
 void
 ath_hal_print_decoded_register(struct ath_hal *ah, 
-			       const char* device_name,
+			       const char *device_name,
 			       u_int32_t address, u_int32_t oldval, 
 			       u_int32_t newval, HAL_BOOL bitfields);
 void
 ath_hal_print_register(struct ath_hal *ah, 
-			       const char* device_name,
+			       const char *device_name,
 			       u_int32_t address, u_int32_t value);
 
 HAL_BOOL
-ath_hal_lookup_register_name(struct ath_hal *ah, char* buf, int buflen, 
+ath_hal_lookup_register_name(struct ath_hal *ah, char *buf, int buflen, 
 		u_int32_t address);
 
 #endif				/* _ATH_AH_OSDEP_H_ */

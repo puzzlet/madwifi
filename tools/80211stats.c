@@ -174,14 +174,14 @@ print_sta_stats(FILE *fd, const u_int8_t macaddr[IEEE80211_ADDR_LEN])
 
 	(void) memset(&iwr, 0, sizeof(iwr));
 	(void) strncpy(iwr.ifr_name, ifr.ifr_name, sizeof(iwr.ifr_name));
-	iwr.u.data.pointer = (void *) &stats;
+	iwr.u.data.pointer = (void *)&stats;
 	iwr.u.data.length = sizeof(stats);
 	memcpy(stats.is_u.macaddr, macaddr, IEEE80211_ADDR_LEN);
 	if (ioctl(s, IEEE80211_IOCTL_STA_STATS, &iwr) < 0)
 		err(1, "unable to get station stats for %s",
-			ether_ntoa((const struct ether_addr*) macaddr));
+			ether_ntoa((const struct ether_addr*)macaddr));
 
-	fprintf(fd, "%s:\n", ether_ntoa((const struct ether_addr*) macaddr));
+	fprintf(fd, "%s:\n", ether_ntoa((const struct ether_addr *)macaddr));
 
 	sep = "\t";
 	STAT(rx_data, "%u");
@@ -294,7 +294,7 @@ main(int argc, char *argv[])
 		 */
 		(void) memset(&iwr, 0, sizeof(iwr));
 		(void) strncpy(iwr.ifr_name, ifr.ifr_name, sizeof(iwr.ifr_name));
-		iwr.u.data.pointer = (void *) buf;
+		iwr.u.data.pointer = (void *)buf;
 		iwr.u.data.length = sizeof(buf);
 		if (ioctl(s, IEEE80211_IOCTL_STA_INFO, &iwr) < 0)
 			err(1, "unable to get station information");
@@ -302,7 +302,7 @@ main(int argc, char *argv[])
 		if (len >= sizeof(struct ieee80211req_sta_info)) {
 			cp = buf;
 			do {
-				si = (struct ieee80211req_sta_info *) cp;
+				si = (struct ieee80211req_sta_info *)cp;
 				print_sta_stats(stdout, si->isi_macaddr);
 				cp += si->isi_len, len -= si->isi_len;
 			} while (len >= sizeof(struct ieee80211req_sta_info));

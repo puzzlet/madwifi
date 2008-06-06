@@ -74,7 +74,7 @@ ahb_enable_wmac(u_int16_t devid, u_int16_t wlanNum)
 	if (((devid & AR5315_REV_MAJ_M) == AR5315_REV_MAJ) ||
 		((devid & AR5315_REV_MAJ_M) == AR5317_REV_MAJ)) {
 		u_int32_t reg;
-		u_int32_t *en = (u_int32_t *) AR5315_AHB_ARB_CTL;
+		u_int32_t *en = (u_int32_t *)AR5315_AHB_ARB_CTL;
 
 		KASSERT(wlanNum == 0, ("invalid wlan # %d", wlanNum));
 
@@ -135,7 +135,7 @@ ahb_disable_wmac(u_int16_t devid, u_int16_t wlanNum)
 	u_int32_t enable;
 	if (((devid & AR5315_REV_MAJ_M) == AR5315_REV_MAJ) ||
 		((devid & AR5315_REV_MAJ_M) == AR5317_REV_MAJ)) {
-		u_int32_t *en = (u_int32_t *) AR5315_AHB_ARB_CTL;
+		u_int32_t *en = (u_int32_t *)AR5315_AHB_ARB_CTL;
 
 		KASSERT(wlanNum == 0, ("invalid wlan # %d", wlanNum));
 
@@ -229,7 +229,7 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 		goto bad3;
 	}
 	dev->mem_end = dev->mem_start + AR531X_WLANX_LEN;
-	sc->aps_sc.sc_iobase = (void __iomem *) dev->mem_start;
+	sc->aps_sc.sc_iobase = (void __iomem *)dev->mem_start;
 	sc->aps_sc.sc_bdev = NULL;
 
 	if (request_irq(dev->irq, ath_intr, IRQF_SHARED, dev->name, dev)) {
@@ -264,7 +264,7 @@ static int ahb_wmac_probe(struct platform_device *pdev)
 	u_int16_t devid;
 	struct ar531x_config *config;
 
-	config = (struct ar531x_config *) pdev->dev.platform_data;
+	config = (struct ar531x_config *)pdev->dev.platform_data;
 	devid = (long) config->tag;
 	config->tag = NULL;
 
@@ -274,7 +274,7 @@ static int ahb_wmac_probe(struct platform_device *pdev)
 
 static int ahb_wmac_remove(struct platform_device *pdev)
 {
-	exit_ath_wmac(pdev->id, (struct ar531x_config *) pdev->dev.platform_data);
+	exit_ath_wmac(pdev->id, (struct ar531x_config *)pdev->dev.platform_data);
 
 	return 0;
 }

@@ -68,7 +68,7 @@ struct scan_state {
 	struct tasklet_struct ss_pwrsav;	/* sta ps ena tasklet */
 	struct timer_list ss_scan_timer;	/* scan timer */
 };
-#define	SCAN_PRIVATE(ss)	((struct scan_state *) ss)
+#define	SCAN_PRIVATE(_ss)	((struct scan_state *)(_ss))
 
 /*
  * Amount of time to go off-channel during a background
@@ -90,9 +90,9 @@ struct scan_state {
 #define	ROAM_RSSI_11A_DEFAULT		9	/* rssi threshold for 11a bss */
 #define	ROAM_RSSI_11B_DEFAULT		9	/* rssi threshold for 11b bss */
 #define	ROAM_RSSI_11BONLY_DEFAULT	9	/* rssi threshold for 11b-only bss */
-#define	ROAM_RATE_11A_DEFAULT		2*24	/* tx rate threshold for 11a bss */
-#define	ROAM_RATE_11B_DEFAULT		2*9	/* tx rate threshold for 11b bss */
-#define	ROAM_RATE_11BONLY_DEFAULT	2*5	/* tx rate threshold for 11b-only bss */
+#define	ROAM_RATE_11A_DEFAULT		2 * 24	/* tx rate threshold for 11a bss */
+#define	ROAM_RATE_11B_DEFAULT		2 * 9	/* tx rate threshold for 11b bss */
+#define	ROAM_RATE_11BONLY_DEFAULT	2 * 5	/* tx rate threshold for 11b-only bss */
 
 static void scan_restart_pwrsav(unsigned long);
 static void scan_next(unsigned long);
@@ -286,7 +286,7 @@ EXPORT_SYMBOL(ieee80211_scan_dump_channels);
 static void
 scan_restart_pwrsav(unsigned long arg)
 {
-	struct scan_state *ss = (struct scan_state *) arg;
+	struct scan_state *ss = (struct scan_state *)arg;
 	struct ieee80211vap *vap = ss->base.ss_vap;
 	struct ieee80211com *ic = vap->iv_ic;
 	int delay;
@@ -630,7 +630,7 @@ static void
 scan_next(unsigned long arg)
 {
 #define	ISCAN_REP	(ISCAN_MINDWELL | ISCAN_START | ISCAN_DISCARD)
-	struct ieee80211_scan_state *ss = (struct ieee80211_scan_state *) arg;
+	struct ieee80211_scan_state *ss = (struct ieee80211_scan_state *)arg;
 	struct ieee80211vap *vap = ss->ss_vap;
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ieee80211_channel *chan;

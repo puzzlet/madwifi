@@ -161,7 +161,7 @@ tkip_encap(struct ieee80211_key *k, struct sk_buff *skb, u_int8_t keyid)
 	if (vap->iv_flags & IEEE80211_F_COUNTERM) {
 #ifdef IEEE80211_DEBUG
 		struct ieee80211_frame *wh =
-			(struct ieee80211_frame *) skb->data;
+			(struct ieee80211_frame *)skb->data;
 #endif
 
 		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_CRYPTO, wh->i_addr2,
@@ -210,7 +210,7 @@ tkip_enmic(struct ieee80211_key *k, struct sk_buff *skb0, int force_sw)
 
 	if ((k->wk_flags & IEEE80211_KEY_SWMIC) || force_sw) {
 		struct ieee80211_frame *wh =
-			(struct ieee80211_frame *) skb0->data;
+			(struct ieee80211_frame *)skb0->data;
 		struct ieee80211vap *vap = ctx->tc_vap;
 		struct ieee80211com *ic = ctx->tc_ic;
 		int hdrlen;
@@ -353,7 +353,7 @@ tkip_demic(struct ieee80211_key *k, struct sk_buff *skb0, int hdrlen, int force_
 		skb = skb->next;
 		pktlen += skb->len;
 	}
-	wh = (struct ieee80211_frame *) skb0->data;
+	wh = (struct ieee80211_frame *)skb0->data;
 	/* NB: skb left pointing at last in chain */
 	if ((k->wk_flags & IEEE80211_KEY_SWMIC) || force_sw) {
 		struct ieee80211vap *vap = ctx->tc_vap;
@@ -576,7 +576,7 @@ tkip_mixing_phase2(u8 *WEPSeed, const u8 *TK, const u16 *TTAK, u16 IV16)
 {
 	/* Make temporary area overlap WEP seed so that the final copy can be
 	 * avoided on little endian hosts. */
-	u16 *PPK = (u16 *) &WEPSeed[4];
+	u16 *PPK = (u16 *)&WEPSeed[4];
 
 	/* Step 1 - make copy of TTAK and bring in TSC */
 	PPK[0] = TTAK[0];
@@ -587,15 +587,15 @@ tkip_mixing_phase2(u8 *WEPSeed, const u8 *TK, const u16 *TTAK, u16 IV16)
 	PPK[5] = TTAK[4] + IV16;
 
 	/* Step 2 - 96-bit bijective mixing using S-box */
-	PPK[0] += _S_(PPK[5] ^ Mk16_le((const __le16 *) &TK[0]));
-	PPK[1] += _S_(PPK[0] ^ Mk16_le((const __le16 *) &TK[2]));
-	PPK[2] += _S_(PPK[1] ^ Mk16_le((const __le16 *) &TK[4]));
-	PPK[3] += _S_(PPK[2] ^ Mk16_le((const __le16 *) &TK[6]));
-	PPK[4] += _S_(PPK[3] ^ Mk16_le((const __le16 *) &TK[8]));
-	PPK[5] += _S_(PPK[4] ^ Mk16_le((const __le16 *) &TK[10]));
+	PPK[0] += _S_(PPK[5] ^ Mk16_le((const __le16 *)&TK[0]));
+	PPK[1] += _S_(PPK[0] ^ Mk16_le((const __le16 *)&TK[2]));
+	PPK[2] += _S_(PPK[1] ^ Mk16_le((const __le16 *)&TK[4]));
+	PPK[3] += _S_(PPK[2] ^ Mk16_le((const __le16 *)&TK[6]));
+	PPK[4] += _S_(PPK[3] ^ Mk16_le((const __le16 *)&TK[8]));
+	PPK[5] += _S_(PPK[4] ^ Mk16_le((const __le16 *)&TK[10]));
 
-	PPK[0] += RotR1(PPK[5] ^ Mk16_le((const __le16 *) &TK[12]));
-	PPK[1] += RotR1(PPK[0] ^ Mk16_le((const __le16 *) &TK[14]));
+	PPK[0] += RotR1(PPK[5] ^ Mk16_le((const __le16 *)&TK[12]));
+	PPK[1] += RotR1(PPK[0] ^ Mk16_le((const __le16 *)&TK[14]));
 	PPK[2] += RotR1(PPK[1]);
 	PPK[3] += RotR1(PPK[2]);
 	PPK[4] += RotR1(PPK[3]);
@@ -606,7 +606,7 @@ tkip_mixing_phase2(u8 *WEPSeed, const u8 *TK, const u16 *TTAK, u16 IV16)
 	WEPSeed[0] = Hi8(IV16);
 	WEPSeed[1] = (Hi8(IV16) | 0x20) & 0x7F;
 	WEPSeed[2] = Lo8(IV16);
-	WEPSeed[3] = Lo8((PPK[5] ^ Mk16_le((const __le16 *) &TK[0])) >> 1);
+	WEPSeed[3] = Lo8((PPK[5] ^ Mk16_le((const __le16 *)&TK[0])) >> 1);
 
 #if _BYTE_ORDER == _BIG_ENDIAN
 	{
@@ -809,7 +809,7 @@ static void
 michael_mic_hdr(const struct ieee80211_frame *wh0, u8 hdr[16])
 {
 	const struct ieee80211_frame_addr4 *wh =
-		(const struct ieee80211_frame_addr4 *) wh0;
+		(const struct ieee80211_frame_addr4 *)wh0;
 
 	switch (wh->i_fc[1] & IEEE80211_FC1_DIR_MASK) {
 	case IEEE80211_FC1_DIR_NODS:
@@ -832,7 +832,7 @@ michael_mic_hdr(const struct ieee80211_frame *wh0, u8 hdr[16])
 
 	if (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_QOS) {
 		const struct ieee80211_qosframe *qwh =
-			(const struct ieee80211_qosframe *) wh;
+			(const struct ieee80211_qosframe *)wh;
 		hdr[12] = qwh->i_qos[0] & IEEE80211_QOS_TID;
 	} else
 		hdr[12] = 0;
@@ -849,7 +849,7 @@ michael_mic(struct tkip_ctx *ctx, const u8 *key,
 	const uint8_t *data;
 	u_int space;
 
-	michael_mic_hdr((struct ieee80211_frame *) skb->data, hdr);
+	michael_mic_hdr((struct ieee80211_frame *)skb->data, hdr);
 
 	l = get_le32(key);
 	r = get_le32(key + 4);
@@ -952,7 +952,7 @@ static int
 tkip_encrypt(struct tkip_ctx *ctx, struct ieee80211_key *key,
 	struct sk_buff *skb0, int hdrlen)
 {
-	struct ieee80211_frame *wh = (struct ieee80211_frame *) skb0->data;
+	struct ieee80211_frame *wh = (struct ieee80211_frame *)skb0->data;
 	struct ieee80211vap *vap = ctx->tc_vap;
 	struct sk_buff *skb;
 	size_t pktlen;
@@ -996,7 +996,7 @@ static int
 tkip_decrypt(struct tkip_ctx *ctx, struct ieee80211_key *key,
 	struct sk_buff *skb0, int hdrlen)
 {
-	struct ieee80211_frame *wh = (struct ieee80211_frame *) skb0->data;
+	struct ieee80211_frame *wh = (struct ieee80211_frame *)skb0->data;
 	struct ieee80211vap *vap = ctx->tc_vap;
 	struct sk_buff *skb;
 	size_t pktlen;
@@ -1016,7 +1016,7 @@ tkip_decrypt(struct tkip_ctx *ctx, struct ieee80211_key *key,
 	iv16 = (u16) ctx->rx_rsc;
 	iv32 = (u32) (ctx->rx_rsc >> 16);
 
-	wh = (struct ieee80211_frame *) skb0->data;
+	wh = (struct ieee80211_frame *)skb0->data;
 	tid = 0;
 	if (IEEE80211_QOS_HAS_SEQ(wh))
 		tid = ((struct ieee80211_qosframe *)wh)->i_qos[0] & IEEE80211_QOS_TID;

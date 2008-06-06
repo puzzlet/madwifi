@@ -257,7 +257,7 @@ runtest(struct ieee80211vap *vap, struct ciphertest *t)
 	/*
 	 * Encrypt frame.
 	 */
-	ctx = (struct wep_ctx_hw *) key->wk_private;
+	ctx = (struct wep_ctx_hw *)key->wk_private;
 	memcpy(&ctx->wc_iv, t->iv, sizeof(t->iv));	/* for encap/encrypt */
 	if (!(*cip->ic_encap)(key, skb, t->keyix << 6)) {
 		printk("FAIL: wep encap failed\n");

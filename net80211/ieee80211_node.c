@@ -70,7 +70,7 @@
 #define ieee80211_alloc_node(_vap, _mac) \
 	ieee80211_alloc_node_debug(_vap, _mac, __func__, __LINE__)
 static struct ieee80211_node *ieee80211_alloc_node_debug(struct ieee80211vap *, 
-		const u_int8_t *, const char* func, int line);
+		const u_int8_t *, const char *func, int line);
 #else
 static struct ieee80211_node *ieee80211_alloc_node(struct ieee80211vap *, 
 		const u_int8_t *);
@@ -80,10 +80,10 @@ static int ieee80211_sta_join1(struct ieee80211_node *);
 
 #ifdef IEEE80211_DEBUG_REFCNT
 static struct ieee80211_node *node_alloc_debug(struct ieee80211vap *, 
-		const char* func, int line);
-static void node_cleanup_debug(struct ieee80211_node *, const char* func, 
+		const char *func, int line);
+static void node_cleanup_debug(struct ieee80211_node *, const char *func, 
 		int line);
-static void node_free_debug(struct ieee80211_node *, const char* func, 
+static void node_free_debug(struct ieee80211_node *, const char *func, 
 		int line);
 #else /* #ifdef IEEE80211_DEBUG_REFCNT */
 static struct ieee80211_node *node_alloc(struct ieee80211vap *);
@@ -98,7 +98,7 @@ static u_int8_t node_getrssi(const struct ieee80211_node *);
 #define node_table_leave_locked(_table, _node) \
 	node_table_leave_locked_debug(_table, _node, __func__, __LINE__)
 static void node_table_leave_locked_debug(struct ieee80211_node_table *, 
-		struct ieee80211_node *, const char* func, int line);
+		struct ieee80211_node *, const char *func, int line);
 #else
 static void node_table_leave_locked(struct ieee80211_node_table *, 
 		struct ieee80211_node *);
@@ -108,7 +108,7 @@ static void node_table_leave_locked(struct ieee80211_node_table *,
 #define node_table_join_locked(_table, _node) \
 	node_table_join_locked_debug(_table, _node, __func__, __LINE__)
 static void node_table_join_locked_debug(struct ieee80211_node_table *, 
-		struct ieee80211_node *, const char* func, int line);
+		struct ieee80211_node *, const char *func, int line);
 #else
 static void node_table_join_locked(struct ieee80211_node_table *, 
 		struct ieee80211_node *);
@@ -296,7 +296,7 @@ copy_bss_state(struct ieee80211_node *nbss, const struct ieee80211_node *obss)
 }
 
 void
-ieee80211_create_ibss(struct ieee80211vap* vap, struct ieee80211_channel *chan)
+ieee80211_create_ibss(struct ieee80211vap *vap, struct ieee80211_channel *chan)
 {
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ieee80211_node *ni;
@@ -671,7 +671,7 @@ ieee80211_sta_join1(struct ieee80211_node *selbs)
 void
 ieee80211_sta_join1_tasklet(IEEE80211_TQUEUE_ARG data)
 {
-	struct ieee80211vap *vap= (struct ieee80211vap *) data;
+	struct ieee80211vap *vap= (struct ieee80211vap *)data;
 	int rc;
 
 	rc = ieee80211_new_state(vap, vap->iv_nsparams.newstate, vap->iv_nsparams.arg);
@@ -784,7 +784,7 @@ static __inline
 void 
 #ifdef IEEE80211_DEBUG_REFCNT
 node_table_join_locked_debug(struct ieee80211_node_table *nt, 
-		struct ieee80211_node *ni, const char* func, int line) 
+		struct ieee80211_node *ni, const char *func, int line) 
 #else
 node_table_join_locked(struct ieee80211_node_table *nt, 
 		struct ieee80211_node *ni) 
@@ -810,7 +810,7 @@ static __inline
 void 
 #ifdef IEEE80211_DEBUG_REFCNT
 node_table_leave_locked_debug(struct ieee80211_node_table *nt, 
-		struct ieee80211_node *ni, const char* func, int line) 
+		struct ieee80211_node *ni, const char *func, int line) 
 #else
 node_table_leave_locked(struct ieee80211_node_table *nt, 
 		struct ieee80211_node *ni) 
@@ -838,7 +838,7 @@ node_table_leave_locked(struct ieee80211_node_table *nt,
  */
 static struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
-node_alloc_debug(struct ieee80211vap *vap, const char* func, int line)
+node_alloc_debug(struct ieee80211vap *vap, const char *func, int line)
 #else
 node_alloc(struct ieee80211vap *vap)
 #endif
@@ -861,7 +861,7 @@ node_alloc(struct ieee80211vap *vap)
  */
 static void
 #ifdef IEEE80211_DEBUG_REFCNT
-node_cleanup_debug(struct ieee80211_node *ni, const char* func, int line)
+node_cleanup_debug(struct ieee80211_node *ni, const char *func, int line)
 #else
 node_cleanup(struct ieee80211_node *ni)
 #endif
@@ -927,10 +927,10 @@ node_print_message(
 		int refcnt_adjust,
 		const struct ieee80211_node *ni,
 #ifdef IEEE80211_DEBUG_REFCNT
-		const char* func1, int line1,
+		const char *func1, int line1,
 #endif
-		const char* func2, int line2,
-		const char* message,
+		const char *func2, int line2,
+		const char *message,
 		...)
 {
 	va_list args;
@@ -978,7 +978,7 @@ EXPORT_SYMBOL(node_print_message);
 
 static void
 #ifdef IEEE80211_DEBUG_REFCNT
-node_free_debug(struct ieee80211_node *ni, const char* func, int line)
+node_free_debug(struct ieee80211_node *ni, const char *func, int line)
 #else
 node_free(struct ieee80211_node *ni)
 #endif
@@ -1027,14 +1027,14 @@ node_getrssi(const struct ieee80211_node *ni)
  * used by the routines below to create entries with a
  * specific purpose.
  * Dont assume a BSS?
- * Allocates a new ieee80211_node* that has a reference 
+ * Allocates a new struct ieee80211_node that has a reference 
  * count of one, and adds it to the node table.
  */
 struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_alloc_node_table_debug(struct ieee80211vap *vap,
 	const u_int8_t *macaddr,
-	const char* func, int line)
+	const char *func, int line)
 #else
 ieee80211_alloc_node_table(struct ieee80211vap *vap,
 	const u_int8_t *macaddr)
@@ -1082,7 +1082,7 @@ EXPORT_SYMBOL(ieee80211_alloc_node_table);
  */
 static struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
-ieee80211_alloc_node_debug(struct ieee80211vap *vap, const u_int8_t *macaddr, const char* func, int line)
+ieee80211_alloc_node_debug(struct ieee80211vap *vap, const u_int8_t *macaddr, const char *func, int line)
 #else
 ieee80211_alloc_node(struct ieee80211vap *vap, const u_int8_t *macaddr)
 #endif
@@ -1135,7 +1135,7 @@ int
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_add_wds_addr_debug(struct ieee80211_node_table *nt,
 	struct ieee80211_node *ni, const u_int8_t *macaddr, u_int8_t wds_static,
-	const char* func, int line)
+	const char *func, int line)
 #else
 ieee80211_add_wds_addr(struct ieee80211_node_table *nt,
 	struct ieee80211_node *ni, const u_int8_t *macaddr, u_int8_t wds_static)
@@ -1177,7 +1177,7 @@ EXPORT_SYMBOL(ieee80211_add_wds_addr);
 void
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_remove_wds_addr_debug(struct ieee80211_node_table *nt, const u_int8_t *macaddr, 
-			   const char* func, int line)
+			   const char *func, int line)
 #else
 ieee80211_remove_wds_addr(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
 #endif
@@ -1211,7 +1211,7 @@ EXPORT_SYMBOL(ieee80211_remove_wds_addr);
 void
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_del_wds_node_debug(struct ieee80211_node_table *nt, struct ieee80211_node *ni, 
-			const char* func, int line)
+			const char *func, int line)
 #else
 ieee80211_del_wds_node(struct ieee80211_node_table *nt, struct ieee80211_node *ni)
 #endif
@@ -1267,13 +1267,13 @@ ieee80211_node_wds_ageout(unsigned long data)
 
 
 /* Add the specified station to the station table.
- * Allocates a new ieee80211_node* that has a reference count of one
+ * Allocates a new struct ieee80211_node that has a reference count of one
  * If tmp is 0, it is added to the node table and the reference is used.
  * If tmp is 1, then the caller gets to use the reference. */
 struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_dup_bss_debug(struct ieee80211vap *vap, const u_int8_t *macaddr,
-		unsigned char tmp, const char* func, int line)
+		unsigned char tmp, const char *func, int line)
 #else
 ieee80211_dup_bss(struct ieee80211vap *vap, const u_int8_t *macaddr,
 		unsigned char tmp)
@@ -1314,7 +1314,7 @@ ieee80211_dup_bss(struct ieee80211vap *vap, const u_int8_t *macaddr,
 static struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_find_wds_node_locked_debug(struct ieee80211_node_table *nt, 
-			 const u_int8_t *macaddr, const char* func, int line)
+			 const u_int8_t *macaddr, const char *func, int line)
 #else
 ieee80211_find_wds_node_locked(struct ieee80211_node_table *nt, 
 			 const u_int8_t *macaddr)
@@ -1389,7 +1389,7 @@ ieee80211_find_node_locked(struct ieee80211_node_table *nt,
 struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_find_wds_node_debug(struct ieee80211_node_table *nt, const u_int8_t *macaddr, 
-			 const char* func, int line)
+			 const char *func, int line)
 #else
 ieee80211_find_wds_node(struct ieee80211_node_table *nt, const u_int8_t *macaddr)
 #endif
@@ -1449,7 +1449,7 @@ struct ieee80211_node *
 #ifdef IEEE80211_DEBUG_REFCNT
 ieee80211_fakeup_adhoc_node_debug(struct ieee80211vap *vap,
 	const u_int8_t macaddr[IEEE80211_ADDR_LEN],
-	const char* func, int line)
+	const char *func, int line)
 #else
 ieee80211_fakeup_adhoc_node(struct ieee80211vap *vap,
 	const u_int8_t macaddr[IEEE80211_ADDR_LEN])
@@ -1875,7 +1875,7 @@ restart:
 static void
 ieee80211_node_timeout(unsigned long arg)
 {
-	struct ieee80211com *ic = (struct ieee80211com *) arg;
+	struct ieee80211com *ic = (struct ieee80211com *)arg;
 
 	ieee80211_scan_timeout(ic);
 	ieee80211_timeout_stations(&ic->ic_sta);
@@ -1954,7 +1954,7 @@ void
 ieee80211_dump_nodes(struct ieee80211_node_table *nt)
 {
 	ieee80211_iterate_nodes(nt,
-		(ieee80211_iter_func *) ieee80211_dump_node, nt);
+		(ieee80211_iter_func *)ieee80211_dump_node, nt);
 }
 
 /*
@@ -2169,7 +2169,7 @@ ieee80211_node_join(struct ieee80211_node *ni, int resp)
 
 	if (ni->ni_needed_chans != NULL) {
 		/* remove nodes which don't support one of ni->ni_needed_chans */
-		ieee80211_iterate_nodes(&ic->ic_sta, &remove_worse_nodes, (void*)ni);
+		ieee80211_iterate_nodes(&ic->ic_sta, &remove_worse_nodes, (void *)ni);
 		FREE(ni->ni_needed_chans, M_DEVBUF);
 		ni->ni_needed_chans = NULL;
 	}
@@ -2452,13 +2452,13 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 {
 	struct ieee80211_node *ni = NULL;
 	if (pni == NULL) {
-		printk(KERN_ERR "%s: NULL ieee80211_node**\n", __func__);
+		printk(KERN_ERR "%s: NULL ieee80211_node **\n", __func__);
 		dump_stack();
 		return;
 	}
 	ni = *pni;
 	if (ni == NULL) {
-		printk(KERN_ERR "%s: NULL ieee80211_node*\n", __func__);
+		printk(KERN_ERR "%s: NULL ieee80211_node *\n", __func__);
 		dump_stack();
 		return;
 	}

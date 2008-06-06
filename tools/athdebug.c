@@ -177,7 +177,7 @@ sysctlbyname(const char *oid0, void *oldp, size_t *oldlenp, void *newp,
 		if (fd == NULL)
 			return -1;
 		/* XXX: only handle ints */
-		if (fscanf(fd, "%u", (int *) oldp) != 1) {
+		if (fscanf(fd, "%u", (int *)oldp) != 1) {
 			fclose(fd);
 			return -1;
 		}

@@ -125,10 +125,10 @@
 #define DEFAULT_ENABLE_AR5K_PHY_WEAK_OFDM_11A 	1
 
 #define IS_CHAN_ANY(ah) \
-	(((struct ieee80211com*)ah->ah_sc)->ic_bsschan == IEEE80211_CHAN_ANYC)
+	(((struct ieee80211com *)ah->ah_sc)->ic_bsschan == IEEE80211_CHAN_ANYC)
 
 #define IS_BG_OR_ANY(ah) \
- (IS_CHAN_ANY(ah) || (!(ieee80211_chan2mode(((struct ieee80211com*)ah->ah_sc)->ic_bsschan) & \
+ (IS_CHAN_ANY(ah) || (!(ieee80211_chan2mode(((struct ieee80211com *)ah->ah_sc)->ic_bsschan) & \
 		(IEEE80211_MODE_11A | IEEE80211_MODE_TURBO_A))))
 
 #define DEFAULT_ENABLE_AR5K_PHY_WEAK_OFDM (IS_BG_OR_ANY(ah) ? \
@@ -167,7 +167,7 @@
 #define AR5K_STA_ID1_NO_KEYSRCH		0x00080000	/* No key search */
 #define AR5K_STA_ID1_NO_PSPOLL		0x00100000	/* No power save polling [5210] */
 #define AR5K_STA_ID1_PCF_5211		0x00100000	/* Enable PCF on [5211+] */
-#define AR5K_STA_ID1_PCF_5210		0x00200000	/* Enable PCF on [5210]*/
+#define AR5K_STA_ID1_PCF_5210		0x00200000	/* Enable PCF on [5210] */
 #define	AR5K_STA_ID1_PCF		(ah->ah_version == AR5K_AR5210 ? \
 					AR5K_STA_ID1_PCF_5210 : AR5K_STA_ID1_PCF_5211)
 #define AR5K_STA_ID1_DEFAULT_ANTENNA	0x00200000	/* Use default antenna */
@@ -238,7 +238,7 @@ enum ath5k_dmasize {
 };
 
 
-int ath_set_ack_bitrate(struct ath_softc* sc, int);
+int ath_set_ack_bitrate(struct ath_softc *sc, int);
 int ar_device(int devid);
 const char * ath5k_chip_name(enum ath5k_srev_type type, u_int16_t val);
 
@@ -280,7 +280,7 @@ static inline u_int32_t field_eq(struct ath_hal *ah, u_int32_t reg,
 		(value & (mask >> shift));
 }
 
-static inline void override_warning(struct ath_hal *ah, const char* name,
+static inline void override_warning(struct ath_hal *ah, const char *name,
 				    u_int32_t reg, u_int32_t mask,
 				    u_int32_t shift, u_int32_t expected, int is_signed) {
 
@@ -305,7 +305,7 @@ static inline void override_warning(struct ath_hal *ah, const char* name,
 #endif
 }
 
-static inline void verification_warning(struct ath_hal *ah, const char* name,
+static inline void verification_warning(struct ath_hal *ah, const char *name,
     u_int32_t reg, u_int32_t mask, 
     u_int32_t shift, u_int32_t expected, int is_signed) {
 

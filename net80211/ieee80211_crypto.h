@@ -151,7 +151,7 @@ extern const struct ieee80211_cipher ieee80211_cipher_none;
 
 void ieee80211_crypto_register(const struct ieee80211_cipher *);
 void ieee80211_crypto_unregister(const struct ieee80211_cipher *);
-int ieee80211_crypto_available(struct ieee80211vap*, u_int);
+int ieee80211_crypto_available(struct ieee80211vap *, u_int);
 
 struct ieee80211_key *ieee80211_crypto_encap(struct ieee80211_node *,
 	struct sk_buff *);

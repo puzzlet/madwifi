@@ -1236,7 +1236,7 @@ EXPORT_SYMBOL(ieee80211_beacon_miss);
 static void
 ieee80211_sta_swbmiss(unsigned long arg)
 {
-	struct ieee80211vap *vap = (struct ieee80211vap *) arg;
+	struct ieee80211vap *vap = (struct ieee80211vap *)arg;
 	ieee80211_beacon_miss(vap->iv_ic);
 }
 
@@ -1247,7 +1247,7 @@ ieee80211_sta_swbmiss(unsigned long arg)
 static void
 ieee80211_tx_timeout(unsigned long arg)
 {
-	struct ieee80211vap *vap = (struct ieee80211vap *) arg;
+	struct ieee80211vap *vap = (struct ieee80211vap *)arg;
 
 	IEEE80211_DPRINTF(vap, IEEE80211_MSG_STATE,
 		"%s: state %s%s\n", __func__,
@@ -1696,7 +1696,7 @@ static int get_dominant_state(struct ieee80211com *ic) {
 }
 
 static void 
-dump_vap_states(struct ieee80211com *ic, struct ieee80211vap* highlighed)
+dump_vap_states(struct ieee80211com *ic, struct ieee80211vap *highlighed)
 {
 	/* RE-count the number of VAPs in RUN, SCAN states */
 	int nrunning = 0;

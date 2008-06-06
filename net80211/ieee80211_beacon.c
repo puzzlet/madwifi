@@ -117,7 +117,7 @@ ieee80211_beacon_init(struct ieee80211_node *ni, struct ieee80211_beacon_offsets
 		*frm++ = 0; *frm++ = 0;		/* TODO: ATIM window */
 		bo->bo_tim_len = 0;
 	} else {
-		struct ieee80211_tim_ie *tie = (struct ieee80211_tim_ie *) frm;
+		struct ieee80211_tim_ie *tie = (struct ieee80211_tim_ie *)frm;
 
 		tie->tim_ie = IEEE80211_ELEMID_TIM;
 		tie->tim_len = 4;	/* length */
@@ -400,7 +400,7 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 
 	if (vap->iv_opmode == IEEE80211_M_HOSTAP) {	/* NB: no IBSS support*/
 		struct ieee80211_tim_ie *tie =
-			(struct ieee80211_tim_ie *) bo->bo_tim;
+			(struct ieee80211_tim_ie *)bo->bo_tim;
 		if (vap->iv_flags & IEEE80211_F_TIMUPDATE) {
 			u_int timlen, timoff, i;
 			/*

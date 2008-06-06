@@ -317,7 +317,7 @@ ath_rate_newstate(struct ieee80211vap *vap, enum ieee80211_state state)
 {
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ath_softc *sc = ic->ic_dev->priv;
-	struct amrr_softc *asc = (struct amrr_softc *) sc->sc_rc;
+	struct amrr_softc *asc = (struct amrr_softc *)sc->sc_rc;
 	struct ieee80211_node *ni;
 
 	if (state == IEEE80211_S_INIT) {
@@ -473,7 +473,7 @@ ath_rate_attach(struct ath_softc *sc)
 static void
 ath_rate_detach(struct ath_ratectrl *arc)
 {
-	struct amrr_softc *asc = (struct amrr_softc *) arc;
+	struct amrr_softc *asc = (struct amrr_softc *)arc;
 
 	del_timer(&asc->timer);
 	kfree(asc);
