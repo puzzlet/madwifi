@@ -1186,7 +1186,7 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 		tni = SKB_NI(skb);
 		if ((ni->ni_vlan != 0) && (vap->iv_vlgrp != NULL))
 			/* Attach VLAN tag. */
-			ret = vlan_hwaccel_receive_skb(skb,
+			ret = vlan_hwaccel_rx(skb,
 					vap->iv_vlgrp, ni->ni_vlan);
 		else
 			ret = netif_rx(skb);
@@ -2271,7 +2271,6 @@ forward_mgmt_to_app(struct ieee80211vap *vap, int subtype, struct sk_buff *skb,
 
 	if (filter_type && ((vap->app_filter & filter_type) == filter_type)) {
 		struct sk_buff *skb1;
-		struct ieee80211_node *tni;
 
 		skb1 = skb_copy(skb, GFP_ATOMIC);
 		if (skb1 == NULL)

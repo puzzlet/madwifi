@@ -82,7 +82,7 @@
 #undef skb_realloc_headroom
 #undef skb_share_check
 #undef skb_unshare
-#undef vlan_hwaccel_receive_skb
+#undef vlan_hwaccel_rx
 
 atomic_t skb_total_counter = ATOMIC_INIT(0);
 EXPORT_SYMBOL(skb_total_counter);
@@ -630,10 +630,10 @@ ieee80211_skb_references(void) {
 
 #ifdef IEEE80211_DEBUG_REFCNT
 
-int  vlan_hwaccel_receive_skb_debug(struct sk_buff *skb, 
+int  vlan_hwaccel_rx_debug(struct sk_buff *skb, 
 			       struct vlan_group *grp, unsigned short vlan_tag, 
 			       const char* func, int line) {
-	return vlan_hwaccel_receive_skb(
+	return vlan_hwaccel_rx(
 		untrack_skb(skb, 0, func, line, __func__, __LINE__),
 		grp, vlan_tag);
 }
@@ -759,7 +759,7 @@ struct sk_buff * skb_copy_expand_debug(const struct sk_buff *skb, int newheadroo
 			func, line, __func__, __LINE__);
 }
 
-EXPORT_SYMBOL(vlan_hwaccel_receive_skb_debug);
+EXPORT_SYMBOL(vlan_hwaccel_rx_debug);
 EXPORT_SYMBOL(netif_rx_debug);
 EXPORT_SYMBOL(alloc_skb_debug);
 EXPORT_SYMBOL(dev_alloc_skb_debug);

@@ -144,9 +144,8 @@ int ieee80211_skb_references(void);
 
 #ifdef IEEE80211_DEBUG_REFCNT
 
-int vlan_hwaccel_receive_skb_debug(struct sk_buff *skb, 
-			           struct vlan_group *grp, unsigned short vlan_tag, 
-			           const char* func, int line);
+int vlan_hwaccel_rx_debug(struct sk_buff *skb, struct vlan_group *grp,
+		unsigned short vlan_tag, const char* func, int line);
 int netif_rx_debug(struct sk_buff *skb, const char* func, int line);
 struct sk_buff * alloc_skb_debug(unsigned int length, gfp_t gfp_mask,
 				 const char *func, int line);
@@ -191,14 +190,14 @@ struct sk_buff * skb_copy_expand_debug(const struct sk_buff *skb, int newheadroo
 #undef skb_realloc_headroom
 #undef skb_share_check
 #undef skb_unshare
-#undef vlan_hwaccel_receive_skb
+#undef vlan_hwaccel_rx
 
 #define skb_unshare(_skb, _pri) \
 	skb_unshare_debug(_skb, _pri, __func__, __LINE__)
 #define skb_copy_expand(_skb, _newheadroom, _newtailroom, _gfp_mask) \
 	skb_copy_expand_debug(_skb, _newheadroom, _newtailroom, _gfp_mask, __func__, __LINE__)
-#define vlan_hwaccel_receive_skb(_skb, _grp, _tag) \
-	vlan_hwaccel_receive_skb_debug(_skb, _grp, _tag, __func__, __LINE__)
+#define vlan_hwaccel_rx(_skb, _grp, _tag) \
+	vlan_hwaccel_rx_debug(_skb, _grp, _tag, __func__, __LINE__)
 #define netif_rx(_skb) \
 	netif_rx_debug(_skb, __func__, __LINE__)
 #define	alloc_skb(_length, _gfp_mask) \
