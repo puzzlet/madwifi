@@ -1103,7 +1103,7 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct net_device *dev = vap->iv_dev;
-	struct ether_header *eh = (struct ether_header *) skb->data;
+	struct ether_header *eh = (struct ether_header *)skb->data;
 	struct ieee80211_node *tni;
 	int ret;
 
@@ -1149,19 +1149,21 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 			}
 		}
 		if (skb1 != NULL) {
-			struct ieee80211_node *tni;
 			skb1->dev = dev;
 			skb_reset_mac_header(skb1);
 			skb_set_network_header(skb1, sizeof(struct ether_header));
 
 			skb1->protocol = __constant_htons(ETH_P_802_2);
+
+			/* This SKB is being emitted to the physical/parent
+			 * device, which maintains node references. However,
+			 * there is kernel code in between which does not.
+			 * Therefore, the ref. is cleaned if the SKB is
+			 * dropped. */
+			tni = SKB_NI(skb1);
 			/* XXX: Insert vlan tag before queuing it? */
-			tni = SKB_NI(skb1); /* Remember node so we can free it. */
 			if (dev_queue_xmit(skb1) == NET_XMIT_DROP) {
-				/* If queue dropped the packet because device
-				 * was too busy */
 				vap->iv_devstats.tx_dropped++;
-				/* node reference was leaked */
 				if (tni != NULL)
 					ieee80211_unref_node(&tni);
 			}
@@ -1188,12 +1190,10 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 					vap->iv_vlgrp, ni->ni_vlan);
 		else
 			ret = netif_rx(skb);
-		if (ret == NET_RX_DROP) {
-			/* Cleanup if passing SKB to ourselves failed. */
-			if (tni != NULL)
-				ieee80211_unref_node(&tni);
+		if (ret == NET_RX_DROP)
 			vap->iv_devstats.rx_dropped++;
-		}
+		if (tni != NULL)
+			ieee80211_unref_node(&tni);
 		skb = NULL; /* SKB is no longer ours */
 	}
 }
@@ -2285,18 +2285,13 @@ forward_mgmt_to_app(struct ieee80211vap *vap, int subtype, struct sk_buff *skb,
 		skb1->pkt_type = PACKET_OTHERHOST;
 		skb1->protocol = __constant_htons(0x0019);  /* ETH_P_80211_RAW */
 
-		tni = SKB_NI(skb1);
-		if (netif_rx(skb1) == NET_RX_DROP) {
-			/* If netif_rx dropped the packet because 
-			 * device was too busy */
-			if (tni != NULL) {
-				/* node reference was leaked */
-				ieee80211_unref_node(&tni);
-			}
-			vap->iv_devstats.rx_dropped++;
-		}
 		vap->iv_devstats.rx_packets++;
 		vap->iv_devstats.rx_bytes += skb1->len;
+
+		if (SKB_NI(skb1) != NULL)
+			ieee80211_unref_node(&SKB_NI(skb1));
+		if (netif_rx(skb1) == NET_RX_DROP)
+			vap->iv_devstats.rx_dropped++;
 	}
 }
 

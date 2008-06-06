@@ -302,6 +302,7 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 	int noise = 0, antenna = 0, ieeerate = 0;
 	u_int32_t rssi = 0;
 	u_int8_t pkttype = 0;
+
 	if (tx) {
 		rssi = bf->bf_dsstatus.ds_txstat.ts_rssi;
 		antenna = bf->bf_dsstatus.ds_txstat.ts_antenna;
@@ -574,17 +575,14 @@ ieee80211_input_monitor(struct ieee80211com *ic, struct sk_buff *skb,
 			skb1->protocol = 
 				__constant_htons(0x0019); /* ETH_P_80211_RAW */
 
-			if (netif_rx(skb1) == NET_RX_DROP) {
-				/* If netif_rx dropped the packet because 
-				 * device was too busy, reclaim the ref. in 
-				 * the skb. */
-				if (SKB_NI(skb1) != NULL)
-					ieee80211_unref_node(&SKB_NI(skb1));
-				vap->iv_devstats.rx_dropped++;
-			}
-
 			vap->iv_devstats.rx_packets++;
 			vap->iv_devstats.rx_bytes += skb1->len;
+
+			if (SKB_NI(skb1) != NULL)
+				ieee80211_unref_node(&SKB_NI(skb1));
+			if (netif_rx(skb1) == NET_RX_DROP)
+				vap->iv_devstats.rx_dropped++;
+			skb1 = NULL;
 		}
 	}
 }
