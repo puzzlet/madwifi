@@ -1251,16 +1251,6 @@ ieee80211_decap(struct ieee80211vap *vap, struct sk_buff *skb, int hdrlen)
 	else
 		eh->ether_type = ether_type;
 
-	if (!ALIGNED_POINTER(skb->data + sizeof(*eh), u_int32_t)) {
-		struct sk_buff *tskb;
-
-		/* XXX: does this always work? */
-		tskb = skb_copy(skb, GFP_ATOMIC);
-		if (tskb)
-			ieee80211_skb_copy_noderef(skb, tskb);
-		ieee80211_dev_kfree_skb(&skb);
-		skb = tskb;
-	}
 	return skb;
 }
 
