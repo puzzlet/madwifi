@@ -6370,7 +6370,7 @@ ath_capture(struct net_device *dev, const struct ath_buf *bf,
 
 	/* Never copy the SKB, as it is ours on the RX side, and this is the 
 	 * last process on the TX side and we only modify our own headers. */
-	tskb = ath_skb_removepad(skb, 0 /* Copy SKB */);
+	tskb = ath_skb_removepad(skb, !tx /* Copy SKB */);
 	if (tskb == NULL) {
 		DPRINTF(sc, ATH_DEBUG_ANY,
 			"Dropping; ath_skb_removepad failed!\n");
@@ -6378,6 +6378,8 @@ ath_capture(struct net_device *dev, const struct ath_buf *bf,
 	}
 	
 	ieee80211_input_monitor(ic, tskb, bf, tx, tsf, sc);
+	if (tskb != skb)
+		ieee80211_dev_kfree_skb(&tskb);
 }
 
 /*
