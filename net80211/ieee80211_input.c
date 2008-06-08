@@ -207,7 +207,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 #ifdef ATH_SUPERG_FF
 	struct llc *llc;
 #endif
-	int hdrspace;
+	int hdrlen;
 	u_int8_t dir, type = -1, subtype;
 	u_int8_t *bssid;
 	u_int16_t rxseq;
@@ -431,11 +431,11 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 
 	switch (type) {
 	case IEEE80211_FC0_TYPE_DATA:
-		hdrspace = ieee80211_hdrspace(ic, wh);
-		if (skb->len < hdrspace) {
+		hdrlen = ieee80211_hdrsize(wh);
+		if (skb->len < hdrlen) {
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_ANY,
 				wh, "data", "too short: len %u, expecting %u",
-			 	skb->len, hdrspace);
+			 	skb->len, hdrlen);
 			vap->iv_stats.is_rx_tooshort++;
 			goto out;		/* XXX */
 		}
@@ -624,7 +624,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 				IEEE80211_NODE_STAT(ni, rx_noprivacy);
 				goto out;
 			}
-			key = ieee80211_crypto_decap(ni, skb, hdrspace);
+			key = ieee80211_crypto_decap(ni, skb, hdrlen);
 			if (key == NULL) {
 				/* NB: stats+msgs handled in crypto_decap */
 				IEEE80211_NODE_STAT(ni, rx_wepfail);
@@ -639,7 +639,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 		 * Next up, any fragmentation.
 		 */
 		if (!IEEE80211_IS_MULTICAST(wh->i_addr1)) {
-			skb = ieee80211_defrag(ni, skb, hdrspace);
+			skb = ieee80211_defrag(ni, skb, hdrlen);
 			if (skb == NULL) {
 				/* Fragment dropped or frame not complete yet */
 				goto out;
@@ -651,7 +651,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 		 * Next strip any MSDU crypto bits.
 		 */
 		if (key != NULL &&
-		    !ieee80211_crypto_demic(vap, key, skb, hdrspace, 0)) {
+		    !ieee80211_crypto_demic(vap, key, skb, hdrlen, 0)) {
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
 				ni->ni_macaddr, "data", "%s", "demic error");
 			IEEE80211_NODE_STAT(ni, rx_demicfail);
@@ -661,7 +661,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 		/*
 		 * Finally, strip the 802.11 header.
 		 */
-		skb = ieee80211_decap(vap, skb, hdrspace);
+		skb = ieee80211_decap(vap, skb, hdrlen);
 		if (skb == NULL) {
 			/* don't count Null data frames as errors */
 			if (subtype == IEEE80211_FC0_SUBTYPE_NODATA)
@@ -812,8 +812,8 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 				vap->iv_stats.is_rx_noprivacy++;
 				goto out;
 			}
-			hdrspace = ieee80211_hdrspace(ic, wh);
-			key = ieee80211_crypto_decap(ni, skb, hdrspace);
+			hdrlen = ieee80211_hdrsize(wh);
+			key = ieee80211_crypto_decap(ni, skb, hdrlen);
 			if (key == NULL) {
 				/* NB: stats+msgs handled in crypto_decap */
 				goto out;
@@ -4245,8 +4245,7 @@ ieee80211_check_mic(struct ieee80211_node *ni, struct sk_buff *skb)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211_frame *wh;
 	struct ieee80211_key *key;
-	int hdrspace;
-	struct ieee80211com *ic = vap->iv_ic;
+	int hdrlen;
 
 	if (skb->len < sizeof(struct ieee80211_frame_min)) {
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY, 
@@ -4257,13 +4256,13 @@ ieee80211_check_mic(struct ieee80211_node *ni, struct sk_buff *skb)
 	}
 
 	wh = (struct ieee80211_frame *)skb->data;
-	hdrspace = ieee80211_hdrspace(ic, wh);
+	hdrlen = ieee80211_hdrsize(wh);
 
-	key = ieee80211_crypto_decap(ni, skb, hdrspace);
+	key = ieee80211_crypto_decap(ni, skb, hdrlen);
 	if (key == NULL) {
 		/* NB: stats+msgs handled in crypto_decap */
 		IEEE80211_NODE_STAT(ni, rx_wepfail);
-	} else if (!ieee80211_crypto_demic(vap, key, skb, hdrspace, 1)) {
+	} else if (!ieee80211_crypto_demic(vap, key, skb, hdrlen, 1)) {
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
 				ni->ni_macaddr, "data", "%s", "demic error");
 		IEEE80211_NODE_STAT(ni, rx_demicfail);

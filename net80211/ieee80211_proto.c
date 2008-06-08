@@ -313,8 +313,8 @@ ieee80211_print_essid(const u_int8_t *essid, int len)
 EXPORT_SYMBOL(ieee80211_print_essid);
 
 void
-ieee80211_dump_pkt(struct ieee80211com *ic,
-	const u_int8_t *buf, int len, int rate, int rssi)
+ieee80211_dump_pkt(struct ieee80211com *ic, const u_int8_t *buf,
+		int len, int rate, int rssi, int tx)
 {
 	const struct ieee80211_frame *wh;
 	int i;
@@ -365,7 +365,10 @@ ieee80211_dump_pkt(struct ieee80211com *ic,
 	if (wh->i_fc[1] & IEEE80211_FC1_PROT) {
 		int off;
 
-		off = ieee80211_anyhdrspace(ic, wh);
+		if (tx)
+			off = ieee80211_anyhdrspace(ic, wh);
+		else
+			off = ieee80211_anyhdrsize(wh);
 		printk(" Prot. [IV %.02x %.02x %.02x",
 			buf[off + 0], buf[off + 1], buf[off + 2]);
 		if (buf[off + IEEE80211_WEP_IVLEN] & IEEE80211_WEP_EXTIV)

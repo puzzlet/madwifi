@@ -224,7 +224,8 @@ ieee80211_pwrsave(struct sk_buff *skb)
 			ni->ni_stats.ns_psq_drops, IEEE80211_PS_MAX_QUEUE);
 #ifdef IEEE80211_DEBUG
 		if (ieee80211_msg_dumppkts(vap))
-			ieee80211_dump_pkt(ni->ni_ic, skb->data, skb->len, -1, -1);
+			ieee80211_dump_pkt(ni->ni_ic, skb->data,
+					skb->len, -1, -1, 1);
 #endif
 		if (SKB_NI(skb) != NULL)
 			ieee80211_unref_node(&SKB_NI(skb));

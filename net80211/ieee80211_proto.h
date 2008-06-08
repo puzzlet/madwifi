@@ -252,7 +252,8 @@ void ieee80211_dturbo_switch(struct ieee80211com *, int);
 int ieee80211_new_state(struct ieee80211vap *, enum ieee80211_state, int);
 void ieee80211_print_essid(const u_int8_t *, int);
 #ifdef IEEE80211_DEBUG
-void ieee80211_dump_pkt(struct ieee80211com *, const u_int8_t *, int, int, int);
+void ieee80211_dump_pkt(struct ieee80211com *, const u_int8_t *,
+		int, int, int, int);
 #else
 #define ieee80211_dump_pkt(...)
 #endif

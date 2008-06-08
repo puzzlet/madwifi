@@ -6320,66 +6320,36 @@ ath_rxbuf_init(struct ath_softc *sc, struct ath_buf *bf)
 
 /* This function calculates the presence of, and then removes any padding 
  * bytes between the frame header and frame body, and returns a modified 
- * SKB. If padding is removed and copy_skb is specified, then a new SKB is 
- * created, otherwise the same SKB is used.
- *
- * NB: MAY ALLOCATE */
-static struct sk_buff *
-ath_skb_removepad(struct sk_buff *skb, unsigned int copy_skb)
+ * SKB. */
+static void
+ath_skb_removepad(struct ieee80211com *ic, struct sk_buff *skb)
 {
-	struct sk_buff *tskb = skb;
 	struct ieee80211_frame *wh = (struct ieee80211_frame *)skb->data;
 	unsigned int padbytes = 0, headersize = 0;
+  	
+	KASSERT(ic->ic_flags & IEEE80211_F_DATAPAD,
+  		("data padding not enabled?"));
 
 	/* Only non-control frames have bodies, and hence padding. */
 	if (IEEE80211_FRM_HAS_BODY(wh)) {
 		headersize = ieee80211_anyhdrsize(wh);
 		padbytes = roundup(headersize, 4) - headersize;
 		if (padbytes > 0) {
-			if (copy_skb) {
-				/* Copy skb and remove HW pad bytes */
-				tskb = skb_copy(skb, GFP_ATOMIC);
-				if (tskb == NULL)
-					return NULL;
-				ieee80211_skb_copy_noderef(skb, tskb);
-			}
-			memmove(tskb->data + padbytes, tskb->data, headersize);
-			skb_pull(tskb, padbytes);
+			memmove(skb->data + padbytes, skb->data, headersize);
+			skb_pull(skb, padbytes);
 		}
   	}
-	return tskb;
 }
 
-/*
- * Add a prism2 header to a received frame and
- * dispatch it to capture tools like kismet.
- */
-static void
+static __inline void
 ath_capture(struct net_device *dev, const struct ath_buf *bf,
 		struct sk_buff *skb, u_int64_t tsf, unsigned int tx)
 {
 	struct ath_softc *sc = dev->priv;
 	struct ieee80211com *ic = &sc->sc_ic;
-	struct sk_buff *tskb = NULL;
   
-  	KASSERT(ic->ic_flags & IEEE80211_F_DATAPAD,
-  		("data padding not enabled?"));
-  
-	if (sc->sc_nmonvaps <= 0)
-		return;
-
-	/* Never copy the SKB, as it is ours on the RX side, and this is the 
-	 * last process on the TX side and we only modify our own headers. */
-	tskb = ath_skb_removepad(skb, !tx /* Copy SKB */);
-	if (tskb == NULL) {
-		DPRINTF(sc, ATH_DEBUG_ANY,
-			"Dropping; ath_skb_removepad failed!\n");
-		return;
-	}
-	
-	ieee80211_input_monitor(ic, tskb, bf, tx, tsf, sc);
-	if (tskb != skb)
-		ieee80211_dev_kfree_skb(&tskb);
+	if (sc->sc_nmonvaps > 0)
+		ieee80211_input_monitor(ic, skb, bf, tx, tsf, sc);
 }
 
 /*
@@ -6640,6 +6610,7 @@ rx_accept:
 		skb_put(skb, len);
 		skb->protocol = __constant_htons(ETH_P_CONTROL);
 
+		ath_skb_removepad(ic, skb);
 		ath_capture(dev, bf, skb, bf->bf_tsf, 0 /* RX */);
 
 		/* Finished monitor mode handling, now reject error frames 
@@ -6684,7 +6655,7 @@ rx_accept:
 		if (IFF_DUMPPKTS(sc, ATH_DEBUG_RECV))
 			ieee80211_dump_pkt(ic, skb->data, skb->len,
 				   sc->sc_hwmap[rs->rs_rate].ieeerate,
-				   rs->rs_rssi);
+				   rs->rs_rssi, 0);
 
 		{
 			struct ieee80211_frame *wh =
@@ -7973,7 +7944,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	if (IFF_DUMPPKTS(sc, ATH_DEBUG_XMIT))
 		/* FFXXX: need multi-skb version to dump entire FF */
 		ieee80211_dump_pkt(ic, skb->data, skb->len,
-			sc->sc_hwmap[txrate].ieeerate, -1);
+			sc->sc_hwmap[txrate].ieeerate, -1, 1);
 
 	/*
 	 * Determine if a tx interrupt should be generated for
@@ -8354,11 +8325,12 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 			unsigned int i;
 #endif
 
-			/* ath_capture modifies skb data; must be last process
-			 * in TX path. */
-			tskb = skb->next;
+			/* HW is now finished with the SKB, so it is safe to
+			 * remove padding. */
+			ath_skb_removepad(&sc->sc_ic, skb);
 			DPRINTF(sc, ATH_DEBUG_TX_PROC, "capture skb %p\n",
 					bf->bf_skb);
+			tskb = skb->next;
 			ath_capture(sc->sc_dev, bf, skb, bf->bf_tsf, 1 /* TX */);
 			skb = tskb;
 
@@ -8366,9 +8338,10 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 			/* Handle every skb after the first one - these are FF 
 			 * extra buffers */
 			for (i = 0; i < bf->bf_numdescff; i++) {
-				tskb = skb->next;
+				ath_skb_removepad(&sc->sc_ic, skb); /* XXX: padding for FF? */
 				DPRINTF(sc, ATH_DEBUG_TX_PROC, "capture skb %p\n",
 					skb);
+				tskb = skb->next;
 				ath_capture(sc->sc_dev, bf, skb, bf->bf_tsf, 1 /* TX */);
 				skb = tskb;
 			}
