@@ -6341,17 +6341,6 @@ ath_skb_removepad(struct ieee80211com *ic, struct sk_buff *skb)
   	}
 }
 
-static __inline void
-ath_capture(struct net_device *dev, const struct ath_buf *bf,
-		struct sk_buff *skb, u_int64_t tsf, unsigned int tx)
-{
-	struct ath_softc *sc = dev->priv;
-	struct ieee80211com *ic = &sc->sc_ic;
-  
-	if (sc->sc_nmonvaps > 0)
-		ieee80211_input_monitor(ic, skb, bf, tx, tsf, sc);
-}
-
 /*
  * Intercept management frames to collect beacon RSSI data and to do
  * ibss merges. This function is called for all management frames,
@@ -6611,7 +6600,7 @@ rx_accept:
 		skb->protocol = __constant_htons(ETH_P_CONTROL);
 
 		ath_skb_removepad(ic, skb);
-		ath_capture(dev, bf, skb, bf->bf_tsf, 0 /* RX */);
+		ieee80211_input_monitor(ic, skb, bf, 0 /* RX */, bf->bf_tsf, sc);
 
 		/* Finished monitor mode handling, now reject error frames 
 		 * before passing to other VAPs. Ignore MIC failures here, as 
@@ -8331,7 +8320,8 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 			DPRINTF(sc, ATH_DEBUG_TX_PROC, "capture skb %p\n",
 					bf->bf_skb);
 			tskb = skb->next;
-			ath_capture(sc->sc_dev, bf, skb, bf->bf_tsf, 1 /* TX */);
+			ieee80211_input_monitor(&sc->sc_ic, skb, bf,
+					1 /* TX */, bf->bf_tsf, sc);
 			skb = tskb;
 
 #ifdef ATH_SUPERG_FF
@@ -8342,7 +8332,8 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 				DPRINTF(sc, ATH_DEBUG_TX_PROC, "capture skb %p\n",
 					skb);
 				tskb = skb->next;
-				ath_capture(sc->sc_dev, bf, skb, bf->bf_tsf, 1 /* TX */);
+				ieee80211_input_monitor(&sc->sc_ic, skb, bf,
+						1 /* TX */, bf->bf_tsf, sc);
 				skb = tskb;
 			}
 			bf->bf_numdescff = 0;
