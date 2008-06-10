@@ -726,6 +726,8 @@ struct ath_softc {
 	u_int8_t sc_protrix;			/* protection rate index */
 	u_int8_t sc_mcastantenna;		/* Multicast antenna number */
 	u_int8_t sc_txantenna;			/* data tx antenna (fixed or auto) */
+	u_int8_t sc_rxantenna;			/* current default antenna */
+	u_int8_t sc_numrxotherant;		/* RXs on non-default antenna */
 	u_int16_t sc_nvaps;			/* # of active virtual APs */
 	u_int8_t sc_nstavaps;			/* # of active station VAPs */
 	u_int8_t sc_nmonvaps;			/* # of monitor VAPs */
@@ -756,8 +758,6 @@ struct ath_softc {
 	spinlock_t sc_rxbuflock;
 	struct ATH_TQ_STRUCT sc_rxtq;		/* rx intr tasklet */
 	struct ATH_TQ_STRUCT sc_rxorntq;	/* rxorn intr tasklet */
-	u_int8_t sc_defant;			/* current default antenna */
-	u_int8_t sc_rxotherant;			/* RXs on non-default antenna */
 	u_int16_t sc_cachelsz;			/* cache line size */
 
 	struct ath_descdma sc_txdma;		/* TX descriptors */
