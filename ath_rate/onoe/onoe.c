@@ -467,7 +467,7 @@ static ctl_table ath_rate_static_sysctls[] = {
 };
 static ctl_table ath_rate_table[] = {
 	{ .ctl_name	= CTL_AUTO,
-	  .procname	= "rate",
+	  .procname	= "rate_onoe",
 	  .mode		= 0555,
 	  .child	= ath_rate_static_sysctls
 	}, { 0 }
