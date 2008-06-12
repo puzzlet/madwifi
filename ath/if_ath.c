@@ -2869,11 +2869,15 @@ ath_txq_dump(struct ath_softc *sc, struct ath_txq *txq)
 
 	j = 0;
 	STAILQ_FOREACH(bf, &txq->axq_q, bf_list) {
+		HAL_STATUS status = 
+			ath_hal_txprocdesc(sc->sc_ah,
+					   bf->bf_desc,
+					   &bf->bf_dsstatus.ds_txstat);
 		DPRINTF(sc, ATH_DEBUG_WATCHDOG, "  [%3u] bf_daddr:%08llx "
-				"ds_link:%08x ds_hw3:%08x\n",
-				j++,
-				(u_int64_t)bf->bf_daddr, bf->bf_desc->ds_link,
-				bf->bf_desc->ds_hw[3]);
+			"ds_link:%08x %s\n",
+			j++,
+			(u_int64_t)bf->bf_daddr, bf->bf_desc->ds_link,
+			status == HAL_EINPROGRESS ? "pending" : "done");
 	}
 }
 
@@ -8467,8 +8471,10 @@ ath_tx_timeout(struct net_device *dev)
 		sc->sc_invalid ? "in" : "");
 
 	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
-		ath_txq_check(sc, &sc->sc_txq[i], __func__);
-		ath_txq_dump(sc, &sc->sc_txq[i]);
+		if (ATH_TXQ_SETUP(sc, i)) {
+			ath_txq_check(sc, &sc->sc_txq[i], __func__);
+			ath_txq_dump(sc, &sc->sc_txq[i]);
+		}
 	}
 
 	if ((dev->flags & IFF_RUNNING) && !sc->sc_invalid) {
