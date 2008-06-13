@@ -37,11 +37,11 @@ EXTRA_CFLAGS += $(INCS) $(COPTS) -DOPT_AH_H=\"public/$(TARGET).opt_ah.h\"
 
 ifneq ($(VERSION).$(PATCHLEVEL),2.4)
 obj-$(CONFIG_ATHEROS)	+= ath_$(BUSNAME).o
-ath_$(BUSNAME)-objs	:= if_ath.o if_ath_radar.o if_ath_$(BUSNAME).o
+ath_$(BUSNAME)-objs	:= if_ath.o if_ath_radar.o if_ath_hal_extensions.o if_ath_$(BUSNAME).o
 endif
 
 ifeq ($(VERSION).$(PATCHLEVEL),2.4)
-obj-$(CONFIG_ATHEROS) := if_ath.o if_ath_$(BUSNAME).o
+obj-$(CONFIG_ATHEROS) := if_ath.o if_ath_radar.o if_ath_hal_extensions.o if_ath_$(BUSNAME).o
 
 O_TARGET := ath_$(BUSNAME).o
 include $(TOPDIR)/Rules.make
