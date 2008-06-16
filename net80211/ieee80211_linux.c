@@ -380,7 +380,7 @@ ieee80211_load_module(const char *modname)
 {
 #ifdef CONFIG_KMOD
 	int rv;
-	rv = request_module(modname);
+	rv = request_module("%s", modname);
 	if (rv < 0)
 		printk(KERN_ERR "failed to automatically load module: %s; " \
 			"errno: %d\n", modname, rv);

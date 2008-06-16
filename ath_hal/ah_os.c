@@ -448,7 +448,7 @@ ath_hal_lookup_register_name(struct ath_hal *ah, char *buf, int buflen,
 		if (static_label) {
 			if (strncmp(static_label, "ATH5K_", 6) == 0) 
 				static_label += 6;
-			snprintf(buf, buflen, static_label);
+			snprintf(buf, buflen, "%s", static_label);
 			return AH_TRUE;
 		}
 
