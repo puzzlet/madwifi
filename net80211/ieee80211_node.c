@@ -2113,7 +2113,7 @@ ieee80211_node_join(struct ieee80211_node *ni, int resp)
 		if (IEEE80211_IS_CHAN_ANYG(ic->ic_bsschan))
 			ieee80211_node_join_11g(ni);
 
-		KASSERT(ni->ni_suppchans == NULL, ("not a reassociation, but suppchans bitmap not NULL\n"));
+		KASSERT(ni->ni_suppchans == NULL, ("not a reassociation, but suppchans bitmap not NULL"));
 		/* Use node's new suppchans as the current */
 		ni->ni_suppchans = ni->ni_suppchans_new;
 		ni->ni_suppchans_new = NULL;

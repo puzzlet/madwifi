@@ -115,6 +115,7 @@
 #define KASSERT(exp, msg) do {			\
 	if (unlikely(!(exp))) {			\
 		printk msg;			\
+		printk("\n");			\
 		BUG();				\
 	}					\
 } while (0)

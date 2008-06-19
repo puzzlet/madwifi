@@ -1573,7 +1573,7 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 		case IEEE80211_S_SCAN:		/* adhoc/hostap mode */
 		case IEEE80211_S_ASSOC:		/* infra mode */
 			KASSERT(ni->ni_txrate < ni->ni_rates.rs_nrates,
-				("%s: bogus xmit rate %u setup\n", __func__,
+				("%s: bogus xmit rate %u setup", __func__,
 				ni->ni_txrate));
 #ifdef IEEE80211_DEBUG
 			if (ieee80211_msg_debug(vap)) {
@@ -1681,14 +1681,14 @@ static int get_dominant_state(struct ieee80211com *ic) {
 			 tmpvap->iv_state == IEEE80211_S_AUTH ||
 			 tmpvap->iv_state == IEEE80211_S_ASSOC) {
 			KASSERT((nscanning <= 1), ("Two VAPs cannot scan at "
-						"the same time\n"));
+						"the same time"));
 			nscanning++;
 		}
 	}
 	KASSERT(!(nscanning && nrunning), ("SCAN and RUN can't happen at the "
-				"same time\n"));
+				"same time"));
 	KASSERT((nscanning <= 1),         ("Two VAPs must not SCAN at the "
-				"same time\n"));
+				"same time"));
 
 	if (nrunning > 0) 
 		return IEEE80211_S_RUN;
@@ -1725,7 +1725,7 @@ dump_vap_states(struct ieee80211com *ic, struct ieee80211vap *highlighed)
 		}
 		if (tmpvap->iv_state == IEEE80211_S_RUN) {
 			KASSERT((nscanning == 0), ("SCAN and RUN can't happen "
-						"at the same time\n"));
+						"at the same time"));
 			nrunning++;
 		}
 		if (tmpvap->iv_state == IEEE80211_S_SCAN ||
@@ -1733,9 +1733,9 @@ dump_vap_states(struct ieee80211com *ic, struct ieee80211vap *highlighed)
 				tmpvap->iv_state == IEEE80211_S_AUTH || 
 				tmpvap->iv_state == IEEE80211_S_ASSOC) {
 			KASSERT((nscanning == 0), ("Two VAPs cannot scan at "
-						"the same time\n"));
+						"the same time"));
 			KASSERT((nrunning == 0), ("SCAN and RUN can't happen "
-						"at the same time\n"));
+						"at the same time"));
 			nscanning++;
 		}
 	}

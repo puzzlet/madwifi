@@ -386,7 +386,7 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 			    *try0 = sn->retry_adjusted_count[ndx];
 
 		KASSERT((ndx < sn->num_rates),
-			    ("%s: bad ndx (%d/%d) for " MAC_FMT "?\n",
+			    ("%s: bad ndx (%d/%d) for " MAC_FMT "?",
 			     dev_info, ndx, sn->num_rates,
 			     MAC_ADDR(an->an_node.ni_macaddr)));
 
@@ -420,17 +420,17 @@ ath_rate_get_mrr(struct ath_softc *sc, struct ath_node *an, int shortPreamble,
 		rc3 = 0;
 
 		KASSERT((rc1 >= 0) && (rc1 < sn->num_rates),
-			    ("%s: bad rc1 (%d/%d) for " MAC_FMT "?\n",
+			    ("%s: bad rc1 (%d/%d) for " MAC_FMT "?",
 			     dev_info, rc1, sn->num_rates,
 			     MAC_ADDR(an->an_node.ni_macaddr)));
 
 		KASSERT((rc2 >= 0) && (rc2 < sn->num_rates),
-			    ("%s: bad rc2 (%d/%d) for " MAC_FMT "?\n",
+			    ("%s: bad rc2 (%d/%d) for " MAC_FMT "?",
 			     dev_info, rc2, sn->num_rates,
 			     MAC_ADDR(an->an_node.ni_macaddr)));
 
 		KASSERT((rc3 >= 0) && (rc3 < sn->num_rates),
-			    ("%s: bad rc3 (%d/%d) for " MAC_FMT "?\n",
+			    ("%s: bad rc3 (%d/%d) for " MAC_FMT "?",
 			     dev_info, rc3, sn->num_rates,
 			     MAC_ADDR(an->an_node.ni_macaddr)));
 

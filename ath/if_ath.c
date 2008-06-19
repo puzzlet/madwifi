@@ -8255,7 +8255,7 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 				(struct ieee80211_qosframe *)bf->bf_skb->data;
 			an = ATH_NODE(ni);
 			KASSERT(ni != NULL, ("Processing U-APSD txq for "
-						"ath_buf with no node!\n"));
+						"ath_buf with no node!"));
 			if (qwh->i_qos[0] & IEEE80211_QOS_EOSP) {
 				DPRINTF(sc, ATH_DEBUG_UAPSD, 
 					"EOSP detected for node (" MAC_FMT ") on desc %p\n",
@@ -12537,7 +12537,7 @@ static inline struct ath_buf *
 descdma_get_buffer(struct ath_descdma *dd, int index)
 {
 	KASSERT((index >= 0 && index < dd->dd_nbuf), 
-		("Invalid index, %d, requested for %s dma buffers.\n", index, dd->dd_name));
+		("Invalid index, %d, requested for %s dma buffers", index, dd->dd_name));
 	return dd->dd_bufptr + index;
 }
 

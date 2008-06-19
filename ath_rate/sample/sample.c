@@ -490,7 +490,7 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 	}
 
 	KASSERT(ndx >= 0 && ndx < sn->num_rates,
-		("%s: bad ndx (%u/%u) for " MAC_FMT "?\n",
+		("%s: bad ndx (%u/%u) for " MAC_FMT "?",
 		 dev_info, ndx, sn->num_rates,
 		 MAC_ADDR(an->an_node.ni_macaddr)));
 

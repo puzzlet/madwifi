@@ -881,7 +881,7 @@ michael_mic(struct tkip_ctx *ctx, const u8 *key,
 			break;
 		skb = skb->next;
 		if (skb == NULL) {
-			KASSERT(0, ("out of data, data_len %lu\n",
+			KASSERT(0, ("out of data, data_len %lu",
 				    (unsigned long)data_len));
 			break;
 		}
@@ -893,7 +893,7 @@ michael_mic(struct tkip_ctx *ctx, const u8 *key,
 			data_next = skb->data;
 			KASSERT(skb->len >= sizeof(uint32_t) - space,
 				("not enough data in following buffer, "
-				"skb len %u need %u\n", skb->len,
+				"skb len %u need %u", skb->len,
 				(int)sizeof(uint32_t) - space));
 			switch (space) {
 			case 1:

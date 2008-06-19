@@ -541,7 +541,7 @@ ccmp_encrypt(struct ieee80211_key *key, struct sk_buff *skb0, int hdrlen)
 			space_next = len > space ? len - space : 0;
 			KASSERT(skb->len >= space_next,
 				("not enough data in following buffer, "
-				"skb len %u need %u\n", skb->len, space_next));
+				"skb len %u need %u", skb->len, space_next));
 
 			xor_block(b + space, pos_next, space_next);
 			CCMP_ENCRYPT(i, b, b0, pos, e, space);
@@ -644,7 +644,7 @@ ccmp_decrypt(struct ieee80211_key *key, u_int64_t pn, struct sk_buff *skb0, int 
 			space_next = len > space ? len - space : 0;
 			KASSERT(skb->len >= space_next,
 				("not enough data in following buffer, "
-				"skb len %u need %u\n", skb->len, space_next));
+				"skb len %u need %u", skb->len, space_next));
 
 			xor_block(b+space, pos_next, space_next);
 			CCMP_DECRYPT(i, b, b0, pos, a, space);
