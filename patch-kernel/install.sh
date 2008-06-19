@@ -14,7 +14,7 @@ die()
 }
 
 SRC=..
-KERNEL_VERSION=`uname -r`
+KERNEL_VERSION=$(uname -r)
 
 if test -n "$1"; then
 	KERNEL_PATH="$1"
@@ -74,19 +74,19 @@ cp -f ${SRC}/BuildCaps.inc ${SRC}/svnversion.h ${SRC}/release.h ${MADWIFI}
 
 
 echo "Copying source files"
-FILES=`cd ${SRC} && find ath ath_hal ath_rate hal include net80211 -name '*.[ch]'`
+FILES=$(cd ${SRC} && find ath ath_hal ath_rate hal include net80211 -name '*.[ch]')
 for f in $FILES; do
 	case $f in
 		*.mod.c) continue;;
 	esac
-	mkdir -p `dirname ${MADWIFI}/$f`
+	mkdir -p $(dirname ${MADWIFI}/$f)
 	cp -f ${SRC}/$f ${MADWIFI}/$f
 done
 
 echo "Copying makefiles"
-FILES=`cd ${SRC} && find . -name Makefile.kernel`
+FILES=$(cd ${SRC} && find . -name Makefile.kernel)
 for f in $FILES; do
-	cp -f ${SRC}/$f `dirname ${MADWIFI}/$f`/Makefile
+	cp -f ${SRC}/$f $(dirname ${MADWIFI}/$f)/Makefile
 done
 cp -f ${SRC}/ath_hal/ah_target.inc ${MADWIFI}/ath_hal
 

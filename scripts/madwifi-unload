@@ -3,7 +3,7 @@
 : ${PATTERN='\(ath_.*\|wlan_.*\|wlan\)$'}
 : ${MAX_TRIES=10}
 
-test "`id -u`" = 0 || {
+test "$(id -u)" = 0 || {
 	echo "ERROR: You must be root to run this script" >&2
 	exit 1
 }
@@ -18,7 +18,7 @@ while test "$tries" != "0"; do
 	skipped=0
 	IFS='
 '
-	for line in `cat /proc/modules`; do
+	for line in $(cat /proc/modules); do
 		IFS=' 	'
 		set x $line
 		name="$2"
