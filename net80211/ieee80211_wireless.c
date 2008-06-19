@@ -2799,7 +2799,7 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		vap->iv_roam.rssi11bOnly = value;
 		break;
 	case IEEE80211_PARAM_ROAM_RSSI_11G:
-		vap->iv_roam.rssi11b = value;
+		vap->iv_roam.rssi11g = value;
 		break;
 	case IEEE80211_PARAM_ROAM_RATE_11A:
 		vap->iv_roam.rate11a = value;
@@ -2808,7 +2808,7 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		vap->iv_roam.rate11bOnly = value;
 		break;
 	case IEEE80211_PARAM_ROAM_RATE_11G:
-		vap->iv_roam.rate11b = value;
+		vap->iv_roam.rate11g = value;
 		break;
 	case IEEE80211_PARAM_UAPSDINFO:
 		if (vap->iv_opmode == IEEE80211_M_HOSTAP) {
@@ -3166,7 +3166,7 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		param[0] = vap->iv_roam.rssi11bOnly;
 		break;
 	case IEEE80211_PARAM_ROAM_RSSI_11G:
-		param[0] = vap->iv_roam.rssi11b;
+		param[0] = vap->iv_roam.rssi11g;
 		break;
 	case IEEE80211_PARAM_ROAM_RATE_11A:
 		param[0] = vap->iv_roam.rate11a;
@@ -3175,7 +3175,7 @@ ieee80211_ioctl_getparam(struct net_device *dev, struct iw_request_info *info,
 		param[0] = vap->iv_roam.rate11bOnly;
 		break;
 	case IEEE80211_PARAM_ROAM_RATE_11G:
-		param[0] = vap->iv_roam.rate11b;
+		param[0] = vap->iv_roam.rate11g;
 		break;
 	case IEEE80211_PARAM_UAPSDINFO:
 		if (vap->iv_opmode == IEEE80211_M_HOSTAP) {
@@ -5595,17 +5595,17 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	{ IEEE80211_PARAM_ROAM_RSSI_11G,
 	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rssi11g" },
 	{ IEEE80211_PARAM_ROAM_RATE_11A,
-	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "rate11a" },
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "rate11a_x2" },
 	{ IEEE80211_PARAM_ROAM_RATE_11A,
-	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rate11a" },
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rate11a_x2" },
 	{ IEEE80211_PARAM_ROAM_RATE_11B,
-	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "rate11b" },
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "rate11b_x2" },
 	{ IEEE80211_PARAM_ROAM_RATE_11B,
-	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rate11b" },
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rate11b_x2" },
 	{ IEEE80211_PARAM_ROAM_RATE_11G,
-	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "rate11g" },
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "rate11g_x2" },
 	{ IEEE80211_PARAM_ROAM_RATE_11G,
-	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rate11g" },
+	  0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_rate11g_x2" },
 	{ IEEE80211_PARAM_UAPSDINFO,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "uapsd" },
 	{ IEEE80211_PARAM_UAPSDINFO,

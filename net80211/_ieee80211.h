@@ -307,12 +307,10 @@ struct ieee80211_rateset {
 
 struct ieee80211_roam {
 	int8_t rssi11a;		/* rssi thresh for 11a bss */
-	int8_t rssi11b;		/* for 11g sta in 11b bss */
+	int8_t rssi11g;		/* for 11g */
 	int8_t rssi11bOnly;	/* for 11b sta */
-	u_int8_t pad1;
 	u_int8_t rate11a;	/* rate thresh for 11a bss */
-	u_int8_t rate11b;	/* for 11g sta in 11b bss */
+	u_int8_t rate11g;	/* for 11g */
 	u_int8_t rate11bOnly;	/* for 11b sta */
-	u_int8_t pad2;
 };
 #endif /* _NET80211__IEEE80211_H_ */

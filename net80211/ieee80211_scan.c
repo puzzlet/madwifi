@@ -88,10 +88,10 @@ struct scan_state {
  */
 #define	SCAN_VALID_DEFAULT		60	/* scan cache valid age (secs) */
 #define	ROAM_RSSI_11A_DEFAULT		9	/* rssi threshold for 11a bss */
-#define	ROAM_RSSI_11B_DEFAULT		9	/* rssi threshold for 11b bss */
+#define	ROAM_RSSI_11G_DEFAULT		9	/* rssi threshold for 11g bss */
 #define	ROAM_RSSI_11BONLY_DEFAULT	9	/* rssi threshold for 11b-only bss */
 #define	ROAM_RATE_11A_DEFAULT		2 * 24	/* tx rate threshold for 11a bss */
-#define	ROAM_RATE_11B_DEFAULT		2 * 9	/* tx rate threshold for 11b bss */
+#define	ROAM_RATE_11G_DEFAULT		2 * 9	/* tx rate threshold for 11g bss */
 #define	ROAM_RATE_11BONLY_DEFAULT	2 * 5	/* tx rate threshold for 11b-only bss */
 
 static void scan_restart_pwrsav(unsigned long);
@@ -142,10 +142,10 @@ ieee80211_scan_vattach(struct ieee80211vap *vap)
 	vap->iv_bgscanintvl = IEEE80211_BGSCAN_INTVAL_DEFAULT * HZ;
 	vap->iv_scanvalid = SCAN_VALID_DEFAULT * HZ;
 	vap->iv_roam.rssi11a = ROAM_RSSI_11A_DEFAULT;
-	vap->iv_roam.rssi11b = ROAM_RSSI_11B_DEFAULT;
+	vap->iv_roam.rssi11g = ROAM_RSSI_11G_DEFAULT;
 	vap->iv_roam.rssi11bOnly = ROAM_RSSI_11BONLY_DEFAULT;
 	vap->iv_roam.rate11a = ROAM_RATE_11A_DEFAULT;
-	vap->iv_roam.rate11b = ROAM_RATE_11B_DEFAULT;
+	vap->iv_roam.rate11g = ROAM_RATE_11G_DEFAULT;
 	vap->iv_roam.rate11bOnly = ROAM_RATE_11BONLY_DEFAULT;
 }
 

@@ -984,10 +984,9 @@ sta_roam_check(struct ieee80211_scan_state *ss, struct ieee80211vap *vap)
 		return;
 	}
 
-	/* XXX do we need 11g too? */
 	if (IEEE80211_IS_CHAN_ANYG(ic->ic_bsschan)) {
-		roamRate = vap->iv_roam.rate11b;
-		roamRssi = vap->iv_roam.rssi11b;
+		roamRate = vap->iv_roam.rate11g;
+		roamRssi = vap->iv_roam.rssi11g;
 	} else if (IEEE80211_IS_CHAN_B(ic->ic_bsschan)) {
 		roamRate = vap->iv_roam.rate11bOnly;
 		roamRssi = vap->iv_roam.rssi11bOnly;
