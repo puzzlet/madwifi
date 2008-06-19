@@ -166,7 +166,7 @@ extern void *__ahdecl ath_hal_memcpy(void *, const void *, size_t);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,12)) && \
     (AH_BYTE_ORDER == AH_BIG_ENDIAN) && \
     !defined(CONFIG_GENERIC_IOMAP) && \
-    !defined(CONFIG_PARICS) && \
+    !defined(CONFIG_PARISC) && \
     !(defined(CONFIG_PPC64) && \
       (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,14))) && \
     !defined(CONFIG_PPC_MERGE) && \
