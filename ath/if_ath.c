@@ -3722,46 +3722,24 @@ ath_keyprint(struct ath_softc *sc, const char *tag, u_int ix,
 		"CLR",
 	};
 	unsigned int i, n;
-	static const int MLEN = 1024;
-	static const int BLEN = 64;
-	char m[MLEN+1], b[BLEN+1];
-	m[MLEN] = '\0';
-	b[BLEN] = '\0';
-	snprintf(b, BLEN, "%s: [%02u] %-7s ", 
-		 tag, ix, ciphers[hk->kv_type]);
-	strncat(m, b, MLEN);
 
-	for (i = 0, n = hk->kv_len; i < n; i++) {
-		snprintf(b, BLEN, "%02x", hk->kv_val[i]);
-		strncat(m, b, MLEN);
-	}
-
-	snprintf(b, BLEN, " mac " MAC_FMT, MAC_ADDR(mac));
-	strncat(m, b, MLEN);
-
+	printk("%s: [%02u] %-7s ", tag, ix, ciphers[hk->kv_type]);
+	for (i = 0, n = hk->kv_len; i < n; i++)
+		printk("%02x", hk->kv_val[i]);
+	printk(" mac " MAC_FMT, MAC_ADDR(mac));
 	if (hk->kv_type == HAL_CIPHER_TKIP) {
-		snprintf(b, BLEN, " %s ", 
-			 sc->sc_splitmic ? "mic" : "rxmic");
-		strncat(m, b, MLEN);
-
-		for (i = 0; i < sizeof(hk->kv_mic); i++) {
-			snprintf(b, BLEN, "%02x", hk->kv_mic[i]);
-			strncat(m, b, MLEN);
-		}
+		printk(" %s ", sc->sc_splitmic ? "mic" : "rxmic");
+		for (i = 0; i < sizeof(hk->kv_mic); i++)
+			printk("%02x", hk->kv_mic[i]);
 #if HAL_ABI_VERSION > 0x06052200
 		if (!sc->sc_splitmic) {
-			strncat(m, " txmic ", MLEN);
-			for (i = 0; i < sizeof(hk->kv_txmic); i++) {
-				snprintf(b, BLEN, 
-					 "%02x", hk->kv_txmic[i]);
-				strncat(m, b, MLEN);
-			}
+			printk(" txmic ");
+			for (i = 0; i < sizeof(hk->kv_txmic); i++)
+				printk("%02x", hk->kv_txmic[i]);
 		}
 #endif
 	}
-	strncat(m, "\n", MLEN);
-
-	DPRINTF(sc, ATH_DEBUG_ANY, "%s", m);
+	printk("\n");
 }
 #endif
 
