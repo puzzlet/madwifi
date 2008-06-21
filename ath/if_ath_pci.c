@@ -380,12 +380,12 @@ MODULE_LICENSE("Dual BSD/GPL");
 static int __init
 init_ath_pci(void)
 {
+	int status;
 	printk(KERN_INFO "%s: %s\n", dev_info, version);
 
-	if (pci_register_driver(&ath_pci_driver) < 0) {
-		printk(KERN_ERR "%s: No devices found, driver not installed.\n", dev_info);
-		return (-ENODEV);
-	}
+	status = pci_register_driver(&ath_pci_driver);
+	if (status)
+		return (status);
 	ath_sysctl_register();
 	return (0);
 }
