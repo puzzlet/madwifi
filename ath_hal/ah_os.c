@@ -1082,7 +1082,9 @@ ath_hal_sysctl_unregister(void)
  * Module glue.
  */
 #include "version.h"
+#if 0
 static char *dev_info = "ath_hal";
+#endif
 
 MODULE_AUTHOR("Errno Consulting, Sam Leffler");
 MODULE_DESCRIPTION("Atheros Hardware Access Layer (HAL)");
@@ -1122,7 +1124,6 @@ init_ath_hal(void)
 	kmmio_logmsg = _kmmio_logmsg;
 #endif
 
-	printk("%s: %s (", dev_info, ath_hal_version);
 	sep = "";
 	for (i = 0; ath_hal_buildopts[i] != NULL; i++) {
 		printk("%s%s", sep, ath_hal_buildopts[i]);
@@ -1141,6 +1142,5 @@ exit_ath_hal(void)
 	kmmio_logmsg = NULL;
 #endif
 	ath_hal_sysctl_unregister();
-	printk("%s: driver unloaded\n", dev_info);
 }
 module_exit(exit_ath_hal);

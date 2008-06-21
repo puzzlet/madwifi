@@ -595,8 +595,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 				"supported by the HAL.\n");
 		hal_tpc = 0;
 	}
-	IPRINTF(sc, "HAL managed transmit power control (TPC) %s.\n",
-		hal_tpc ? "enabled" : "disabled");
+	DPRINTF(sc, ATH_DEBUG_ANY, "HAL managed transmit power control (TPC) "
+		"%s.\n", hal_tpc ? "enabled" : "disabled");
 	ath_hal_settpc(ah, hal_tpc);
 #else
 	sc->sc_hastpc = 0;
@@ -623,7 +623,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	}
 	else {
 		ath_hal_setintmit(ah, sc->sc_useintmit);
-		IPRINTF(sc, "Interference mitigation is supported.  Currently %s.\n",
+		DPRINTF(sc, ATH_DEBUG_ANY, "Interference mitigation is "
+			"supported.  Currently %s.\n",
 			(sc->sc_useintmit ? "enabled" : "disabled"));
 	}
 
@@ -11193,7 +11194,9 @@ ath_announce(struct net_device *dev)
 	struct ath_softc *sc = dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 	u_int modes, cc;
+#if 0
 	unsigned int i;
+#endif
 
 	printk(KERN_INFO "%s: Atheros AR%s chip found (MAC %d.%d, ",
 		DEV_NAME(dev),
@@ -11226,6 +11229,8 @@ ath_announce(struct net_device *dev)
 			ah->ah_analog5GhzRev & 0xf);
 	}
 
+/* Disabled - this information is not operationally useful. */
+#if 0
 	for (i = 0; i <= WME_AC_VO; i++) {
 		struct ath_txq *txq = sc->sc_ac2q[i];
 		printk(KERN_INFO "%s: Use H/W queue %u for %s traffic\n",
@@ -11247,6 +11252,7 @@ ath_announce(struct net_device *dev)
 		DEV_NAME(dev), sc->sc_cabq->axq_qnum);
 	printk(KERN_INFO "%s: Use hw queue %u for beacons\n",
 		DEV_NAME(dev), sc->sc_bhalq);
+#endif
 }
  
 /*

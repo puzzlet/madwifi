@@ -110,7 +110,9 @@ enum {
  */
 
 #include "release.h"
+#if 0
 static char *version = "1.2 (" RELEASE_VERSION ")";
+#endif
 static char *dev_info = "ath_rate_sample";
 
 
@@ -1136,7 +1138,6 @@ MODULE_LICENSE("Dual BSD/GPL");
 static int __init
 init_ath_rate_sample(void)
 {
-	printk(KERN_INFO "%s: %s\n", dev_info, version);
 	return ieee80211_rate_register(&ath_rate_ops);
 }
 module_init(init_ath_rate_sample);
@@ -1145,6 +1146,5 @@ static void __exit
 exit_ath_rate_sample(void)
 {
 	ieee80211_rate_unregister(&ath_rate_ops);
-	printk(KERN_INFO "%s: unloaded\n", dev_info);
 }
 module_exit(exit_ath_rate_sample);

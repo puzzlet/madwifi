@@ -555,8 +555,10 @@ static struct ieee80211_rate_ops ath_rate_ops = {
 };
 
 #include "release.h"
+#if 0
 static char *version = "0.1 (" RELEASE_VERSION ")";
 static char *dev_info = "ath_rate_amrr";
+#endif
 
 MODULE_AUTHOR("INRIA, Mathieu Lacage");
 MODULE_DESCRIPTION("AMRR Rate control algorithm");
@@ -570,10 +572,7 @@ MODULE_LICENSE("Dual BSD/GPL");
 static int __init
 init_ath_rate_amrr(void)
 {
-	int ret;
-	printk(KERN_INFO "%s: %s\n", dev_info, version);
-
-	ret = ieee80211_rate_register(&ath_rate_ops);
+	int ret = ieee80211_rate_register(&ath_rate_ops);
 	if (ret)
 		return ret;
 
@@ -588,7 +587,5 @@ exit_ath_rate_amrr(void)
 	if (ath_sysctl_header != NULL)
 		unregister_sysctl_table(ath_sysctl_header);
 	ieee80211_rate_unregister(&ath_rate_ops);
-
-	printk(KERN_INFO "%s: unloaded\n", dev_info);
 }
 module_exit(exit_ath_rate_amrr);

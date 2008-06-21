@@ -982,8 +982,10 @@ static struct notifier_block ieee80211_event_block = {
  * Module glue.
  */
 #include "release.h"
+#if 0
 static char *version = RELEASE_VERSION;
 static char *dev_info = "wlan";
+#endif
 
 MODULE_AUTHOR("Errno Consulting, Sam Leffler");
 MODULE_DESCRIPTION("802.11 wireless LAN protocol support");
@@ -1000,7 +1002,6 @@ static int __init
 init_wlan(void)
 {
   	register_netdevice_notifier(&ieee80211_event_block);
-	printk(KERN_INFO "%s: %s\n", dev_info, version);
 	return 0;
 }
 module_init(init_wlan);
@@ -1009,6 +1010,5 @@ static void __exit
 exit_wlan(void)
 {
   	unregister_netdevice_notifier(&ieee80211_event_block);
-	printk(KERN_INFO "%s: driver unloaded\n", dev_info);
 }
 module_exit(exit_wlan);

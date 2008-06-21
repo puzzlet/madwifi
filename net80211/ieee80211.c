@@ -1152,6 +1152,8 @@ EXPORT_SYMBOL(ieee80211_dfs_test_return);
 void
 ieee80211_announce(struct ieee80211com *ic)
 {
+/* Disabled - creates noise but no useful information. */
+#if 0
 	struct net_device *dev = ic->ic_dev;
 	int i, mode, rate, mword;
 	struct ieee80211_rateset *rs;
@@ -1184,6 +1186,7 @@ ieee80211_announce(struct ieee80211com *ic)
 	if (ic->ic_caps & IEEE80211_C_TKIP)
 		printk(" TKIP");
 	printk("\n");
+#endif
 }
 EXPORT_SYMBOL(ieee80211_announce);
 

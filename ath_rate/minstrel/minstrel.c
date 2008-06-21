@@ -133,8 +133,9 @@ enum {
 #define ONE_SECOND (1000 * 1000)  /* 1 second, or 1000 milliseconds; eternity, in other words */
 
 #include "release.h"
-
+#if 0
 static char *version = "1.2 (" RELEASE_VERSION ")";
+#endif
 static char *dev_info = "ath_rate_minstrel";
 
 #define STALE_FAILURE_TIMEOUT_MS 10000
@@ -1091,14 +1092,15 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 static int __init ath_rate_minstrel_init(void)
 {
-	printk(KERN_INFO "%s: Minstrel automatic rate control "
-	       "algorithm %s\n", dev_info, version);
+/* Debugging output - disabled as noisy. */
+#if 0
 	printk(KERN_INFO "%s: look around rate set to %d%%\n",
 	       dev_info, ath_lookaround_rate);
 	printk(KERN_INFO "%s: EWMA rolloff level set to %d%%\n",
 	       dev_info, ath_ewma_level);
-	printk(KERN_INFO "%s: max segment size in the mrr set "
+	printk(KERN_INFO "%s: max segment size in the MRR set "
 	       "to %d us\n", dev_info, ath_segment_size);
+#endif
 	return ieee80211_rate_register(&ath_rate_ops);
 }
 module_init(ath_rate_minstrel_init);
@@ -1106,7 +1108,6 @@ module_init(ath_rate_minstrel_init);
 static void __exit ath_rate_minstrel_exit(void)
 {
 	ieee80211_rate_unregister(&ath_rate_ops);
-	printk(KERN_INFO "%s: unloaded\n", dev_info);
 }
 module_exit(ath_rate_minstrel_exit);
 
