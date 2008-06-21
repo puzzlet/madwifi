@@ -11190,7 +11190,6 @@ ath_dynamic_sysctl_unregister(struct ath_softc *sc)
 static void
 ath_announce(struct net_device *dev)
 {
-#define	HAL_MODE_DUALBAND	(HAL_MODE_11A|HAL_MODE_11B)
 	struct ath_softc *sc = dev->priv;
 	struct ath_hal *ah = sc->sc_ah;
 	u_int modes, cc;
@@ -11204,26 +11203,23 @@ ath_announce(struct net_device *dev)
 		ath5k_chip_name(AR5K_VERSION_RAD, ah->ah_phyRev),
 		ah->ah_phyRev >> 4, ah->ah_phyRev & 0xf);
 
-	/*
-	 * Print radio revision(s).  We check the wireless modes
-	 * to avoid falsely printing revs for inoperable parts.
-	 * Dual-band radio revs are returned in the 5 GHz rev number.
-	 */
+	/* Print radio revision(s).  We check the wireless modes to avoid 
+	 * falsely printing revs for inoperable parts. Dual-band radio rev's
+	 * are returned in the 5 GHz rev. number. */
 	ath_hal_getcountrycode(ah, &cc);
 	modes = ath_hal_getwirelessmodes(ah, cc);
-	if ((modes & HAL_MODE_DUALBAND) == HAL_MODE_DUALBAND) {
-		if (ah->ah_analog5GhzRev && ah->ah_analog2GhzRev) {
+	if ((modes & (HAL_MODE_11A | HAL_MODE_11B)) ==
+			(HAL_MODE_11A | HAL_MODE_11B)) {
+		if (ah->ah_analog5GhzRev && ah->ah_analog2GhzRev)
 			printk("5 GHz Radio %d.%d 2 GHz Radio %d.%d)\n",
 				ah->ah_analog5GhzRev >> 4,
 				ah->ah_analog5GhzRev & 0xf,
 				ah->ah_analog2GhzRev >> 4,
 				ah->ah_analog2GhzRev & 0xf);
-		}
-		else {
+		else
 			printk("Radio %d.%d)\n",
 				ah->ah_analog5GhzRev >> 4,
 				ah->ah_analog5GhzRev & 0xf);
-		}
 	} else {
 		printk("Radio %d.%d)\n",
 			ah->ah_analog5GhzRev >> 4,
@@ -11232,7 +11228,7 @@ ath_announce(struct net_device *dev)
 
 	for (i = 0; i <= WME_AC_VO; i++) {
 		struct ath_txq *txq = sc->sc_ac2q[i];
-		printk(KERN_INFO "%s: Use hw queue %u for %s traffic\n",
+		printk(KERN_INFO "%s: Use H/W queue %u for %s traffic\n",
 			DEV_NAME(dev),
 			txq->axq_qnum,
 			ieee80211_wme_acnames[i]);
@@ -11251,7 +11247,6 @@ ath_announce(struct net_device *dev)
 		DEV_NAME(dev), sc->sc_cabq->axq_qnum);
 	printk(KERN_INFO "%s: Use hw queue %u for beacons\n",
 		DEV_NAME(dev), sc->sc_bhalq);
-#undef HAL_MODE_DUALBAND
 }
  
 /*
