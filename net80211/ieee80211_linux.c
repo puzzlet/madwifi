@@ -542,6 +542,8 @@ IEEE80211_SYSCTL_DECL(ieee80211_sysctl_debug, ctl, write, filp, buffer,
 		if (ret == 0) {
 			vap->iv_debug 		= (val & ~IEEE80211_MSG_IC);
 			vap->iv_ic->ic_debug 	= (val &  IEEE80211_MSG_IC);
+			printk(KERN_INFO "%s debug flags changed to 0x%08x.\n",
+					vap->iv_dev->name, val);
 		}
 	} else {
 		/* VAP specific and 'global' debug flags */

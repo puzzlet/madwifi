@@ -10613,6 +10613,9 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 			case ATH_DEBUG:
 				sc->sc_debug 	 = (val & ~ATH_DEBUG_GLOBAL);
 				ath_debug_global = (val &  ATH_DEBUG_GLOBAL);
+				IPRINTF(sc, "Ath. debug flags changed to "
+						"0x%08x.\n", val);
+
 				break;
 			case ATH_TXANTENNA:
 				/*
