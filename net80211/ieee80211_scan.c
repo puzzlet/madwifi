@@ -435,9 +435,8 @@ ieee80211_start_scan(struct ieee80211vap *vap, int flags, u_int duration,
 		 * the requested scan has not, then we update the running scan
 		 * flag. This is needed when wpa_supplicant is used with
 		 * ap_scan=1. Without it, the driver will never associate. */
-
-		if (((flags & IEEE80211_SCAN_NOPICK) == 0)
-		    && (ss->ss_flags & IEEE80211_SCAN_NOPICK)) {
+		if (((flags & IEEE80211_SCAN_NOPICK) == 0) &&
+		    (ss->ss_flags & IEEE80211_SCAN_NOPICK)) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
 					  "%s: clearing SCAN_NOPICK flag\n",
 					  __func__);

@@ -648,13 +648,8 @@ struct ath_softc {
 	int sc_default_ieee80211_debug;		/* default debug flags for new VAPs */
 	int (*sc_recv_mgmt)(struct ieee80211vap *, struct ieee80211_node *,
 		struct sk_buff *, int, int, u_int64_t);
-#ifdef IEEE80211_DEBUG_REFCNT
-	void (*sc_node_cleanup_debug)(struct ieee80211_node *, const char *func, int line);
-	void (*sc_node_free_debug)(struct ieee80211_node *, const char *func, int line);
-#else /* #ifdef IEEE80211_DEBUG_REFCNT */
 	void (*sc_node_cleanup)(struct ieee80211_node *);
 	void (*sc_node_free)(struct ieee80211_node *);
-#endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	void *sc_bdev;				/* associated bus device */
 	struct ath_hal *sc_ah;			/* Atheros HAL */
 	spinlock_t sc_hal_lock;                 /* hardware access lock */

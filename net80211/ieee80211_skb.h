@@ -81,13 +81,7 @@ extern atomic_t skb_refs_counter;
  * If SKB refcount is going to zero:
  *  - Free the node reference and set it to null.
  *  - Break the linked list, clearing next skb's prev pointer if possible. */
-#ifdef IEEE80211_DEBUG_REFCNT
-#define ieee80211_dev_kfree_skb(_pskb) \
-	ieee80211_dev_kfree_skb_debug(_pskb, __func__, __LINE__)
-void ieee80211_dev_kfree_skb_debug(struct sk_buff **pskb, const char *func, int line);
-#else
 void ieee80211_dev_kfree_skb(struct sk_buff **pskb);
-#endif
 
 static inline void ieee80211_skb_copy_noderef(struct sk_buff *src, 
 		struct sk_buff *dst)
@@ -98,35 +92,12 @@ static inline void ieee80211_skb_copy_noderef(struct sk_buff *src,
 
 /* ieee80211_dev_kfree_skb_list will invoke ieee80211_dev_kfree_skb on each node in
  * a list of skbs, starting with the first. */
-#ifdef IEEE80211_DEBUG_REFCNT
-#define ieee80211_dev_kfree_skb_list(_pskb) \
-	ieee80211_dev_kfree_skb_list_debug(_pskb, __func__, __LINE__)
-void ieee80211_dev_kfree_skb_list_debug(struct sk_buff **pskb, const char *func, int line);
-#else
 void ieee80211_dev_kfree_skb_list(struct sk_buff **pskb);
-#endif
 
-#ifdef IEEE80211_DEBUG_REFCNT
-#define ieee80211_dev_alloc_skb(_size) \
-	ieee80211_dev_alloc_skb_debug(_size, __func__, __LINE__)
-struct sk_buff *ieee80211_dev_alloc_skb_debug(int size, const char *func, int line);
-#else
 struct sk_buff *ieee80211_dev_alloc_skb(int size);
-#endif
 
-#ifdef IEEE80211_DEBUG_REFCNT
-#define ieee80211_skb_track(_skb) \
-	ieee80211_skb_track_debug(_skb, __func__, __LINE__)
-#define ieee80211_skb_untrack(_skb) \
-	ieee80211_skb_untrack_debug(_skb, __func__, __LINE__)
-void ieee80211_skb_track_debug(struct sk_buff *skb, 
-					       const char *func, int line);
-void ieee80211_skb_untrack_debug(struct sk_buff *skb, 
-					       const char *func, int line);
-#else
 void ieee80211_skb_track(struct sk_buff *skb);
 void ieee80211_skb_untrack(struct sk_buff *skb);
-#endif
 
 #ifdef IEEE80211_DEBUG_REFCNT
 int ieee80211_skb_counter(void);
