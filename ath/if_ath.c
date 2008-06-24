@@ -1301,30 +1301,31 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 		/* Use RadioTAP interface type for monitor mode. */
 		dev->type = ARPHRD_IEEE80211_RADIOTAP;
 
-	if ((flags & IEEE80211_CLONE_BSSID) && sc->sc_hasbmask) {
-		struct ieee80211vap *v;
-		uint64_t id_mask;
-		unsigned int id;
+	if (flags & IEEE80211_CLONE_BSSID) {
+		if (sc->sc_hasbmask) {
+			struct ieee80211vap *v;
+			uint64_t id_mask = 0;
+			unsigned int id;
 
-		/*
-		 * Hardware supports the bssid mask and a unique
-		 * bssid was requested.  Assign a new mac address
-		 * and expand our bssid mask to cover the active
-		 * virtual APs with distinct addresses.
-		 */
+			/* Hardware supports the BSSID mask and a unique
+			 * BSSID was requested.  Assign a new MAC address
+			 * and expand our BSSID mask to cover the active
+			 * virtual APs with distinct addresses. */
+			/* Do a full search to mark all the allocated VAPs. */
+			TAILQ_FOREACH(v, &ic->ic_vaps, iv_next)
+				id_mask |= (1 << ATH_GET_VAP_ID(v->iv_myaddr));
 
-		/* do a full search to mark all the allocated VAPs */
-		id_mask = 0;
-		TAILQ_FOREACH(v, &ic->ic_vaps, iv_next)
-			id_mask |= (1 << ATH_GET_VAP_ID(v->iv_myaddr));
-
-		for (id = 1; id < ath_maxvaps; id++) {
-			/* get the first available slot */
-			if ((id_mask & (1 << id)) == 0) {
-				ATH_SET_VAP_BSSID(vap->iv_myaddr, id);
-				ATH_SET_VAP_BSSID(vap->iv_bssid, id);
-				break;
+			for (id = 1; id < ath_maxvaps; id++) {
+				/* Get the first available slot. */
+				if ((id_mask & (1 << id)) == 0) {
+					ATH_SET_VAP_BSSID(vap->iv_myaddr, id);
+					ATH_SET_VAP_BSSID(vap->iv_bssid, id);
+					break;
+				}
 			}
+		} else {
+			EPRINTF(sc, "Unique BSSID requested on HW that does"
+				"does not support the necessary features.");
 		}
 	}
 	avp->av_bslot = -1;
