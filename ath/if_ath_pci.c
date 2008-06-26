@@ -380,10 +380,12 @@ MODULE_LICENSE("Dual BSD/GPL");
 static int __init
 init_ath_pci(void)
 {
-	int status = pci_register_driver(&ath_pci_driver);
-	if (status)
-		return (status);
+	int status;
 	ath_sysctl_register();
+	if ((status = pci_register_driver(&ath_pci_driver))) {
+		ath_sysctl_unregister();
+		return (status);
+	}
 	return (0);
 }
 module_init(init_ath_pci);

@@ -11024,6 +11024,10 @@ ath_dynamic_sysctl_register(struct ath_softc *sc)
 	unsigned int i, space;
 	char *dev_name = NULL;
 
+	/* Prevent multiple registrations */
+	if (sc->sc_sysctls)
+		return;
+
 	space = 5 * sizeof(struct ctl_table) + sizeof(ath_sysctl_template);
 	sc->sc_sysctls = kzalloc(space, GFP_KERNEL);
 	if (sc->sc_sysctls == NULL) {
@@ -11041,6 +11045,8 @@ ath_dynamic_sysctl_register(struct ath_softc *sc)
 	dev_name = kmalloc((strlen(DEV_NAME(sc->sc_dev)) + 1) * sizeof(char), GFP_KERNEL);
 	if (dev_name == NULL) {
 		EPRINTF(sc, "Insufficient memory for device name storage!\n");
+		kfree(sc->sc_sysctls);
+		sc->sc_sysctls = NULL;
 		return;
 	}
 	strncpy(dev_name, DEV_NAME(sc->sc_dev), strlen(DEV_NAME(sc->sc_dev)) + 1);
