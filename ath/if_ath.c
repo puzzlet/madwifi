@@ -2868,9 +2868,10 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 	struct ath_txq *txq, struct ath_buf *bf, int framelen)
 {
 	struct ath_hal *ah = sc->sc_ah;
-	struct ath_desc	*ds = bf->bf_desc;
 
 #ifdef ATH_SUPERG_FF
+	struct ath_desc	*ds = bf->bf_desc;
+
 	/* Go to the last descriptor.
 	 * NB: This code assumes that the descriptors for a buf are allocated,
 	 *     contiguously. This assumption is made elsewhere too. */
@@ -3269,6 +3270,9 @@ ath_hardstart(struct sk_buff *__skb, struct net_device *dev)
 	struct ath_buf *tbf;
 	struct sk_buff *tskb;
 	int framecnt;
+	struct sk_buff *original_skb  = __skb; /* ALWAYS FREE THIS ONE!!! */
+	struct ath_node *an;
+	struct sk_buff *skb = NULL;
 	/* We will use the requeue flag to denote when to stuff a skb back into
 	 * the OS queues.  This should NOT be done under low memory conditions,
 	 * such as skb allocation failure.  However, it should be done for the
@@ -3278,14 +3282,11 @@ ath_hardstart(struct sk_buff *__skb, struct net_device *dev)
 #ifdef ATH_SUPERG_FF
 	unsigned int pktlen;
 	struct ieee80211com *ic = &sc->sc_ic;
-	struct ath_node *an;
 	struct ath_txq *txq = NULL;
-	struct sk_buff *skb = NULL;
 	/* NB: NEVER free __skb, leave it alone and use original_skb instead!
 	 * IF original_skb is NULL it means the ownership was taken!
 	 * *** ALWAYS *** free any skb != __skb when cleaning up - unless it was
 	 * taken. */
-	struct sk_buff *original_skb  = __skb; /* ALWAYS FREE THIS ONE!!! */
 	int ff_flush;
 #endif
 	ieee80211_skb_track(original_skb);
@@ -3366,10 +3367,7 @@ ath_hardstart(struct sk_buff *__skb, struct net_device *dev)
 		requeue = 0;
 		goto hardstart_fail;
 	}
-#endif
 
-
-#ifdef ATH_SUPERG_FF
 	/* NB: use this lock to protect an->an_tx_ffbuf (and txq->axq_stageq)
 	 *     in athff_can_aggregate() call too. */
 	ATH_TXQ_LOCK_IRQ(txq);
@@ -12500,10 +12498,13 @@ ath_scanbufs_in_txq_locked(struct ath_softc *sc, struct ath_descdma *dd,
 	}
 
 	snprintf(sacontext, sizeof(sacontext), "%s staging area", context);
+
+#ifdef ATH_SUPERG_FF
 	TAILQ_FOREACH(tbf, &txq->axq_stageq, bf_stagelist) {
 		ath_scanbufs_found_buf_locked(sc, dd, dd_bufs_found, tbf, 
 			sacontext);
 	}
+#endif
 }
 
 static void
@@ -12535,10 +12536,13 @@ ath_scanbufs_in_vap_locked(struct ath_softc *sc, struct ath_descdma *dd,
 			 "] mcast queue staging area", 
 			 DEV_NAME(av->av_vap.iv_dev), av, 
 			 MAC_ADDR(av->av_vap.iv_bssid));
+
+#ifdef ATH_SUPERG_FF
 		TAILQ_FOREACH(tbf, &av->av_mcastq.axq_stageq, bf_stagelist) {
 			ath_scanbufs_found_buf_locked(sc, dd, dd_bufs_found, tbf, 
 				context);
 		}
+#endif
 	}
 }
 
