@@ -44,6 +44,7 @@
 #include <linux/time.h>
 #include <linux/netdevice.h>
 #include <linux/kernel.h>
+#include <linux/kmod.h>
 #endif
 
 #include <linux/version.h>
@@ -190,6 +191,10 @@ typedef unsigned long resource_size_t;
 #define __skb_queue_after(_list, _old, _new)	__skb_append(_old, _new)
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,25)
 #define __skb_queue_after(_list, _old, _new)	__skb_append(_old, _new, _list)
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
+#define request_module(_fmt, _modname) request_module(_modname)
 #endif
 
 #endif /* __KERNEL__ */
