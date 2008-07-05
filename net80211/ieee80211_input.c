@@ -605,6 +605,11 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 			goto out;
 		}
 
+		/* These frames have no further meaning. */
+		if ((subtype == IEEE80211_FC0_SUBTYPE_NULL) ||
+		    (subtype == IEEE80211_FC0_SUBTYPE_QOS_NULL))
+			goto out;
+
 		/*
 		 * Handle privacy requirements.  Note that we
 		 * must not be preempted from here until after
@@ -635,9 +640,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 		} else
 			key = NULL;
 
-		/*
-		 * Next up, any fragmentation.
-		 */
+		/* Next up, any fragmentation. */
 		if (!IEEE80211_IS_MULTICAST(wh->i_addr1)) {
 			skb = ieee80211_defrag(ni, skb, hdrlen);
 			if (skb == NULL) {
@@ -647,9 +650,7 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 		}
 		wh = NULL;		/* no longer valid, catch any uses */
 
-		/*
-		 * Next strip any MSDU crypto bits.
-		 */
+		/* Next strip any MSDU crypto. bits. */
 		if (key != NULL &&
 		    !ieee80211_crypto_demic(vap, key, skb, hdrlen, 0)) {
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
@@ -658,14 +659,9 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 			goto out;
 		}
 
-		/*
-		 * Finally, strip the 802.11 header.
-		 */
+		/* Finally, strip the 802.11 header. */
 		skb = ieee80211_decap(vap, skb, hdrlen);
 		if (skb == NULL) {
-			/* don't count Null data frames as errors */
-			if (subtype == IEEE80211_FC0_SUBTYPE_NODATA)
-				goto out;
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
 				ni->ni_macaddr, "data", "%s", "decap error");
 			vap->iv_stats.is_rx_decap++;

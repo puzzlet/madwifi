@@ -7849,7 +7849,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	if (ATH_NODE(ni)->an_decomp_index != INVALID_DECOMP_INDEX &&
 	    !ismcast &&
 	    ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_DATA) &&
-	    ((wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK) != IEEE80211_FC0_SUBTYPE_NODATA)) {
+	    ((wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK) != IEEE80211_FC0_SUBTYPE_NULL)) {
 		if (pktlen > ATH_COMP_THRESHOLD)
 			comp = ATH_COMP_PROC_COMP_OPTIMAL;
 		else

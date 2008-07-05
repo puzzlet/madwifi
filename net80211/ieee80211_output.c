@@ -463,7 +463,7 @@ ieee80211_send_nulldata(struct ieee80211_node *ni)
 	wh = (struct ieee80211_frame *)
 		skb_push(skb, sizeof(struct ieee80211_frame));
 	ieee80211_send_setup(vap, ni, wh,
-		IEEE80211_FC0_TYPE_DATA | IEEE80211_FC0_SUBTYPE_NODATA,
+		IEEE80211_FC0_TYPE_DATA | IEEE80211_FC0_SUBTYPE_NULL,
 		vap->iv_myaddr, ni->ni_macaddr, vap->iv_bssid);
 	/* NB: power management bit is never sent by an AP */
 	if ((IEEE80211_VAP_IS_SLEEPING(ni->ni_vap)) &&
