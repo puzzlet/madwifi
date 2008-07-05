@@ -1770,11 +1770,18 @@ encode_ie(void *buf, size_t bufsize, const u_int8_t *ie, size_t ielen,
 
 struct iwscanreq {		/* XXX: right place for this declaration? */
 	struct ieee80211vap *vap;
+	struct iw_request_info *info;
 	char *current_ev;
 	char *end_buf;
 	int mode;
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 26)
+#define iwe_stream_add_event(a, b, c, d, e)	iwe_stream_add_event(b, c, d, e)
+#define iwe_stream_add_point(a, b, c, d, e)	iwe_stream_add_point(b, c, d, e)
+#define iwe_stream_add_value(a, b, c, d, e, f)	\
+	iwe_stream_add_value(b, c, d, e, f)
+#endif
 static int
 giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 {
@@ -1807,7 +1814,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 		IEEE80211_ADDR_COPY(iwe.u.ap_addr.sa_data, se->se_macaddr);
 	else
 		IEEE80211_ADDR_COPY(iwe.u.ap_addr.sa_data, se->se_bssid);
-	current_ev = iwe_stream_add_event(current_ev, end_buf, &iwe, IW_EV_ADDR_LEN);
+	current_ev = iwe_stream_add_event(req->info, current_ev, end_buf,
+					&iwe, IW_EV_ADDR_LEN);
 
 	/* We ran out of space in the buffer. */
 	if (last_ev == current_ev)
@@ -1818,8 +1826,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 	iwe.cmd = SIOCGIWESSID;
 	iwe.u.data.flags = 1;
 	iwe.u.data.length = se->se_ssid[1];
-	current_ev = iwe_stream_add_point(current_ev,
-		end_buf, &iwe, (char *)se->se_ssid + 2);
+	current_ev = iwe_stream_add_point(req->info, current_ev,
+			end_buf, &iwe, (char *)se->se_ssid + 2);
 
 	/* We ran out of space in the buffer. */
 	if (last_ev == current_ev)
@@ -1831,8 +1839,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 		iwe.cmd = SIOCGIWMODE;
 		iwe.u.mode = se->se_capinfo & IEEE80211_CAPINFO_ESS ?
 			IW_MODE_MASTER : IW_MODE_ADHOC;
-		current_ev = iwe_stream_add_event(current_ev,
-			end_buf, &iwe, IW_EV_UINT_LEN);
+		current_ev = iwe_stream_add_event(req->info, current_ev,
+				end_buf, &iwe, IW_EV_UINT_LEN);
 
 		/* We ran out of space in the buffer. */
 		if (last_ev == current_ev)
@@ -1844,8 +1852,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 	iwe.cmd = SIOCGIWFREQ;
 	iwe.u.freq.m = se->se_chan->ic_freq * 100000;
 	iwe.u.freq.e = 1;
-	current_ev = iwe_stream_add_event(current_ev,
-		end_buf, &iwe, IW_EV_FREQ_LEN);
+	current_ev = iwe_stream_add_event(req->info, current_ev,
+			end_buf, &iwe, IW_EV_FREQ_LEN);
 
 	/* We ran out of space in the buffer. */
 	if (last_ev == current_ev)
@@ -1855,8 +1863,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 	last_ev = current_ev;
 	iwe.cmd = IWEVQUAL;
 	set_quality(&iwe.u.qual, se->se_rssi, ATH_DEFAULT_NOISE);
-	current_ev = iwe_stream_add_event(current_ev,
-		end_buf, &iwe, IW_EV_QUAL_LEN);
+	current_ev = iwe_stream_add_event(req->info, current_ev,
+			end_buf, &iwe, IW_EV_QUAL_LEN);
 
 	/* We ran out of space in the buffer */
 	if (last_ev == current_ev)
@@ -1870,7 +1878,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 	else
 		iwe.u.data.flags = IW_ENCODE_DISABLED;
 	iwe.u.data.length = 0;
-	current_ev = iwe_stream_add_point(current_ev, end_buf, &iwe, "");
+	current_ev = iwe_stream_add_point(req->info, current_ev,
+					end_buf, &iwe, "");
 
 	/* We ran out of space in the buffer. */
 	if (last_ev == current_ev)
@@ -1885,18 +1894,18 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 		int r = se->se_rates[2 + j] & IEEE80211_RATE_VAL;
 		if (r != 0) {
 			iwe.u.bitrate.value = r * (1000000 / 2);
-			current_val = iwe_stream_add_value(current_ev,
-				current_val, end_buf, &iwe,
-				IW_EV_PARAM_LEN);
+			current_val = iwe_stream_add_value(req->info,
+					current_ev, current_val, end_buf,
+					&iwe, IW_EV_PARAM_LEN);
 		}
 	}
 	for (j = 0; j < se->se_xrates[1]; j++) {
 		int r = se->se_xrates[2+j] & IEEE80211_RATE_VAL;
 		if (r != 0) {
 			iwe.u.bitrate.value = r * (1000000 / 2);
-			current_val = iwe_stream_add_value(current_ev,
-				current_val, end_buf, &iwe,
-				IW_EV_PARAM_LEN);
+			current_val = iwe_stream_add_value(req->info,
+					current_ev, current_val, end_buf,
+					&iwe, IW_EV_PARAM_LEN);
 		}
 	}
 	/* remove fixed header if no rates were added */
@@ -1913,7 +1922,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 	iwe.cmd = IWEVCUSTOM;
 	snprintf(buf, sizeof(buf), "bcn_int=%d", se->se_intval);
 	iwe.u.data.length = strlen(buf);
-	current_ev = iwe_stream_add_point(current_ev, end_buf, &iwe, buf);
+	current_ev = iwe_stream_add_point(req->info, current_ev,
+					end_buf, &iwe, buf);
 
 	/* We ran out of space in the buffer. */
 	if (last_ev == current_ev)
@@ -1937,8 +1947,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 				rsn_leader, sizeof(rsn_leader) - 1);
 #endif
 		if (iwe.u.data.length != 0) {
-			current_ev = iwe_stream_add_point(current_ev, end_buf,
-				&iwe, buf);
+			current_ev = iwe_stream_add_point(req->info,
+					current_ev, end_buf, &iwe, buf);
 
 			/* We ran out of space in the buffer */
 			if (last_ev == current_ev)
@@ -1963,8 +1973,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 			wpa_leader, sizeof(wpa_leader) - 1);
 #endif
 		if (iwe.u.data.length != 0) {
-			current_ev = iwe_stream_add_point(current_ev, end_buf,
-				&iwe, buf);
+			current_ev = iwe_stream_add_point(req->info,
+					current_ev, end_buf, &iwe, buf);
 
 			/* We ran out of space in the buffer. */
 			if (last_ev == current_ev)
@@ -1982,8 +1992,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 			se->se_wme_ie, se->se_wme_ie[1] + 2,
 			wme_leader, sizeof(wme_leader) - 1);
 		if (iwe.u.data.length != 0) {
-			current_ev = iwe_stream_add_point(current_ev, end_buf,
-				&iwe, buf);
+			current_ev = iwe_stream_add_point(req->info,
+					current_ev, end_buf, &iwe, buf);
 
 			/* We ran out of space in the buffer. */
 			if (last_ev == current_ev)
@@ -2000,8 +2010,8 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 			se->se_ath_ie, se->se_ath_ie[1] + 2,
 			ath_leader, sizeof(ath_leader) - 1);
 		if (iwe.u.data.length != 0) {
-			current_ev = iwe_stream_add_point(current_ev, end_buf,
-				&iwe, buf);
+			current_ev = iwe_stream_add_point(req->info,
+					current_ev, end_buf, &iwe, buf);
 
 			/* We ran out of space in the buffer. */
 			if (last_ev == current_ev)
@@ -2023,6 +2033,7 @@ ieee80211_ioctl_giwscan(struct net_device *dev,	struct iw_request_info *info,
 	int res = 0;
 
 	req.vap = vap;
+	req.info = info;
 	req.current_ev = extra;
 	if (data->length == 0) {
 		req.end_buf = extra + IW_SCAN_MAX_DATA;
