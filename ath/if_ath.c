@@ -103,6 +103,13 @@
 
 #include "ah_os.h"
 
+#ifndef MAX
+# define MAX(a, b)	(((a) > (b))? (a) : (b))
+#endif
+#ifndef MIN
+# define MIN(a, b)	(((a) < (b))? (a) : (b))
+#endif
+
 /* unaligned little endian access */
 #define LE_READ_2(p)							\
 	((u_int16_t)							\
@@ -4260,10 +4267,6 @@ ath_slottime2timeout(struct ath_softc *sc, int slottime)
 		return slottime + 18;
 }
 
-#ifndef MAX
-# define MAX(a, b)	(((a) > (b))? (a) : (b))
-#endif
-
 static inline int 
 ath_default_ctsack_timeout(struct ath_softc *sc)
 {
@@ -7409,7 +7412,6 @@ static int
 ath_tx_start(struct net_device *dev, struct ieee80211_node *ni, 
 		struct ath_buf *bf, struct sk_buff *skb, int nextfraglen)
 {
-#define	MIN(a,b)	((a) < (b) ? (a) : (b))
 	struct ath_softc *sc = dev->priv;
 	struct ieee80211com *ic = ni->ni_ic;
 	struct ieee80211vap *vap = ni->ni_vap;
@@ -7999,7 +8001,6 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 
 	ath_tx_txqaddbuf(sc, PASS_NODE(ni), txq, bf, pktlen);
 	return 0;
-#undef MIN
 }
 
 /*
@@ -10105,7 +10106,6 @@ athff_can_aggregate(struct ath_softc *sc, struct ether_header *eh,
 	u_int32_t txoplimit;
 
 #define US_PER_4MS 4000
-#define	MIN(a,b)	((a) < (b) ? (a) : (b))
 
 	*flushq = AH_FALSE;
 
@@ -10145,7 +10145,6 @@ athff_can_aggregate(struct ath_softc *sc, struct ether_header *eh,
 	return AH_TRUE;
 
 #undef US_PER_4MS
-#undef MIN
 }
 #endif
 
