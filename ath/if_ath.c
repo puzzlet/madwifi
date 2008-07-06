@@ -3701,13 +3701,12 @@ static int
 ath_keyset_tkip(struct ath_softc *sc, const struct ieee80211_key *k,
 	HAL_KEYVAL *hk, const u_int8_t mac[IEEE80211_ADDR_LEN])
 {
-#define	IEEE80211_KEY_XR	(IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV)
 	static const u_int8_t zerobssid[IEEE80211_ADDR_LEN];
 	struct ath_hal *ah = sc->sc_ah;
 
 	KASSERT(k->wk_cipher->ic_cipher == IEEE80211_CIPHER_TKIP,
 		("got a non-TKIP key, cipher %u", k->wk_cipher->ic_cipher));
-	if ((k->wk_flags & IEEE80211_KEY_XR) == IEEE80211_KEY_XR) {
+	if ((k->wk_flags & IEEE80211_KEY_TXRX) == IEEE80211_KEY_TXRX) {
 		if (sc->sc_splitmic) {
 			/*
 			 * TX key goes at first index, RX key at the rx index.
@@ -3738,11 +3737,9 @@ ath_keyset_tkip(struct ath_softc *sc, const struct ieee80211_key *k,
 			return ath_hal_keyset(ah, ATH_KEY(k->wk_keyix), hk, 
 					mac, AH_FALSE);
 		}
-	} else if (k->wk_flags & IEEE80211_KEY_XR) {
-		/*
-		 * TX/RX key goes at first index.
-		 * The HAL handles the MIC keys are index+64.
-		 */
+	} else if (k->wk_flags & IEEE80211_KEY_TXRX) {
+		/* TX/RX key goes at first index.
+		 * The HAL handles the MIC keys are index + 64. */
 		memcpy(hk->kv_mic, k->wk_flags & IEEE80211_KEY_XMIT ?
 			k->wk_txmic : k->wk_rxmic, sizeof(hk->kv_mic));
 		KEYPRINTF(sc, k->wk_keyix, hk, mac);
@@ -3750,7 +3747,6 @@ ath_keyset_tkip(struct ath_softc *sc, const struct ieee80211_key *k,
 				AH_FALSE);
 	}
 	return 0;
-#undef IEEE80211_KEY_XR
 }
 
 /*
@@ -4158,13 +4154,14 @@ ath_key_update_end(struct ieee80211vap *vap)
 static u_int32_t
 ath_calcrxfilter(struct ath_softc *sc)
 {
-#define	RX_FILTER_PRESERVE	(HAL_RX_FILTER_PHYERR | HAL_RX_FILTER_PHYRADAR)
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct net_device *dev = ic->ic_dev;
 	struct ath_hal *ah = sc->sc_ah;
 	u_int32_t rfilt;
 
-	rfilt = (ath_hal_getrxfilter(ah) & RX_FILTER_PRESERVE) |
+	/* Preserve the current Phy. radar and err. filters. */
+	rfilt = (ath_hal_getrxfilter(ah) &
+			(HAL_RX_FILTER_PHYERR | HAL_RX_FILTER_PHYRADAR)) |
 		 HAL_RX_FILTER_UCAST | HAL_RX_FILTER_BCAST |
 		 HAL_RX_FILTER_MCAST;
 	if (ic->ic_opmode != IEEE80211_M_STA)
@@ -4181,7 +4178,6 @@ ath_calcrxfilter(struct ath_softc *sc)
 	if (sc->sc_curchan.privFlags & CHANNEL_DFS)
 		rfilt |= (HAL_RX_FILTER_PHYERR | HAL_RX_FILTER_PHYRADAR);
 	return rfilt;
-#undef RX_FILTER_PRESERVE
 }
 
 /*
@@ -4377,14 +4373,13 @@ ath_updateslot(struct net_device *dev)
 static void
 ath_beacon_dturbo_config(struct ieee80211vap *vap, u_int32_t intval)
 {
-#define	IS_CAPABLE(vap) \
-	(vap->iv_bss && (vap->iv_bss->ni_ath_flags & (IEEE80211_ATHC_TURBOP)) == \
-		(IEEE80211_ATHC_TURBOP))
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ath_softc *sc = ic->ic_dev->priv;
 
-	if (ic->ic_opmode == IEEE80211_M_HOSTAP && IS_CAPABLE(vap)) {
-
+	/* Check VAP capability. */
+	if ((ic->ic_opmode == IEEE80211_M_HOSTAP) && vap->iv_bss &&
+			((vap->iv_bss->ni_ath_flags & IEEE80211_ATHC_TURBOP) == 
+			 IEEE80211_ATHC_TURBOP)) {
 		/* Dynamic Turbo is supported on this channel. */
 		sc->sc_dturbo = 1;
 		sc->sc_dturbo_tcount = 0;
@@ -4418,7 +4413,6 @@ ath_beacon_dturbo_config(struct ieee80211vap *vap, u_int32_t intval)
 		sc->sc_dturbo = 0;
 		ic->ic_ath_cap &= ~IEEE80211_ATHC_BOOST;
 	}
-#undef IS_CAPABLE
 }
 
 /*
@@ -4648,7 +4642,6 @@ ath_beaconq_setup(struct ath_softc *sc)
 static int
 ath_beaconq_config(struct ath_softc *sc)
 {
-#define	ATH_EXPONENT_TO_VALUE(v)	((1<<v)-1)
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_hal *ah = sc->sc_ah;
 	HAL_TXQ_INFO qi;
@@ -4669,7 +4662,7 @@ ath_beaconq_config(struct ath_softc *sc)
 		 */
 		qi.tqi_aifs = wmep->wmep_aifsn;
 		qi.tqi_cwmin = 0;
-		qi.tqi_cwmax = 2 * ATH_EXPONENT_TO_VALUE(wmep->wmep_logcwmin);
+		qi.tqi_cwmax = 2 * ((1 << wmep->wmep_logcwmin) - 1);
 	}
 
 	DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
@@ -4685,7 +4678,6 @@ ath_beaconq_config(struct ath_softc *sc)
 		ath_hal_resettxqueue(ah, sc->sc_bhalq);	/* push to h/w */
 		return 1;
 	}
-#undef ATH_EXPONENT_TO_VALUE
 }
 
 static int
@@ -7188,8 +7180,6 @@ ath_tx_setup(struct ath_softc *sc, int ac, int haltype)
 static int
 ath_txq_update(struct ath_softc *sc, struct ath_txq *txq, int ac)
 {
-#define	ATH_EXPONENT_TO_VALUE(v)	((1<<v)-1)
-#define	ATH_TXOP_TO_US(v)		(v<<5)
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct wmeParams *wmep = &ic->ic_wme.wme_chanParams.cap_wmeParams[ac];
 	struct ath_hal *ah = sc->sc_ah;
@@ -7197,9 +7187,9 @@ ath_txq_update(struct ath_softc *sc, struct ath_txq *txq, int ac)
 
 	ath_hal_gettxqueueprops(ah, txq->axq_qnum, &qi);
 	qi.tqi_aifs = wmep->wmep_aifsn;
-	qi.tqi_cwmin = ATH_EXPONENT_TO_VALUE(wmep->wmep_logcwmin);
-	qi.tqi_cwmax = ATH_EXPONENT_TO_VALUE(wmep->wmep_logcwmax);
-	qi.tqi_burstTime = ATH_TXOP_TO_US(wmep->wmep_txopLimit);
+	qi.tqi_cwmin = (1 << wmep->wmep_logcwmin) - 1;
+	qi.tqi_cwmax = (1 << wmep->wmep_logcwmax) - 1;
+	qi.tqi_burstTime = wmep->wmep_txopLimit / 32; /* 32 us units. */
 
 	if (!ath_hal_settxqueueprops(ah, txq->axq_qnum, &qi)) {
 		EPRINTF(sc, "Unable to update hardware queue "
@@ -7210,8 +7200,6 @@ ath_txq_update(struct ath_softc *sc, struct ath_txq *txq, int ac)
 		ath_hal_resettxqueue(ah, txq->axq_qnum); /* push to h/w */
 		return 1;
 	}
-#undef ATH_TXOP_TO_US
-#undef ATH_EXPONENT_TO_VALUE
 }
 
 /*
@@ -9331,7 +9319,6 @@ ath_comp_set(struct ieee80211vap *vap, struct ieee80211_node *ni, int en)
 static void
 ath_setup_comp(struct ieee80211_node *ni, int enable)
 {
-#define	IEEE80211_KEY_XR	(IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV)
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;
 	struct ath_node *an = ATH_NODE(ni);
@@ -9353,8 +9340,8 @@ ath_setup_comp(struct ieee80211_node *ni, int enable)
 		if ((ni->ni_wpa_ie != NULL) &&
 		    (ni->ni_rsn.rsn_ucastcipher == IEEE80211_CIPHER_TKIP) &&
 		    sc->sc_splitmic) {
-			if ((ni->ni_ucastkey.wk_flags & IEEE80211_KEY_XR)
-							== IEEE80211_KEY_XR)
+			if ((ni->ni_ucastkey.wk_flags & IEEE80211_KEY_TXRX)
+							== IEEE80211_KEY_TXRX)
 				keyix = ni->ni_ucastkey.wk_keyix + 32;
 			else
 				keyix = ni->ni_ucastkey.wk_keyix;
@@ -9371,7 +9358,6 @@ ath_setup_comp(struct ieee80211_node *ni, int enable)
 	}
 
 	return;
-#undef IEEE80211_KEY_XR
 }
 #endif
 
@@ -12039,19 +12025,16 @@ ath_regdump_filter(struct ath_softc *sc, u_int32_t address) {
 #ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR
 	char buf[MAX_REGISTER_NAME_LEN];
 #endif
-	#define UNFILTERED AH_FALSE
-	#define FILTERED   AH_TRUE
-
 	if ((ar_device(sc->devid) != 5212) && (ar_device(sc->devid) != 5213)) 
-		return FILTERED;
+		return AH_TRUE;
 	/* Addresses with side effects are never dumped out by bulk debug 
 	 * dump routines. */
-	if ((address >= 0x00c0) && (address <= 0x00df)) return FILTERED;
-	if ((address >= 0x143c) && (address <= 0x143f)) return FILTERED;
+	if ((address >= 0x00c0) && (address <= 0x00df)) return AH_TRUE;
+	if ((address >= 0x143c) && (address <= 0x143f)) return AH_TRUE;
 	/* PCI timing registers are not interesting */
-	if ((address >= 0x4000) && (address <= 0x5000)) return FILTERED;
+	if ((address >= 0x4000) && (address <= 0x5000)) return AH_TRUE;
 	/* reading 0x9200-0x092c causes crashes in turbo A mode? */
-	if ((address >= 0x0920) && (address <= 0x092c)) return FILTERED;
+	if ((address >= 0x0920) && (address <= 0x092c)) return AH_TRUE;
 
 #ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR
 	/* We are being conservative, and do not want to access addresses that
@@ -12060,13 +12043,11 @@ ath_regdump_filter(struct ath_softc *sc, u_int32_t address) {
 	 * openHAL). */
 	return (AH_TRUE == ath_hal_lookup_register_name(sc->sc_ah, buf, 
 				MAX_REGISTER_NAME_LEN, address)) ?
-		UNFILTERED : FILTERED;
+		AH_FALSE : AH_TRUE;
 #else /* #ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR */
 
-	return UNFILTERED;
+	return AH_FALSE;
 #endif /* #ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR */
-	#undef UNFILTERED
-	#undef FILTERED
 }
 #endif /* #ifdef ATH_REVERSE_ENGINEERING */
 

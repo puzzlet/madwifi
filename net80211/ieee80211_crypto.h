@@ -80,6 +80,7 @@ struct ieee80211_key {
 #define	IEEE80211_KEY_GROUP	0x04	/* key used for WPA group operation */
 #define	IEEE80211_KEY_SWCRYPT	0x10	/* host-based encrypt/decrypt */
 #define	IEEE80211_KEY_SWMIC	0x20	/* host-based enmic/demic */
+#define	IEEE80211_KEY_TXRX	(IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV)
 	ieee80211_keyix_t wk_keyix;	/* key index */
 	u_int8_t wk_key[IEEE80211_KEYBUF_SIZE+IEEE80211_MICBUF_SIZE];
 #define	wk_txmic	wk_key+IEEE80211_KEYBUF_SIZE+0	/* XXX can't () right */
