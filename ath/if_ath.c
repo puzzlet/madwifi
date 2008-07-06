@@ -4241,21 +4241,23 @@ ath_mode_init(struct net_device *dev)
 static inline int 
 ath_slottime2timeout(struct ath_softc *sc, int slottime)
 {
-	/* HAL seems to use a constant of 8 for OFDM overhead and 18 for 
-	 * CCK overhead.
+	/* IEEE 802.11 2007 9.2.8 says the ACK timeout shall be SIFSTime +
+	 * slot time (+ PHY RX start delay). HAL seems to use a constant of 8
+	 * for OFDM overhead and 18 for CCK overhead.
 	 *
-	 * XXX: Update based on emperical evidence (potentially save 15us per timeout)
-	 */
-	if (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_A) == IEEE80211_CHAN_A) ||
-	    (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_108G) == IEEE80211_CHAN_108G) && 
-		 (sc->sc_ic.ic_flags & IEEE80211_F_SHSLOT)))
-	{
-		/* short slot time - 802.11a, and 802.11g turbo in turbo mode with short slot time */
-		return (slottime * 2) + 8;
-	}
-
-	/* constant for CCK mib processing time */
-	return (slottime * 2) + 18;
+	 * XXX: Update based on emperical evidence (potentially save 15us per
+	 * timeout). */
+	if (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_A) ==
+				IEEE80211_CHAN_A) ||
+	    (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_108G) ==
+	      			IEEE80211_CHAN_108G) && 
+	     (sc->sc_ic.ic_flags & IEEE80211_F_SHSLOT)))
+		/* Short slot time: 802.11a, and 802.11g turbo in turbo mode
+		 * with short slot time. */
+		return slottime + 8;
+	else
+		/* Constant for CCK MIB processing time. */
+		return slottime + 18;
 }
 
 #ifndef MAX
@@ -10453,48 +10455,44 @@ ath_ccatime(struct ath_softc *sc)
 static inline int 
 ath_estimate_max_distance(struct ath_softc *sc)
 {
-	/* Prefer overrided, ask HAL if not overridden */
+	/* Prefer override; ask HAL if not overridden. */
 	int slottime = sc->sc_slottimeconf;
 	if (slottime <= 0)
 		slottime = ath_hal_getslottime(sc->sc_ah);
-	/* NB: We ignore MAC overhead.  this function is reverse operation of 
-	 * ath_distance2slottime, and assumes slottime is CCA + 2x air propagation. */
+	/* NB: We ignore MAC overhead.  This function is the reverse operation
+	 * of ath_distance2slottime, and assumes slottime is CCA + 2 * air
+	 * propagation. */
 	return (slottime - ath_ccatime(sc)) * 150;
 }
 
 static inline int 
 ath_distance2slottime(struct ath_softc *sc, int distance)
 {
-
 	/* Allowance for air propagation (roundtrip time) should be at least 
 	 * 5us per the standards.
 	 * 
 	 * So let's set a minimum distance to accomodate this: 
-	 * 
-	 * roundtrip time = ( ( distance / speed_of_light ) * 2 )
-	 *
-	 * distance = ( (time * 300 ) / 2) or ((5 * 300) / 2) = 750 m
-	 */
+	 * roundtrip time = ((distance / speed_of_light) * 2)
+	 * distance = ((time * 300 ) / 2) or ((5 * 300) / 2) = 750 m */
 	int rtdist = distance * 2;
-	int aAirPropagation = 	(rtdist / 300) + !!(rtdist % 300);
-	if (aAirPropagation < 5) {
-		aAirPropagation = 5;
-	}
-	/* NB: We ignore MAC processing delays... no clue */
+	int c = 299;	/* Speed of light in vacuum in m/us. */ 
+	/* IEEE 802.11 2007 10l.4.3.2. In us. */
+	int aAirPropagation = MAX(5, howmany(rtdist, c));
+	/* XXX: RX/TX turnaround & MAC delay. */
 	return ath_ccatime(sc) + aAirPropagation;
 }
 
 static inline int 
 ath_distance2timeout(struct ath_softc *sc, int distance)
 {
-	/* HAL uses a constant of twice slot time plus 18us.
-	 * The 18us covers rxtx turnaround, MIB processing, etc.
-	 * but the athctrl used to return 2slot+3 so the extra 15us of 
-	 * timeout is probably just being very careful or taking something into
-	 * account that I can't find in the specs.
+	/* HAL uses a constant of twice slot time plus 18us. The 18us covers
+	 * RX/TX turnaround, MIB processing, etc., but the athctrl used to
+	 * return (2 * slot) + 3, so the extra 15us of timeout is probably just
+	 * being very careful or taking something into account that I can't
+	 * find in the specs.
 	 *
-	 * XXX: Update based on emperical evidence (potentially save 15us per timeout)
-	 */
+	 * XXX: Update based on emperical evidence (potentially save 15us per
+	 * timeout). */
 	return ath_slottime2timeout(sc, ath_distance2slottime(sc, distance));
 }
 
@@ -10510,10 +10508,9 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 	ctl->data = &val;
 	ctl->maxlen = sizeof(val);
 
-	/* special case for ATH_RP which expect 3 integers : tsf rssi
-	 * width. It should be noted that tsf is unsigned 64 bits but the
-	 * sysctl API is only unsigned 32 bits. As a result, tsf might get
-	 * truncated */
+	/* Special case for ATH_RP which expect 3 integers: TSF RSSI width. It
+	 * should be noted that tsf is unsigned 64 bits but the sysctl API is
+	 * only unsigned 32 bits. As a result, TSF might get truncated. */
 	if (ctl->extra2 == (void *)ATH_RP) {
 		ctl->data = &tab_3_val;
 		ctl->maxlen = sizeof(tab_3_val);
