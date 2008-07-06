@@ -10105,8 +10105,6 @@ athff_can_aggregate(struct ath_softc *sc, struct ether_header *eh,
 	struct ath_buf *ffbuf = an->an_tx_ffbuf[skb->priority];
 	u_int32_t txoplimit;
 
-#define US_PER_4MS 4000
-
 	*flushq = AH_FALSE;
 
 	if (fragthreshold < 2346)
@@ -10130,9 +10128,9 @@ athff_can_aggregate(struct ath_softc *sc, struct ether_header *eh,
 	txoplimit = IEEE80211_TXOP_TO_US(
 		ic->ic_wme.wme_chanParams.cap_wmeParams[skb->priority].wmep_txopLimit);
 
-	/* if the 4 msec limit is set on the channel, take it into account */
+	/* Handle 4 ms channel limit. */
 	if (sc->sc_curchan.privFlags & CHANNEL_4MS_LIMIT)
-		txoplimit = MIN(txoplimit, US_PER_4MS);
+		txoplimit = MIN(txoplimit, 4000);
 
 	if (txoplimit != 0 && athff_approx_txtime(sc, an, skb) > txoplimit) {
 		DPRINTF(sc, ATH_DEBUG_XMIT | ATH_DEBUG_FF,
@@ -10143,8 +10141,6 @@ athff_can_aggregate(struct ath_softc *sc, struct ether_header *eh,
 	}
 
 	return AH_TRUE;
-
-#undef US_PER_4MS
 }
 #endif
 
