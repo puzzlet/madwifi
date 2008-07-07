@@ -1777,10 +1777,11 @@ struct iwscanreq {		/* XXX: right place for this declaration? */
 };
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 26)
-#define iwe_stream_add_event(a, b, c, d, e)	iwe_stream_add_event(b, c, d, e)
-#define iwe_stream_add_point(a, b, c, d, e)	iwe_stream_add_point(b, c, d, e)
-#define iwe_stream_add_value(a, b, c, d, e, f)	\
+#define	iwe_stream_add_event(a, b, c, d, e)	iwe_stream_add_event(b, c, d, e)
+#define	iwe_stream_add_point(a, b, c, d, e)	iwe_stream_add_point(b, c, d, e)
+#define	iwe_stream_add_value(a, b, c, d, e, f)	\
 	iwe_stream_add_value(b, c, d, e, f)
+#define	iwe_stream_lcp_len(...)			IW_EV_LCP_LEN
 #endif
 static int
 giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
@@ -1888,7 +1889,7 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 	memset(&iwe, 0, sizeof(iwe));
 	last_ev = current_ev;
 	iwe.cmd = SIOCGIWRATE;
-	current_val = current_ev + IW_EV_LCP_LEN;
+	current_val = current_ev + iwe_stream_lcp_len(req->info);
 	/* NB: not sorted, does it matter? */
 	for (j = 0; j < se->se_rates[1]; j++) {
 		int r = se->se_rates[2 + j] & IEEE80211_RATE_VAL;
@@ -1909,7 +1910,7 @@ giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
 		}
 	}
 	/* remove fixed header if no rates were added */
-	if ((current_val - current_ev) > IW_EV_LCP_LEN) {
+	if ((current_val - current_ev) > iwe_stream_lcp_len(req->info)) {
 		current_ev = current_val;
 	} else {
 		/* We ran out of space in the buffer. */
