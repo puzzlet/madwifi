@@ -9,12 +9,12 @@ Read the file COPYRIGHT for the complete copyright.
 Requirements
 ------------
 
-- Configured kernel sources of the target kernel.  Some Linux
-  distributions provide headers, makefiles and configuration data - it
-  should suffice.
+- Configured kernel sources of the target kernel.  Most Linux
+  distributions provide a kernel development package - it should
+  suffice.
 
-- Wireless Extensions support (14 or later, 17 preferred) - option
-  CONFIG_NET_RADIO in kernel .config file.
+- Wireless Extensions support - option CONFIG_NET_RADIO or
+  CONFIG_WIRELESS_EXT in kernel .config file, whichever is available.
 
 - Sysctl support - option CONFIG_SYSCTL in kernel .config file.
 
@@ -22,7 +22,7 @@ Requirements
   support is used if present, otherwise the AES-CCMP cipher module falls
   back to a private implementation).
 
-- gcc of same version that was used to compile the kernel.  At least
+- gcc of the same version that was used to compile the kernel.  At least
   make sure that the first two version numbers or the compiler are the
   same (e.g. it's OK to use gcc 3.4.6 to compile MadWifi if the kernel
   was compiled by gcc 3.4.2).  Ignoring this rule will cause "Invalid
@@ -34,8 +34,9 @@ way compatibility with the future 2.6 kernels can be ensured.  However,
 the latest 2.6 kernel at the time of the release should be expected to
 work.
 
-Automatic module loading support (CONFIG_KMOD) is recommended; otherwise, 
-care will have to be taken to manually load needed modules.
+Automatic module loading support (CONFIG_KMOD) is highly recommended;
+otherwise, you'll need to load all required modules manually.
+
 
 Building the driver
 -------------------
