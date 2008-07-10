@@ -1776,12 +1776,12 @@ struct iwscanreq {		/* XXX: right place for this declaration? */
 	int mode;
 };
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 26)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 27) && !defined(IW_REQUEST_FLAG_COMPAT)
 #define	iwe_stream_add_event(a, b, c, d, e)	iwe_stream_add_event(b, c, d, e)
 #define	iwe_stream_add_point(a, b, c, d, e)	iwe_stream_add_point(b, c, d, e)
 #define	iwe_stream_add_value(a, b, c, d, e, f)	\
 	iwe_stream_add_value(b, c, d, e, f)
-#define	iwe_stream_lcp_len(...)			IW_EV_LCP_LEN
+#define	iwe_stream_lcp_len(a)			IW_EV_LCP_LEN
 #endif
 static int
 giwscan_cb(void *arg, const struct ieee80211_scan_entry *se)
