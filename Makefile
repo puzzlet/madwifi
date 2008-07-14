@@ -43,9 +43,7 @@
 obj := $(firstword $(obj) $(SUBDIRS) .)
 TOP = $(obj)
 
-ifneq (svnversion.h,$(MAKECMDGOALS))
 include $(TOP)/Makefile.inc
-endif
 
 obj-y := ath/ ath_hal/ ath_rate/ net80211/
 
@@ -57,7 +55,7 @@ endif
 all: modules tools
 
 .PHONY: modules
-modules: configcheck svnversion.h
+modules: configcheck $(TOP)/svnversion.h
 ifdef LINUX24
 	for i in $(obj-y); do \
 		$(MAKE) -C $$i || exit 1; \
@@ -66,9 +64,11 @@ else
 	$(MAKE) -C $(KERNELPATH) SUBDIRS=$(shell pwd) modules
 endif
 
-.PHONY: svnversion.h
-svnversion.h:
-	@if [ -d .svn ]; then \
+$(addprefix $(obj)/, $(obj-y:/=)): $(TOP)/svnversion.h
+
+$(TOP)/svnversion.h:
+	@cd $(TOP) && \
+	if [ -d .svn ]; then \
 		ver=$$(svnversion -nc . | sed -e 's/^[^:]*://;s/[A-Za-z]//'); \
 		echo "#define SVNVERSION \"svn r$$ver\"" > $@.tmp; \
 	elif [ -d .git ]; then \
