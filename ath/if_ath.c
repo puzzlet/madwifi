@@ -7854,8 +7854,18 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	 * the first or second antenna port.
 	 * If the user has set the txantenna, use it for multicast frames too. */
 	if (ismcast && !sc->sc_txantenna) {
-		antenna = sc->sc_mcastantenna + 1;
-		sc->sc_mcastantenna = (sc->sc_mcastantenna + 1) & 0x1;
+		/* Alternating antenna might be the wrong thing to do if we
+		 * have one antenna that's significantly better than the other
+		 *
+		 * Use antenna in the ratio of the successfully sent unicast packets.
+		 */
+		if (sc->sc_mcastantenna > 0) {
+			sc->sc_mcastantenna -= sc->sc_ant_tx[1] + 1;
+			antenna = 2;
+		} else {
+			sc->sc_mcastantenna += sc->sc_ant_tx[2] + 1;
+			antenna = 1;
+		}
 	} else
 		antenna = sc->sc_txantenna;
 
