@@ -407,6 +407,14 @@ ath_rate_get_mrr(struct ath_softc *sc, struct ath_node *an, int shortPreamble,
 		/* Index into the rate table, so for example, it is  0..11. */
 		int rc1, rc2, rc3;
 
+		if (sn->num_rates <= 0) {
+			DPRINTF(sc, "%s: no rates for " MAC_FMT "\n", 
+					dev_info,
+					MAC_ADDR(an->an_node.ni_macaddr));
+			memset(mrr, 0, sizeof(struct ieee80211_mrr));
+			return;
+		}
+
 		if (sn->is_sampling) {
 			sn->is_sampling = 0;
 			if (sn->rs_sample_rate_slower)
