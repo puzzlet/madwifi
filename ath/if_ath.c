@@ -542,6 +542,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 		goto bad;
 	}
 	sc->sc_ah = ah;
+
 	/*
 	 * TPC support can be done either with a global cap or
 	 * per-packet support.  The latter is not available on
@@ -605,8 +606,8 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	 * errors.  If so we need to enable the MIB interrupt
 	 * so we can act on stat triggers.
 	 */
-	sc->sc_needmib = ath_hal_hwphycounters(ah) && 
-		sc->sc_hasintmit && 
+	sc->sc_needmib = ath_hal_hwphycounters(ah) &&
+		sc->sc_hasintmit &&
 		sc->sc_useintmit;
 
 	/*
@@ -2875,7 +2876,6 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 	struct ath_txq *txq, struct ath_buf *bf, int framelen)
 {
 	struct ath_hal *ah = sc->sc_ah;
-
 #ifdef ATH_SUPERG_FF
 	struct ath_desc	*ds = bf->bf_desc;
 
@@ -10425,7 +10425,7 @@ enum {
 	ATH_RP_IGNORED 		= 24,
 	ATH_RADAR_IGNORED       = 25,
 	ATH_MAXVAPS  		= 26,
-        ATH_INTMIT 		= 27,
+	ATH_INTMIT 		= 27,
 	ATH_DISTANCE		= 28,
 };
 
@@ -10725,24 +10725,24 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 				}
 				if (sc->sc_useintmit == val)
 					break;
-				sc->sc_useintmit = val; 
-				sc->sc_needmib = ath_hal_hwphycounters(ah) && 
+				sc->sc_useintmit = val;
+				sc->sc_needmib = ath_hal_hwphycounters(ah) &&
 					sc->sc_useintmit;
 				/* Update the HAL and MIB interrupt mask bits */
-				ath_hal_setintmit(ah, !!val); 
-				sc->sc_imask = (sc->sc_imask & ~HAL_INT_MIB) | 
+				ath_hal_setintmit(ah, !!val);
+				sc->sc_imask = (sc->sc_imask & ~HAL_INT_MIB) |
 					(sc->sc_needmib ? HAL_INT_MIB : 0);
 				ath_hal_intrset(sc->sc_ah, sc->sc_imask);
-				/* Only do a reset if device is valid and UP 
+				/* Only do a reset if device is valid and UP
 				 * and we just made a change to the settings. */
 				if (sc->sc_dev && !sc->sc_invalid &&
 				    (sc->sc_dev->flags & IFF_RUNNING))
-					ath_reset(sc->sc_dev); 
-				/* NB: Run this step to cleanup if HAL doesn't 
+					ath_reset(sc->sc_dev);
+				/* NB: Run this step to cleanup if HAL doesn't
 				 * obey capability flags and hangs onto ANI
 				 * settings. */
 				ath_override_intmit_if_disabled(sc);
-                                break; 
+				break;
 			default:
 				ret = -EINVAL;
 				break;
@@ -10812,9 +10812,9 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 		case ATH_RADAR_IGNORED:
 			val = sc->sc_radar_ignored;
 			break;
-                case ATH_INTMIT: 
-			val = sc->sc_useintmit; 
-			break; 
+		case ATH_INTMIT:
+			val = sc->sc_useintmit;
+			break;
 		default:
 			ret = -EINVAL;
 			break;
@@ -10995,12 +10995,12 @@ static const ctl_table ath_sysctl_template[] = {
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RADAR_IGNORED,
 	},
-        { .ctl_name     = CTL_AUTO, 
-	  .procname     = "intmit", 
-	  .mode         = 0644, 
-	  .proc_handler = ath_sysctl_halparam, 
-	  .extra2       = (void *)ATH_INTMIT, 
-	}, 
+	{ .ctl_name     = CTL_AUTO,
+	  .procname     = "intmit",
+	  .mode         = 0644,
+	  .proc_handler = ath_sysctl_halparam,
+	  .extra2       = (void *)ATH_INTMIT,
+	},
 	{ 0 }
 };
 
