@@ -8577,7 +8577,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 	struct net_device *dev = sc->sc_dev;
 	HAL_CHANNEL hchan;
 	u_int8_t tswitch = 0;
-	u_int8_t doth_cac_needed = 0;
+	u_int8_t dfs_cac_needed = 0;
 	u_int8_t channel_change_required = 0;
 	struct timeval tv;
 
@@ -8616,8 +8616,8 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 			ath_interrupt_dfs_cac(sc, 
 					"Channel change interrupted DFS wait.");
 
-	/* Need a doth channel availability check?  We do if ... */
-	doth_cac_needed = IEEE80211_IS_MODE_DFS_MASTER(ic->ic_opmode) &&
+	/* Need a DFS channel availability check?  We do if ... */
+	dfs_cac_needed = IEEE80211_IS_MODE_DFS_MASTER(ic->ic_opmode) &&
 		(hchan.channel != sc->sc_curchan.channel ||
 		/* the scan wasn't already done */
 		 (0 == (sc->sc_curchan.privFlags & CHANNEL_DFS_CLEAR))) &&
@@ -8627,7 +8627,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 
 	channel_change_required = hchan.channel != sc->sc_curchan.channel ||
 		hchan.channelFlags != sc->sc_curchan.channelFlags ||
-		tswitch || doth_cac_needed;
+		tswitch || dfs_cac_needed;
 
 	if (channel_change_required) {
 		HAL_STATUS status;
@@ -8681,7 +8681,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 		}
 
 		do_gettimeofday(&tv);
-		if (doth_cac_needed && !(ic->ic_flags & IEEE80211_F_SCAN)) {
+		if (dfs_cac_needed && !(ic->ic_flags & IEEE80211_F_SCAN)) {
 			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, 
 					"Starting DFS wait for "
 					"channel %u -- Time: %ld.%06ld\n", 
