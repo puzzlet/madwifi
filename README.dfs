@@ -1,8 +1,14 @@
 2007-10-11 Benoit PAPILLAULT <benoit.papillault@free.fr>
 
 Conformance testing to the following standards:
-* ETSI 301 893 v1.3.1
-* 802.11h
+* ETSI 301 893 v1.4.1 (dated 2007-07)
+* FCC
+* IEEE 802.11h-2003 (dated 2003-10-14)
+
+ETSI and FCC defines the regulation constraints and defines several roles :
+* "master"
+* "slave without radar detection"
+* "slave with radar detection"
 
 Frequencies & channels where DFS is applicable:
 * ETSI : 5250-5350MHz , 5470-5725MHz
@@ -18,3 +24,29 @@ echo "<tsf> <rssi> <width>" > /proc/sys/dev/wifi0/radar_pulse
 
 Simulating a radar detected event:
 iwpriv wlan0 doth_radar
+
+== Notes on DFS in various modes ==
+
+A VAP interface can be used in several modes:
+* IEEE80211_M_STA "sta"		: DFS is implemented as "slave"
+* IEEE80211_M_IBSS "adhoc"	: DFS is implemented as "master"
+* IEEE80211_M_AHDEMO "ahdemo"	: DFS is implemented as "master"
+* IEEE80211_M_HOSTAP "ap"	: DFS is implemented as "master"
+* IEEE80211_M_MONITOR "monitor" : DFS is not implemented
+* IEEE80211_M_WDS "wds"		: DFS is implemented as "master"
+
+== Implementation notes ==
+
+sc->sc_curchan.privFlags & CHANNEL_DFS is set if ETSI/FCC compliance is
+required by regulation. It does not mean that 802.11h is required. This flag
+is automatically adjusted by ath_radar_correct_dfs_flags() according to the
+regulation for the specified frequency.
+
+ic->ic_flags & IEEE80211_F_DOTH is set if IEEE 802.11h is required. It matches
+dot11SpectrumManagementRequired as described in IEEE 802.11h. Default value is
+1 and can be changed at anytime by the user through iwpriv.
+
+ETSI/FCC mechanisms (Channel Availability Check, In-Service Monitoring, Channel
+Shutdown, Non-Occupancy Period) and IEEE 802.11h magnums (Selecting and
+advertising a new channel, ...) are implemented ONLY if both flags are set.
+
