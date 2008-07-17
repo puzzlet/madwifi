@@ -57,7 +57,7 @@ enum {
 #ifdef AR_DEBUG
 
 /* DEBUG-ONLY DEFINITIONS */
-#define	DFLAG_ISSET(sc, _m) ((sc->sc_debug & _m))
+#define	DFLAG_ISSET(_sc, _m) (((_sc)->sc_debug & _m))
 #define	DPRINTF(_sc, _m, _fmt, ...) do {				\
 	if (DFLAG_ISSET((_sc), (_m))) 					\
 		printk(KERN_DEBUG "%s: %s: " _fmt, \
@@ -70,9 +70,9 @@ enum {
 
 #else /* #ifdef AR_DEBUG */
 
-#define	DFLAG_ISSET(sc, _m)		0
-#define	DPRINTF(sc, _m, _fmt, ...)
-#define	KEYPRINTF(sc, k, ix, mac)
+#define	DFLAG_ISSET(_sc, _m)		0
+#define	DPRINTF(_sc, _m, _fmt, ...)
+#define	KEYPRINTF(_sc, _ix, _hk, _mac)
 
 #endif /* #ifdef AR_DEBUG */
 
