@@ -166,13 +166,13 @@ ath_hal_setlogging(int enable)
 		error = alq_open(&ath_hal_alq, ath_hal_logfile,
 				MSG_MAXLEN, ath_hal_alq_qsize, (enable == 1 ? 0x7fffffff : enable));
 		ath_hal_alq_lost = 0;
-		printk("ath_hal: logging to %s %s\n", ath_hal_logfile,
+		printk(KERN_INFO "ath_hal: logging to %s %s\n", ath_hal_logfile,
 			error == 0 ? "enabled" : "could not be setup");
 	} else {
 		if (ath_hal_alq)
 			alq_close(ath_hal_alq);
 		ath_hal_alq = NULL;
-		printk("ath_hal: logging disabled\n");
+		printk(KERN_INFO "ath_hal: logging disabled\n");
 		error = 0;
 	}
 	return error;
