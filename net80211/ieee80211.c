@@ -804,12 +804,12 @@ ieee80211_media_setup(struct ieee80211com *ic,
 }
 
 /*
- * Perform the dfs action (channel switch) using scan cache or a randomly
- * chosen channel. The choice of the fallback random channel is done in
- * ieee80211_scan_dfs_action, when there are no scan cache results.
+ * Perform the DFS action (channel switch) using scan cache or a randomly
+ * chosen channel. The choice of the random channel is done in
+ * ieee80211_scan_dfs_action().
  *
- * This was moved out of ieee80211_mark_dfs, because the same functionality is
- * used also in ieee80211_ioctl_chanswitch.
+ * This was moved out of ieee80211_mark_dfs(), because the same functionality
+ * is used also in ieee80211_ioctl_chanswitch().
  */
 void
 ieee80211_dfs_action(struct ieee80211com *ic) {
@@ -1140,7 +1140,7 @@ ieee80211_dfs_test_return(struct ieee80211com *ic, u_int8_t ieeeChan)
 {
 	struct net_device *dev = ic->ic_dev;
 
-	/* Return to the original channel we were on before the test mute */
+	/* Return to the original channel we were on before the test mute. */
 	if_printf(dev, "Returning to channel %d\n", ieeeChan);
 	printk(KERN_DEBUG "Returning to chan %d\n", ieeeChan);
 	ic->ic_chanchange_chan = ieeeChan;

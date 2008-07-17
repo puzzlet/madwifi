@@ -424,7 +424,7 @@ struct ieee80211com {
 	int ic_country_outdoor;
 	struct ieee80211_ie_country ic_country_ie; /* country info element */
 
-	/* current channel max power, used to compute Power Constraint IE.
+	/* Current channel max. power, used to compute Power Constraint IE.
 	 *
 	 * NB: local power constraint depends on the channel, but assuming it must
 	 *     be detected dynamically, we cannot maintain a table (i.e., will not
@@ -586,7 +586,7 @@ MALLOC_DECLARE(M_80211_VAP);
 #define IEEE80211_F_NOBRIDGE    0x10000000		/* CONF: disable internal bridge */
 
 #define	IEEE80211_F_WMEUPDATE	0x20000000		/* STATUS: update beacon wme */
-#define IEEE80211_F_DOTH	0x40000000		/* enable 11.h */
+#define IEEE80211_F_DOTH	0x40000000		/* CONF: enable 11.h (dot11SpectrumManagementRequired) */
 #define IEEE80211_F_CHANSWITCH	0x80000000		/* force chanswitch */
 
 /* ic_flags_ext */
