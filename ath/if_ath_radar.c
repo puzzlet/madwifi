@@ -363,7 +363,8 @@ static struct ath_rp *pulse_prev(struct ath_rp *pulse)
 #define MR_FAIL_MAX_PERIOD	5
 
 #ifdef AR_DEBUG
-static const char *get_match_result_desc(u_int32_t code) {
+static const char *get_match_result_desc(u_int32_t code)
+{
 	switch (code) {
 	case MR_MATCH:
 		return "MATCH";
@@ -1226,7 +1227,8 @@ static u_int32_t interval_to_frequency(u_int32_t interval)
 #endif /* AR_DEBUG */
 
 #ifdef ATH_RADAR_LONG_PULSE
-static const char *get_longpulse_desc(int lp) {
+static const char *get_longpulse_desc(int lp)
+{
 	switch (lp) {
 	case  8:  return "FCC [5,  8 pulses]";
 	case  9:  return "FCC [5,  9 pulses]";
