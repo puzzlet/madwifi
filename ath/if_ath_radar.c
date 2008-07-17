@@ -236,9 +236,9 @@ int ath_radar_update(struct ath_softc *sc)
 	/* Update the DFS flags (as a sanity check) */
 	if (ath_radar_correct_dfs_flags(sc, &sc->sc_curchan))
 		DPRINTF(sc, ATH_DEBUG_DOTH, "%s: %s: channel required "
-			"corrections to private flags.\n", 
+			"corrections to private flags.\n",
 			SC_DEV_NAME(sc), __func__);
-	required = ath_radar_is_dfs_required(sc, &sc->sc_curchan) && 
+	required = ath_radar_is_dfs_required(sc, &sc->sc_curchan) &&
 		    (ic->ic_flags & IEEE80211_F_DOTH);
 	/* configure radar pulse detector register using default values, but do
 	 * not toggle the enable bit.  XXX: allow tweaking?? */
@@ -260,7 +260,7 @@ int ath_radar_update(struct ath_softc *sc)
 		if (required) {
 			new_radar |= AR5K_PHY_RADAR_ENABLE;
 			new_filter |= AR5K_AR5212_PHY_ERR_FIL_RADAR;
-			new_rxfilt |= (HAL_RX_FILTER_PHYERR | 
+			new_rxfilt |= (HAL_RX_FILTER_PHYERR |
 				       HAL_RX_FILTER_PHYRADAR);
 			new_mask |= HAL_INT_RXPHY;
 			new_ier |= HAL_INT_RXPHY;
@@ -287,7 +287,7 @@ int ath_radar_update(struct ath_softc *sc)
 		     (old_mask != new_mask) || 
 		     (old_ier != new_ier))) {
 			DPRINTF(sc, ATH_DEBUG_DOTH, 
-				"%s: %s: Radar detection %s.\n", SC_DEV_NAME(sc), 
+				"%s: %s: Radar detection %s.\n", SC_DEV_NAME(sc),
 				__func__, required ? "enabled" : "disabled");
 		}
 		ath_hal_intrset(ah, new_ier);
@@ -309,7 +309,7 @@ int ath_radar_correct_dfs_flags(struct ath_softc *sc, HAL_CHANNEL *hchan)
 		hchan->channelFlags &= ~CHANNEL_PASSIVE;
 		hchan->privFlags &= ~CHANNEL_DFS;
 	}
-	return ((old_privFlags != hchan->privFlags) || 
+	return ((old_privFlags != hchan->privFlags) ||
 		(old_channelFlags != hchan->channelFlags));
 }
 
@@ -848,7 +848,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 				"%s: %s skipped (last pulse isn't old enough to"
 				" match this pattern).  %10llu >= %10llu.\n",
-				SC_DEV_NAME(sc), pattern->name, 
+				SC_DEV_NAME(sc), pattern->name,
 				(u_int64_t)(
 					pattern->min_rep_int * 
 					pattern->min_evts), 
@@ -924,7 +924,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 					"%s: %s matching stopped (pulse->rp_tsf"
 					" < t0_max).  t1=%10llu t0_max=%10llu "
 					"t_min=%10llu t_max=%10llu matched=%u "
-					"missed=%u\n", SC_DEV_NAME(sc), 
+					"missed=%u\n", SC_DEV_NAME(sc),
 					pattern->name, t1, t0_max, 
 					t_min, t_max, matched, missed);
 				break;
@@ -937,7 +937,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 					"%s: %s matching stopped (too many "
 					"consecutive pulses missing). %d>%d "
 					"matched=%u. missed=%u.\n",
-					SC_DEV_NAME(sc), pattern->name, 
+					SC_DEV_NAME(sc), pattern->name,
 					partial_miss, 
 					pattern->max_consecutive_missing, 
 					matched, missed);
@@ -990,7 +990,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 						"%s: %s mean period deviated "
 						"from original range [period: "
 						"%4u, range: %4u-%4u]\n",
-						SC_DEV_NAME(sc), 
+						SC_DEV_NAME(sc),
 						pattern->name, 
 						mean_period, 
 						pattern->min_rep_int, 
@@ -1046,7 +1046,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 						"many total pulses missing). "
 						"%d>%d  matched=%u. missed=%u."
 						"\n",
-						SC_DEV_NAME(sc), 
+						SC_DEV_NAME(sc),
 						pattern->name, 
 						missed, 
 						pattern->max_missing, 
@@ -1169,7 +1169,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 					"%s: %s match not better than best so "
 					"far.  cr: %d matched: %d  missed: "
 					"%d min_evts: %d\n",
-					SC_DEV_NAME(sc), 
+					SC_DEV_NAME(sc),
 					pattern->name, 
 					compare_result,
 					matched, 
@@ -1444,13 +1444,13 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
 		if (DFLAG_ISSET(sc, ATH_DEBUG_DOTHFILT)) {
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT, 
-				"%s: ========================================\n", 
+				"%s: ========================================\n",
 				DEV_NAME(sc->sc_dev));
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: ==BEGIN RADAR SAMPLE====================\n", 
+				"%s: ==BEGIN RADAR SAMPLE====================\n",
 				DEV_NAME(sc->sc_dev));
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: ========================================\n", 
+				"%s: ========================================\n",
 				DEV_NAME(sc->sc_dev));
 
 #ifdef ATH_RADAR_LONG_PULSE
@@ -1489,13 +1489,13 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 
 			ath_rp_print(sc, 0 /* analyzed pulses only */ );
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT, 
-				"%s: ========================================\n", 
+				"%s: ========================================\n",
 				DEV_NAME(sc->sc_dev));
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT, 
-				"%s: ==END RADAR SAMPLE======================\n", 
+				"%s: ==END RADAR SAMPLE======================\n",
 				DEV_NAME(sc->sc_dev));
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT, 
-				"%s: ========================================\n", 
+				"%s: ========================================\n",
 				DEV_NAME(sc->sc_dev));
 		}
 #ifdef ATH_RADAR_LONG_PULSE
@@ -1618,7 +1618,7 @@ void ath_rp_record(struct ath_softc *sc, u_int64_t tsf, u_int8_t rssi,
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
 				"%s: %s: tsf jitter/bug detected: tsf =%10llu, "
 				"rptsf =%10llu, rp_tsf - tsf = %10llu\n", 
-				SC_DEV_NAME(sc), __func__, tsf, pulse->rp_tsf, 
+				SC_DEV_NAME(sc), __func__, tsf, pulse->rp_tsf,
 				pulse->rp_tsf - tsf);
 		}
 	}

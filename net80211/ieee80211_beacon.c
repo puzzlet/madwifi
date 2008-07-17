@@ -293,9 +293,9 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 	/* Check if we need to change channel right now */
 	if ((ic->ic_flags & IEEE80211_F_DOTH) &&
 	    (vap->iv_flags & IEEE80211_F_CHANSWITCH)) {
-		struct ieee80211_channel *c = 
+		struct ieee80211_channel *c =
 			ieee80211_doth_findchan(vap, ic->ic_chanchange_chan);
-		
+
 		if (!vap->iv_chanchange_count && !c) {
 			vap->iv_flags &= ~IEEE80211_F_CHANSWITCH;
 			ic->ic_flags &= ~IEEE80211_F_CHANSWITCH;
@@ -495,10 +495,10 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 			struct ieee80211_ie_csa *csa_ie =
 				(struct ieee80211_ie_csa *)bo->bo_chanswitch;
 
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH, 
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 					"%s: Sending 802.11h chanswitch IE: "
-					"%d/%d\n", __func__, 
-					ic->ic_chanchange_chan, 
+					"%d/%d\n", __func__,
+					ic->ic_chanchange_chan,
 					ic->ic_chanchange_tbtt);
 			if (!vap->iv_chanchange_count) {
 				vap->iv_flags |= IEEE80211_F_CHANSWITCH;
@@ -525,13 +525,13 @@ ieee80211_beacon_update(struct ieee80211_node *ni,
 				bo->bo_ath_caps += sizeof(*csa_ie);
 				bo->bo_xr += sizeof(*csa_ie);
 
-				/* indicate new beacon length so other layers 
+				/* indicate new beacon length so other layers
 				 * may manage memory */
 				skb_put(skb, sizeof(*csa_ie));
 				len_changed = 1;
 			} else if (csa_ie->csa_count)
 				csa_ie->csa_count--;
-			
+
 			vap->iv_chanchange_count++;
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 				"%s: CHANSWITCH IE, change in %d TBTT\n",

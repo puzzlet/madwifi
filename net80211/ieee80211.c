@@ -846,12 +846,12 @@ ieee80211_dfs_action(struct ieee80211com *ic) {
 		 * vap to RUN. */
 	}
 	/* Check the scan results using only cached results */
-	if (!(ieee80211_check_scan(vap, IEEE80211_SCAN_NOSSID | 
-					IEEE80211_SCAN_KEEPMODE | 
+	if (!(ieee80211_check_scan(vap, IEEE80211_SCAN_NOSSID |
+					IEEE80211_SCAN_KEEPMODE |
 					IEEE80211_SCAN_USECACHE, 0,
 				   vap->iv_des_nssid, vap->iv_des_ssid,
 				   ieee80211_scan_dfs_action))) {
-		/* No channel was found, so call the scan action with no 
+		/* No channel was found, so call the scan action with no
 		 * result. */
 		ieee80211_scan_dfs_action(vap, NULL);
 	}
@@ -961,7 +961,7 @@ ieee80211_expire_dfs_excl_timer(unsigned long data)
 			    /* Operating on channel other than desired. */
 			    (vap->iv_des_chan != IEEE80211_CHAN_ANYC) &&
 			    (vap->iv_des_chan->ic_freq > 0) &&
-			    (vap->iv_des_chan->ic_freq != 
+			    (vap->iv_des_chan->ic_freq !=
 			     ic->ic_bsschan->ic_freq)) {
 				struct ieee80211_channel *des_chan =
 					ieee80211_find_channel(ic, 
@@ -980,7 +980,7 @@ ieee80211_expire_dfs_excl_timer(unsigned long data)
 								ic_freq,
 							vap->iv_des_chan->
 								ic_flags);
-				} else if (!(des_chan->ic_flags & 
+				} else if (!(des_chan->ic_flags &
 							IEEE80211_CHAN_RADAR)) {
 					IEEE80211_DPRINTF(vap, 
 							IEEE80211_MSG_DOTH,
@@ -992,9 +992,9 @@ ieee80211_expire_dfs_excl_timer(unsigned long data)
 								ic_freq,
 							vap->iv_des_chan->
 								ic_flags);
-					ic->ic_chanchange_chan = 
+					ic->ic_chanchange_chan =
 						des_chan->ic_ieee;
-					ic->ic_chanchange_tbtt = 
+					ic->ic_chanchange_tbtt =
 						IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 					ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 				} else if (ieee80211_msg_is_reported(vap, 
@@ -1097,7 +1097,7 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 						"(%d, 0x%x)\n",
 						__func__, ichan->ic_freq, 
 						ichan->ic_flags);
-				/* The current channel has been marked. We 
+				/* The current channel has been marked. We
 				 * need to move away from it. */
 				ieee80211_dfs_action(ic);
 			} else
@@ -1112,10 +1112,10 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 						ic->ic_curchan->ic_ieee, 
 						ic->ic_curchan->ic_freq);
 		} else {
-			/* Change to a radar free 11a channel for dfstesttime 
+			/* Change to a radar free 11a channel for dfstesttime
 			 * seconds. */
 			ic->ic_chanchange_chan = IEEE80211_RADAR_TEST_MUTE_CHAN;
-			ic->ic_chanchange_tbtt = 
+			ic->ic_chanchange_tbtt =
 				IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 			if_printf(dev,
@@ -1129,7 +1129,7 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 					ic->ic_curchan->ic_freq);
 		}
 	} else {
-		/* XXX: Are we in STA mode? If so, send an action msg. to AP 
+		/* XXX: Are we in STA mode? If so, send an action msg. to AP
 		 * saying we found a radar? */
 	}
 }

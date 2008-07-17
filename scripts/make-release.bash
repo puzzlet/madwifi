@@ -163,7 +163,7 @@ while ! ((valid)); do
 		newversion="$newmajor.$newminor.$newpoint"
 		newmicro="0"
 	    fi
-	    
+
 	    if [[ "$(svn list $reproot/tags | grep -c ^release-$newversion)" != "0" ]]; then
 		echo "Release $newversion already exists. Try again."
 	    else

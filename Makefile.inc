@@ -145,7 +145,7 @@ ATH_RATE=	$(TOP)/ath_rate
 #
 # Path to the userspace utilities. 
 # 
-TOOLS=  $(TOP)/tools 
+TOOLS=  $(TOP)/tools
 
 WARNINGS = -Werror -Wall
 COPTS+= $(WARNINGS)

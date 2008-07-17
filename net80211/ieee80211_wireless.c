@@ -764,13 +764,13 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 			ic->ic_set_channel(ic);
 		}
 	} else if (vap->iv_opmode == IEEE80211_M_HOSTAP) {
-		/* Need to use channel switch announcement on beacon if we are 
-		 * up and running.  We use ic_set_channel directly if we are 
+		/* Need to use channel switch announcement on beacon if we are
+		 * up and running.  We use ic_set_channel directly if we are
 		 * "running" but not "up".  Otherwise, iv_des_chan will take
 		 * effect when we are transitioned to RUN state later. */
 		if (IS_UP(vap->iv_dev) &&
 		    (0 == (vap->iv_des_chan->ic_flags & CHANNEL_DFS))) {
-			pre_announced_chanswitch(dev, 
+			pre_announced_chanswitch(dev,
 				ieee80211_chan2ieee(ic, vap->iv_des_chan),
 				IEEE80211_DEFAULT_CHANCHANGE_TBTT_COUNT);
 		}

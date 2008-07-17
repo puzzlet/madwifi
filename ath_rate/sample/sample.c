@@ -449,7 +449,7 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 			} else if (sn->packets_sent[size_bin] < 20) {
 				/* let the bit-rate switch quickly during the first few packets */
 				change_rates = 1;
-			} else if (time_after(jiffies, sn->jiffies_since_switch[size_bin] + 
+			} else if (time_after(jiffies, sn->jiffies_since_switch[size_bin] +
 					      ((HZ * MIN_SWITCH_MS) / 1000))) {
 				/* 2 seconds have gone by */
 				change_rates = 1;

@@ -293,7 +293,7 @@ scan_restart_pwrsav(unsigned long arg)
 
 	/* Handle PS stuff, if required. */
 	ieee80211_sta_pwrsave(vap, 1);
-	
+
 	/* Use an initial 1ms delay to ensure the null
 	 * data frame has a chance to go out.
 	 * XXX: 1ms is a lot, better to trigger scan
@@ -1019,16 +1019,16 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 		 * $4.6.2.5.1 */
 		/* First, we count the usable channels */
 		count = 0;
-		curChanFlags = (ic->ic_bsschan->ic_flags) & 
+		curChanFlags = (ic->ic_bsschan->ic_flags) &
 			~(IEEE80211_CHAN_RADAR);
 		for (i = 0; i < ic->ic_nchans; i++) {
-			if ((ic->ic_channels[i].ic_ieee != 
+			if ((ic->ic_channels[i].ic_ieee !=
 						ic->ic_bsschan->ic_ieee) &&
 			    (ic->ic_channels[i].ic_flags == curChanFlags)) {
 				IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 						"%s: usable channel %3d "
 						"(%4d MHz)\n",
-						__func__, 
+						__func__,
 						ic->ic_channels[i].ic_ieee,
 						ic->ic_channels[i].ic_freq);
 				count ++;
@@ -1041,12 +1041,12 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 
 			count = 0;
 			for (i = 0; i < ic->ic_nchans; i++) {
-				if ((ic->ic_channels[i].ic_ieee != 
+				if ((ic->ic_channels[i].ic_ieee !=
 				     ic->ic_bsschan->ic_ieee) &&
-				    (ic->ic_channels[i].ic_flags == 
+				    (ic->ic_channels[i].ic_flags ==
 				     curChanFlags)) {
 					if (count++ == chanStart) {
-						new_channel = 
+						new_channel =
 							&ic->ic_channels[i];
 						break;
 					}
@@ -1057,8 +1057,8 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 		if (new_channel != NULL)
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 					"%s: new random channel found %3d "
-					"(%4d MHz)\n", __func__, 
-					new_channel->ic_ieee, 
+					"(%4d MHz)\n", __func__,
+					new_channel->ic_ieee,
 					new_channel->ic_freq);
 	}
 
@@ -1066,7 +1066,7 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 		/* Search for the first channel with no radar detected */
 		int n = 0;
 		for (n = 0; n < ic->ic_nchans; n++) {
-			if (0 == (ic->ic_channels[n].ic_flags & 
+			if (0 == (ic->ic_channels[n].ic_flags &
 						IEEE80211_CHAN_RADAR)) {
 				new_channel = &ic->ic_channels[n];
 				break;
@@ -1087,7 +1087,7 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 					  new_channel->ic_freq);
 
 			ic->ic_chanchange_chan = new_channel->ic_ieee;
-			ic->ic_chanchange_tbtt = 
+			ic->ic_chanchange_tbtt =
 				IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
 			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
 		} else {
