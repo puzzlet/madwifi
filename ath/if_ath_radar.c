@@ -769,7 +769,7 @@ static HAL_BOOL rp_analyze_long_pulse(
 }
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
 
-static HAL_BOOL rp_analyse_short_pulse(
+static HAL_BOOL rp_analyze_short_pulse(
 	struct ath_softc *sc, struct ath_rp *last_pulse, 
 	u_int32_t *index, u_int32_t *pri, u_int32_t *matching_pulses, 
 	u_int32_t *missed_pulses, u_int32_t *noise_pulses)
@@ -1246,7 +1246,7 @@ static const char *get_longpulse_desc(int lp) {
 }
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
 
-static HAL_BOOL rp_analyse(struct ath_softc *sc)
+static HAL_BOOL rp_analyze(struct ath_softc *sc)
 {
 	HAL_BOOL radar = 0;
 	struct ath_rp *pulse;
@@ -1314,7 +1314,7 @@ static HAL_BOOL rp_analyse(struct ath_softc *sc)
 				u_int32_t lp_noise   	= 0;
 				u_int32_t lp_pulses  	= 0;
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
-				if (rp_analyse_short_pulse(sc, pulse, &index, 
+				if (rp_analyze_short_pulse(sc, pulse, &index, 
 							&pri, &matched, &missed, 
 							&noise)) {
 					int compare_result = (!radar || best_index == -1) ? 
@@ -1516,7 +1516,7 @@ static void ath_rp_clear(struct ath_softc *sc)
 	sc->sc_rp = NULL;
 	INIT_LIST_HEAD(&sc->sc_rp_list);
 	sc->sc_rp_num = 0;
-	sc->sc_rp_analyse = NULL;
+	sc->sc_rp_analyze = NULL;
 }
 
 static void ath_rp_tasklet(TQUEUE_ARG data)
@@ -1524,8 +1524,8 @@ static void ath_rp_tasklet(TQUEUE_ARG data)
 	struct net_device *dev = (struct net_device *)data;
 	struct ath_softc *sc = dev->priv;
 
-	if (sc->sc_rp_analyse != NULL)
-		sc->sc_rp_analyse(sc);
+	if (sc->sc_rp_analyze != NULL)
+		sc->sc_rp_analyze(sc);
 }
 
 void ath_rp_init(struct ath_softc *sc)
@@ -1551,7 +1551,7 @@ void ath_rp_init(struct ath_softc *sc)
 	}
 
 	sc->sc_rp_num = 0;
-	sc->sc_rp_analyse = rp_analyse;
+	sc->sc_rp_analyze = rp_analyze;
 
 	/* compute sc_rp_min */
 	sc->sc_rp_min = 2;

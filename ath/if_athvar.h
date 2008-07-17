@@ -839,7 +839,7 @@ struct ath_softc {
 	struct list_head sc_rp_list;
 	int sc_rp_num;
 	int sc_rp_min;
-	HAL_BOOL (*sc_rp_analyse)(struct ath_softc *sc);
+	HAL_BOOL (*sc_rp_analyze)(struct ath_softc *sc);
 	struct ATH_TQ_STRUCT sc_rp_tq;
 	
 	int sc_rp_ignored;			/* if set, we ignored all 
