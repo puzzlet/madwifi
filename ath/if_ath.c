@@ -1593,6 +1593,35 @@ static inline void ath_override_intmit_if_disabled(struct ath_softc *sc)
 	}
 }
 
+static inline HAL_BOOL ath_hw_puttxbuf(struct ath_softc *sc, u_int qnum,
+				u_int32_t txdp, const char *msg)
+{
+	HAL_BOOL result;
+	u_int32_t txdp_2;
+
+	result = ath_hal_puttxbuf(sc->sc_ah, qnum, txdp);
+	if (!result) {
+		DPRINTF(sc, ATH_DEBUG_WATCHDOG,
+			"TXQ%d: BUG failed to set TXDP:%08x\n",
+			qnum, txdp);
+		ath_txq_check(sc, &sc->sc_txq[qnum], msg);
+		return result;
+	}
+
+	txdp_2 = ath_hal_gettxbuf(sc->sc_ah, qnum);
+	if (txdp_2 != txdp) {
+		DPRINTF(sc, ATH_DEBUG_WATCHDOG,
+			"TXQ%d: BUG failed to set TXDP:%08x (is %08x)\n",
+			qnum, txdp, txdp_2);
+		ath_txq_check(sc, &sc->sc_txq[qnum], msg);
+	}
+
+	return result;
+}
+
+/* If channel change is sucessfull, sc->sc_curchan is updated with the new
+ * channel */
+
 static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 		HAL_CHANNEL *channel, HAL_BOOL bChannelChange,
 		HAL_STATUS *status)
@@ -1601,6 +1630,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 	unsigned long __axq_lockflags[HAL_NUM_TX_QUEUES];
 	struct ath_txq * txq;
 	int i;
+ 	u_int8_t old_privFlags = sc->sc_curchan.privFlags;
 
 	/* ath_hal_reset() resets all TXDP pointers, so we need to
 	 * lock all TXQ to avoid race condition with
@@ -1614,6 +1644,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 	}
 
 	ret = ath_hal_reset(sc->sc_ah, sc->sc_opmode, channel, bChannelChange, status);
+
 	/* Restore all TXDP pointers, if appropriate, and unlock in
 	 * the reverse order we locked */
 	for (i = HAL_NUM_TX_QUEUES - 1; i >= 0; i--) {
@@ -1633,32 +1664,46 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 						txq->axq_qnum, txdp);
 			}
 
-			bf = STAILQ_FIRST(&txq->axq_q);
-			if (bf != NULL) {
-				DPRINTF(sc, ATH_DEBUG_WATCHDOG,
-						"TXQ%d: restoring "
-						"TXDP:%08llx\n",
-						txq->axq_qnum,
-						(u_int64_t)bf->bf_daddr);
-				ath_hal_puttxbuf(sc->sc_ah, txq->axq_qnum,
-						bf->bf_daddr);
-				txdp = ath_hal_gettxbuf(sc->sc_ah,
-						txq->axq_qnum);
-				if (txdp != bf->bf_daddr) {
+			/* We restore TXDP to the first "In Progress" TX
+			 * descriptor. We skip "Done" TX descriptors in
+			 * order to avoid sending duplicate packets */
+			STAILQ_FOREACH(bf, &txq->axq_q, bf_list) {
+				if (ath_hal_txprocdesc(sc->sc_ah,
+						       bf->bf_desc,
+					&bf->bf_dsstatus.ds_txstat) ==
+				    HAL_EINPROGRESS) {
 					DPRINTF(sc, ATH_DEBUG_WATCHDOG,
-							"TXQ%d: BUG failed to "
-							"restore TXDP:%08llx "
-							"(is %08x)\n",
-							txq->axq_qnum,
-							(u_int64_t)bf->bf_daddr,
-							txdp);
+						"TXQ%d: restoring"
+						" TXDP:%08llx\n",
+ 						txq->axq_qnum,
+ 						(u_int64_t)bf->bf_daddr);
+					ath_hw_puttxbuf(sc, txq->axq_qnum,
+							bf->bf_daddr,
+							__func__);
+					ath_hal_txstart(sc->sc_ah,
+							txq->axq_qnum);
 				}
-				ath_hal_txstart(sc->sc_ah, txq->axq_qnum);
 			}
 			spin_unlock_irqrestore(&txq->axq_lock,
 					__axq_lockflags[i]);
 		}
 	}
+
+	/* On failure, we return immediately */
+	if (!ret)
+		return ret;
+
+ 	/* Do the same as in ath_getchannels() */
+ 	ath_radar_correct_dfs_flags(sc, channel);
+ 
+ 	/* Restore CHANNEL_DFS_CLEAR and CHANNEL_INTERFERENCE flags */
+#define CHANNEL_DFS_FLAGS	(CHANNEL_DFS_CLEAR|CHANNEL_INTERFERENCE)
+	channel->privFlags = (channel->privFlags & ~CHANNEL_DFS_FLAGS) |
+ 		(old_privFlags & CHANNEL_DFS_FLAGS);
+ 
+	/* On success, we update sc->sc_curchan which can be needed by other
+	 * functions below , like ath_radar_update() at least */
+	sc->sc_curchan = *channel;
 
 #ifdef ATH_CAP_TPC
 	if (sc->sc_hastpc && (hal_tpc != ath_hal_gettpc(sc->sc_ah))) {
@@ -1687,8 +1732,11 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 	return ret;
 }
 
-/* Channel Availability Check is running, or a channel has already found to be 
- * unavailable. */
+/* Returns true if we can transmit any frames : this is not the case if :
+ * - we are on a DFS channel
+ * - 802.11h is enabled
+ * - Channel Availability Check is not done or a radar has been detected
+ */
 static int
 ath_chan_unavail(struct ath_softc *sc)
 {
@@ -2115,9 +2163,10 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int *pneedmark, u_int64_t 
 					/* Below leaves an_uapsd_q NULL. */
 					STAILQ_CONCAT(&uapsd_xmit_q->axq_q,
 						      &an->an_uapsd_q);
-					ath_hal_puttxbuf(sc->sc_ah,
+					ath_hw_puttxbuf(sc,
 						uapsd_xmit_q->axq_qnum,
-						(STAILQ_FIRST(&uapsd_xmit_q->axq_q))->bf_daddr);
+						(STAILQ_FIRST(&uapsd_xmit_q->axq_q))->bf_daddr,
+						__func__);
 
 					ath_hal_txstart(sc->sc_ah,
 							uapsd_xmit_q->axq_qnum);
@@ -2915,20 +2964,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 	} else {
 		ATH_TXQ_LINK_DESC(txq, bf);
 		if (!STAILQ_FIRST(&txq->axq_q)) {
-			u_int32_t txdp;
-
-			ath_hal_puttxbuf(ah, txq->axq_qnum, bf->bf_daddr);
-			DPRINTF(sc, ATH_DEBUG_XMIT, "TXDP[%u] = %08llx (%p)\n",
-				txq->axq_qnum, (u_int64_t)bf->bf_daddr,
-				bf->bf_desc);
-			txdp = ath_hal_gettxbuf(ah, txq->axq_qnum);
-			if (txdp != bf->bf_daddr) {
-				DPRINTF(sc, ATH_DEBUG_WATCHDOG,
-						"TXQ%d: BUG TXDP:%08x instead "
-						"of %08llx\n",
-						txq->axq_qnum, txdp,
-						(u_int64_t)bf->bf_daddr);
-			}
+			ath_hw_puttxbuf(sc, txq->axq_qnum, bf->bf_daddr, __func__);
 		}
 		ATH_TXQ_INSERT_TAIL(txq, bf, bf_list);
 		
@@ -5056,8 +5092,9 @@ ath_beacon_generate(struct ath_softc *sc, struct ieee80211vap *vap, int *needmar
 			/* Append the private VAP mcast list to the cabq. */
 			ATH_TXQ_MOVE_Q(&avp->av_mcastq, cabq);
 			if (!STAILQ_FIRST(&cabq->axq_q))
-				ath_hal_puttxbuf(ah, cabq->axq_qnum,
-						 bfmcast->bf_daddr);
+				ath_hw_puttxbuf(sc, cabq->axq_qnum,
+					bfmcast->bf_daddr,
+					__func__);
 		}
 		else {
 			DPRINTF(sc, ATH_DEBUG_BEACON,
@@ -5250,9 +5287,9 @@ ath_beacon_send(struct ath_softc *sc, int *needmark, uint64_t hw_tsf)
 		}
 		/* NB: cabq traffic should already be queued and primed */
 		DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
-			"Invoking ath_hal_puttxbuf with sc_bhalq: %d bfaddr: %x\n",
+			"Invoking ath_hw_puttxbuf with sc_bhalq: %d bfaddr: %x\n",
 			sc->sc_bhalq, bfaddr);
-		ath_hal_puttxbuf(ah, sc->sc_bhalq, bfaddr);
+		ath_hw_puttxbuf(sc, sc->sc_bhalq, bfaddr, __func__);
 
 		DPRINTF(sc, ATH_DEBUG_BEACON_PROC,
 			"Invoking ath_hal_txstart with sc_bhalq: %d\n",
@@ -5927,8 +5964,8 @@ ath_node_move_data(const struct ieee80211_node *ni)
 			else
 				bf = STAILQ_FIRST(&txq->axq_q);
 			if (bf) {
-				ath_hal_puttxbuf(ah, txq->axq_qnum,
-						bf->bf_daddr);
+				ath_hw_puttxbuf(sc, txq->axq_qnum,
+						bf->bf_daddr, __func__);
 				ath_hal_txstart(ah, txq->axq_qnum);
 			}
 		}
@@ -6055,7 +6092,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 			bf = STAILQ_FIRST(&txq->axq_q);
 
 		if (bf) {
-			ath_hal_puttxbuf(ah, txq->axq_qnum, bf->bf_daddr);
+			ath_hw_puttxbuf(sc, txq->axq_qnum, bf->bf_daddr, __func__);
 			ath_hal_txstart(ah, txq->axq_qnum);
 		}
 
@@ -6093,7 +6130,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 			}
 
 			if (bf) {
-				ath_hal_puttxbuf(ah, txq->axq_qnum, bf->bf_daddr);
+				ath_hw_puttxbuf(sc, txq->axq_qnum, bf->bf_daddr, __func__);
 				ath_hal_txstart(ah, txq->axq_qnum);
 			}
 
@@ -7004,7 +7041,7 @@ static void ath_grppoll_start(struct ieee80211vap *vap, int pollcount)
 	/* make it circular */
 	bf->bf_desc->ds_link = ath_ds_link_swap(head->bf_daddr);
 	/* start the queue */
-	ath_hal_puttxbuf(ah, txq->axq_qnum, head->bf_daddr);
+	ath_hw_puttxbuf(sc, txq->axq_qnum, head->bf_daddr, __func__);
 	ath_hal_txstart(ah, txq->axq_qnum);
 	sc->sc_xrgrppoll = 1;
 #undef USE_SHPREAMBLE
@@ -8328,6 +8365,11 @@ ath_tx_tasklet(TQUEUE_ARG data)
 	struct ath_softc *sc = dev->priv;
 	unsigned int i;
 
+	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
+		if (!ath_txq_check(sc, &sc->sc_txq[i], __func__))
+			ath_txq_dump(sc, &sc->sc_txq[i]);
+	}
+
 	/* Process each active queue. This includes sc_cabq, sc_xrtq and
 	 * sc_uapsdq */
 	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
@@ -8679,8 +8721,6 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 				ath_get_hal_status_desc(status), status);
 			return -EIO;
 		}
-
-		sc->sc_curchan = hchan;
 
 		/* Change channels and update the h/w rate map
 		 * if we're switching; e.g. 11a to 11b/g. */

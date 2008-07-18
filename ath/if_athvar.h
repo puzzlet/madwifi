@@ -683,6 +683,14 @@ struct ath_softc {
 	unsigned int	sc_xrgrppoll:1;		/* xr group polls are active */
 	unsigned int	sc_syncbeacon:1;	/* sync/resync beacon timers */
 	unsigned int	sc_hasclrkey:1;		/* CLR key supported */
+	/* sc_stagbeacons : If set and several VAPs need to send beacons,
+	 * this flag means that beacons transmission is evenly distributed
+	 * over time. If unset, it means that beacons for all VAPs are sent
+	 * at the same time. For instance, with a common beacon interval of
+	 * 100 TU and 2 VAPs, 1 beacon is sent every 50 TU (staggered mode)
+	 * or 2 beacons are sent every 100 TU (bursted mode) depending on
+	 * this flag
+	 */
 	unsigned int	sc_stagbeacons:1;	/* use staggered beacons */
 	unsigned int	sc_dfswait:1;		/* waiting on channel for radar detect */
 	unsigned int	sc_ackrate:1;		/* send acks at high bitrate */
