@@ -19,7 +19,7 @@
  * $Id: if_ath_radar.h 2464 2007-06-15 22:51:56Z mtaylor $
  */
 /*
- * Defintions for the Atheros Wireless LAN controller driver.
+ * Definitions for the Atheros Wireless LAN controller driver.
  */
 #ifndef _IF_ATH_RADAR_H
 #define _IF_ATH_RADAR_H

@@ -37,7 +37,7 @@
  */
 
 /*
- * Ioctl-related defintions for the Atheros Wireless LAN controller driver.
+ * Ioctl-related definitions for the Atheros Wireless LAN controller driver.
  */
 #ifndef _DEV_ATH_ATHIOCTL_H
 #define _DEV_ATH_ATHIOCTL_H

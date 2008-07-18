@@ -37,7 +37,7 @@
  */
 
 /*
- * Defintions for the Atheros Wireless LAN controller driver.
+ * Definitions for the Atheros Wireless LAN controller driver.
  */
 #ifndef _DEV_ATH_RATE_ONOE_H
 #define _DEV_ATH_RATE_ONOE_H

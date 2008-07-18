@@ -293,7 +293,7 @@ struct ieee80211vap {
 	u_int32_t app_filter;				/* filters which management frames are forwarded to app */
 };
 
-/* Debug functions need the defintion of struct ieee80211vap because iv_debug 
+/* Debug functions need the definition of struct ieee80211vap because iv_debug
  * is used at runtime to determine if we should log an event
  */
 #include <net80211/ieee80211_debug.h>
