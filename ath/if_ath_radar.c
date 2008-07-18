@@ -296,7 +296,7 @@ int ath_radar_update(struct ath_softc *sc)
 	return (required == ath_radar_is_enabled(sc));
 }
 
-/* Update channel's DFS flags based upon whether DFS is reqired.  Return
+/* Update channel's DFS flags based upon whether DFS is required.  Return
  * true if the value was repaired. */
 int ath_radar_correct_dfs_flags(struct ath_softc *sc, HAL_CHANNEL *hchan)
 {

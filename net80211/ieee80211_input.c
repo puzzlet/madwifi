@@ -2725,7 +2725,7 @@ ieee80211_doth_switch_channel(struct ieee80211vap *vap)
 	netif_stop_queue(ic->ic_dev);
 #endif
 
-	vap->iv_csa_jiffies = 0; /* supress "cancel" msg */
+	vap->iv_csa_jiffies = 0; /* suppress "cancel" msg */
 	ieee80211_doth_cancel_cs(vap);
 
 	ic->ic_curchan = ic->ic_bsschan = vap->iv_csa_chan;

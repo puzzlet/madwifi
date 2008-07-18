@@ -1619,7 +1619,7 @@ static inline HAL_BOOL ath_hw_puttxbuf(struct ath_softc *sc, u_int qnum,
 	return result;
 }
 
-/* If channel change is sucessfull, sc->sc_curchan is updated with the new
+/* If channel change is successful, sc->sc_curchan is updated with the new
  * channel */
 
 static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,

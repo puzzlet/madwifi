@@ -740,7 +740,7 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 		vap->iv_des_chan = c;
 	} else {
 		/*
-		 * Intepret channel 0 to mean "no desired channel";
+		 * Interpret channel 0 to mean "no desired channel";
 		 * otherwise there's no way to undo fixing the desired
 		 * channel.
 		 */
