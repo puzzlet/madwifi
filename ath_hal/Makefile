@@ -79,17 +79,25 @@ endif
 quiet_cmd_uudecode = UUDECODE $@
       cmd_uudecode = $(obj)/uudecode -o $@ $<
 
-$(obj)/$(TARGET).hal.o: $(HAL)/public/$(TARGET).hal.o.uu $(obj)/uudecode
+$(obj)/$(TARGET)._hal.o: $(HAL)/public/$(TARGET).hal.o.uu $(obj)/uudecode
 ifdef LINUX24
-	$(Q)$(obj)/uudecode -o $@ $<
+	$(cmd_uudecode)
 else
 	$(call if_changed,uudecode)
 endif
+
 # Replace as many hashed names as possible with meaningful
 # ones in the symbol table of the binary kernel module for HAL.
-	$(filter-out -O binary -S,$(OBJCOPY)) \
-		$$(cat $(TOP)/scripts/hal_unmangle.objcopy) \
-		$(obj)/$(TARGET).hal.o
+quiet_cmd_unmangle = UNMANGLE $@
+      cmd_unmangle = $(filter-out -O binary -S,$(OBJCOPY)) \
+		$$(cat $(TOP)/scripts/hal_unmangle.objcopy) $< $@
+
+$(obj)/$(TARGET).hal.o: $(obj)/$(TARGET)._hal.o
+ifdef LINUX24
+	$(cmd_unmangle)
+else
+	$(call if_changed,unmangle)
+endif
 
 .PHONY: install
 install:
