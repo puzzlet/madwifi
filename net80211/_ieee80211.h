@@ -36,7 +36,7 @@
 
 /* Warning : ieee80211_phytype is used by the HAL in its ABI, so this
  * enumeration cannot be changed */
- 
+
 enum ieee80211_phytype {
 	IEEE80211_T_DS		= 0,	/* direct sequence spread spectrum */
 	IEEE80211_T_FH		= 1,	/* frequency hopping */
@@ -161,6 +161,8 @@ struct ieee80211_channel {
 
 /* bits 0-3 are for private use by drivers */
 /* channel attributes */
+#define IEEE80211_CHAN_INDOOR   0x0004  /* This channel can be used indoor */
+#define IEEE80211_CHAN_OUTDOOR  0x0008  /* This channel can be used outdoor */
 #define	IEEE80211_CHAN_TURBO	0x0010	/* Turbo channel */
 #define	IEEE80211_CHAN_CCK	0x0020	/* CCK channel */
 #define	IEEE80211_CHAN_OFDM	0x0040	/* OFDM channel */
@@ -200,6 +202,10 @@ struct ieee80211_channel {
 #define	IEEE80211_CHAN_ALLTURBO \
 	(IEEE80211_CHAN_ALL | IEEE80211_CHAN_TURBO | IEEE80211_CHAN_STURBO)
 
+#define IEEE80211_IS_CHAN_INDOOR(_c) \
+	(((_c)->ic_flags & IEEE80211_CHAN_INDOOR) != 0)
+#define IEEE80211_IS_CHAN_OUTDOOR(_c) \
+	(((_c)->ic_flags & IEEE80211_CHAN_OUTDOOR) != 0)
 #define	IEEE80211_IS_CHAN_FHSS(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_FHSS) == IEEE80211_CHAN_FHSS)
 #define	IEEE80211_IS_CHAN_A(_c) \
@@ -241,10 +247,10 @@ struct ieee80211_channel {
 #define	IEEE80211_IS_CHAN_QUARTER(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_QUARTER) != 0)
 
-#define	IEEE80211_IS_CHAN_RADAR(_c) \
-	(((_c)->ic_flags & IEEE80211_CHAN_RADAR) != 0)
 #define	IEEE80211_IS_CHAN_PASSIVE(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_PASSIVE) != 0)
+#define	IEEE80211_IS_CHAN_RADAR(_c) \
+	(((_c)->ic_flags & IEEE80211_CHAN_RADAR) != 0)
 #define	IEEE80211_ARE_CHANS_SAME_MODE(_a, _b) \
 	(((_a)->ic_flags & IEEE80211_CHAN_ALLTURBO) == ((_b)->ic_flags & IEEE80211_CHAN_ALLTURBO))
 
