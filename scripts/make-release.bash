@@ -3,6 +3,27 @@
 # Purpose: automate the process of tagging a release and packing a tarball
 # for it.
 
+# check_dir_prereq:
+# ensures that a given directory name exist and is writeable
+# note: $1 is expected to be set to the name of the variable that contains
+#       the name of the directory that is to be tested (indirect reference)
+function check_dir_prereq {
+	eval d="\$$1"
+	n="$1"
+    
+	if [[ ! -d "$d" || ! -w "$d" ]]; then
+		echo
+		echo "ERROR:"
+		echo -n "$n, currently set to $d, "
+		[[ ! -d "$d" ]] && echo "does not exist" || echo "is not writable"
+		echo
+		exit 1
+	fi
+}
+
+
+
+
 # check if the script has been called directly
 if [[ "$(basename $(pwd))" == "scripts" ]]; then
     echo
@@ -22,6 +43,11 @@ if [[ "$RELEASE_TMP" == "" || "$RELEASE_STORE" == "" ]]; then
     echo
     exit 1
 fi
+
+# make sure that the directories passed in RELEASE_TMP and RELEASE_STORE
+# actually exist and are writable for the caller
+check_dir_prereq "RELEASE_TMP"
+check_dir_prereq "RELEASE_STORE"
 
 # caller must have write access to the madwifi.org repository
 valid=0
@@ -47,14 +73,6 @@ if [[ "$valid" != "1" ]]; then
     fi
 fi
 
-
-if [[ ! -d "$RELEASE_TMP" ]]; then
-    echo
-    echo "ERROR:"
-    echo "RELEASE_TMP seems to be wrong. $RELEASE_TMP: no such directory"
-    echo
-    exit 1
-fi
 
 # check if we're in the top-level directory of the snapshot
 if [[ ! -f ./release.h ]]; then
