@@ -10,7 +10,7 @@
 function check_dir_prereq {
 	eval d="\$$1"
 	n="$1"
-    
+	
 	if [[ ! -d "$d" || ! -w "$d" ]]; then
 		echo
 		echo "ERROR:"
@@ -26,22 +26,22 @@ function check_dir_prereq {
 
 # check if the script has been called directly
 if [[ "$(basename $(pwd))" == "scripts" ]]; then
-    echo
-    echo "ERROR:"
-    echo "Call this script via \"make release\" in the top-level directory of your"
-    echo "working copy."
-    echo
-    exit 1
+	echo
+	echo "ERROR:"
+	echo "Call this script via \"make release\" in the top-level directory of your"
+	echo "working copy."
+	echo
+	exit 1
 fi
 
 # RELEASE_TMP and RELEASE_STORE are expected to be exported by make (from
 # Makefile.inc)
 if [[ "$RELEASE_TMP" == "" || "$RELEASE_STORE" == "" ]]; then
-    echo
-    echo "ERROR:"
-    echo "RELEASE_TMP and/or RELEASE_STORE are not set. Check Makefile.inc and try again."
-    echo
-    exit 1
+	echo
+	echo "ERROR:"
+	echo "RELEASE_TMP and/or RELEASE_STORE are not set. Check Makefile.inc and try again."
+	echo
+	exit 1
 fi
 
 # make sure that the directories passed in RELEASE_TMP and RELEASE_STORE
@@ -53,58 +53,58 @@ check_dir_prereq "RELEASE_STORE"
 valid=0
 repos=$(svn info | grep "Repository Root" | cut -d" " -f3)
 for f in ~/.subversion/auth/svn.simple/*; do
-    if [[ "$(grep -c "$repos" $f)" != "0" ]]; then
-	valid=1
-	break
-    fi
+	if [[ "$(grep -c "$repos" $f)" != "0" ]]; then
+		valid=1
+		break
+	fi
 done
 
 if [[ "$valid" != "1" ]]; then
-    echo
-    echo "WARNING:"
-    echo "Write access to the repository is needed in order to successfully run this"
-    echo "script."
-
-    read -n1 -p "Do you want to continue? [yN] " choice
-    if [[ "$choice" != "y" && "$choice" != "Y" ]]; then
 	echo
-        echo "Aborted."
-	exit 1
-    fi
+	echo "WARNING:"
+	echo "Write access to the repository is needed in order to successfully run this"
+	echo "script."
+
+	read -n1 -p "Do you want to continue? [yN] " choice
+	if [[ "$choice" != "y" && "$choice" != "Y" ]]; then
+		echo
+		echo "Aborted."
+		exit 1
+	fi
 fi
 
 
 # check if we're in the top-level directory of the snapshot
 if [[ ! -f ./release.h ]]; then
-    echo
-    echo "ERROR:"
-    echo "It seems that the script has not been called with the top-level directory"
-    echo "of the working copy as current working directory. This should not happen"
-    echo "if you run \"make release\" in the top-level directory of the working"
-    echo "copy."
-    echo
-    exit 1
+	echo
+	echo "ERROR:"
+	echo "It seems that the script has not been called with the top-level directory"
+	echo "of the working copy as current working directory. This should not happen"
+	echo "if you run \"make release\" in the top-level directory of the working"
+	echo "copy."
+	echo
+	exit 1
 fi
 
 # this script does not work for tarball snapshots
 svn info > /dev/null 2>&1 || {
-    echo
-    echo "ERROR:"
-    echo "It seems this is no Subversion working copy of MadWifi. This script does"
-    echo "not work in such cases."
-    echo
-    exit 1
+	echo
+	echo "ERROR:"
+	echo "It seems this is no Subversion working copy of MadWifi. This script does"
+	echo "not work in such cases."
+	echo
+	exit 1
 }
 
 # check if local working copy has uncommitted changes
 if [[ ! -z "$(svn status)" ]]; then
-    echo
-    echo "ERROR:"
-    echo "Your working copy has changes which are not yet committed."
-    echo "Either commit or revert them before you continue to make a release."
-    echo "Aborting for now."
-    echo
-    exit 1
+	echo
+	echo "ERROR:"
+	echo "Your working copy has changes which are not yet committed."
+	echo "Either commit or revert them before you continue to make a release."
+	echo "Aborting for now."
+	echo
+	exit 1
 fi
 
 # make sure that the local working copy is in sync with the repository
@@ -113,12 +113,12 @@ localrev=$(svn info | grep Last\ Changed\ Rev | cut -d" " -f4)
 remoterev=$(svn log -r HEAD --quiet $repos | grep '^r[0-9]* ' | cut -d" " -f1 | cut -b2-)
 
 if [[ "$localrev" != "$remoterev" ]]; then
-    echo
-    echo "ERROR:"
-    echo "Your working copy is not in sync with the repository. Please update your"
-    echo "working copy, then restart the release process."
-    echo
-    exit 1
+	echo
+	echo "ERROR:"
+	echo "Your working copy is not in sync with the repository. Please update your"
+	echo "working copy, then restart the release process."
+	echo
+	exit 1
 fi
 
 
@@ -130,90 +130,90 @@ latest=$(svn list $reproot/tags | grep -e "^release-" | cut -d"-" -f2 | cut -d"/
 
 echo
 if [[ ! -z "$latest" ]]; then
-    major=$(echo $latest | cut -d"." -f1)
-    minor=$(echo $latest | cut -d"." -f2)
-    point=$(echo $latest | cut -d"." -f3)
-    micro=$(echo $latest | cut -d"." -f4)
+	major=$(echo $latest | cut -d"." -f1)
+	minor=$(echo $latest | cut -d"." -f2)
+	point=$(echo $latest | cut -d"." -f3)
+	micro=$(echo $latest | cut -d"." -f4)
 
-    if [ -n "$micro" ]; then
-	echo "The latest release is: $major.$minor.$point.$micro"
-    else
-	micro="0"
-	echo "The latest release is: $major.$minor.$point"
-    fi
+	if [ -n "$micro" ]; then
+		echo "The latest release is: $major.$minor.$point.$micro"
+	else
+		micro="0"
+		echo "The latest release is: $major.$minor.$point"
+	fi
 else
-    latest="0.0.0"
-    major="0"; minor="0"; point="0"; micro="0"
-    
-    echo "No releases yet."
+	latest="0.0.0"
+	major="0"; minor="0"; point="0"; micro="0"
+	
+	echo "No releases yet."
 fi
 
 valid=0
 while ! ((valid)); do
-    echo
-    echo "Please choose the release type:"
-    echo " 1: major release (new version will be $((major+1)).0.0)"
-    echo " 2: minor release (new version will be $major.$((minor+1)).0)"
-    echo " 3: point release (new version will be $major.$minor.$((point+1)))"
-    echo " 4: micro release (new version will be $major.$minor.$point.$((micro+1))"
-    echo " 5: other (enter new version manually)"
-    echo " 0: abort"
-    echo
-
-    read -n1 -p "Your choice: " choice
-    case "$choice" in
-    1) newmajor=$((major+1)); newminor=0; newpoint=0; newmicro=0; valid=1 ;;
-    2) newmajor=$major; newminor=$((minor+1)); newpoint=0; newmicro=0; valid=1 ;;
-    3) newmajor=$major; newminor=$minor; newpoint=$((point+1)); newmicro=0; valid=1 ;;
-    4) newmajor=$major; newminor=$minor; newpoint=$point; newmicro=$((micro+1)); valid=1 ;;
-    5)
 	echo
-	read -p "Enter release number (a.b.c.d): " newrelease
-	if [[ "$(echo $newrelease | grep -c '^[0-9]*\.[0-9]*\.[0-9]*\(\.[0-9]\)\?$')" == "1" ]]; then
-	    newmajor=$(echo $newrelease | cut -d"." -f1)
-	    newminor=$(echo $newrelease | cut -d"." -f2)
-	    newpoint=$(echo $newrelease | cut -d"." -f3)
-	    newmicro=$(echo $newrelease | cut -d"." -f4)
-	    
-	    if [ -n "$newmicro" ]; then
-		newversion="$newmajor.$newminor.$newpoint.$newmicro"
-	    else
-		newversion="$newmajor.$newminor.$newpoint"
-		newmicro="0"
-	    fi
-
-	    if [[ "$(svn list $reproot/tags | grep -c ^release-$newversion)" != "0" ]]; then
-		echo "Release $newversion already exists. Try again."
-	    else
-		valid=1
-	    fi
-	else
-	    echo "Invalid release number."
-	fi
-	;;
-    0)
+	echo "Please choose the release type:"
+	echo " 1: major release (new version will be $((major+1)).0.0)"
+	echo " 2: minor release (new version will be $major.$((minor+1)).0)"
+	echo " 3: point release (new version will be $major.$minor.$((point+1)))"
+	echo " 4: micro release (new version will be $major.$minor.$point.$((micro+1))"
+	echo " 5: other (enter new version manually)"
+	echo " 0: abort"
 	echo
-	echo "Aborted."
-	exit 0
-	;;
-	
-    *)
-	echo "Invalid."
-	;;
-    esac
+
+	read -n1 -p "Your choice: " choice
+	case "$choice" in
+	1) newmajor=$((major+1)); newminor=0; newpoint=0; newmicro=0; valid=1 ;;
+	2) newmajor=$major; newminor=$((minor+1)); newpoint=0; newmicro=0; valid=1 ;;
+	3) newmajor=$major; newminor=$minor; newpoint=$((point+1)); newmicro=0; valid=1 ;;
+	4) newmajor=$major; newminor=$minor; newpoint=$point; newmicro=$((micro+1)); valid=1 ;;
+	5)
+		echo
+		read -p "Enter release number (a.b.c.d): " newrelease
+		if [[ "$(echo $newrelease | grep -c '^[0-9]*\.[0-9]*\.[0-9]*\(\.[0-9]\)\?$')" == "1" ]]; then
+			newmajor=$(echo $newrelease | cut -d"." -f1)
+			newminor=$(echo $newrelease | cut -d"." -f2)
+			newpoint=$(echo $newrelease | cut -d"." -f3)
+			newmicro=$(echo $newrelease | cut -d"." -f4)
+		    
+			if [ -n "$newmicro" ]; then
+				newversion="$newmajor.$newminor.$newpoint.$newmicro"
+			else
+				newversion="$newmajor.$newminor.$newpoint"
+				newmicro="0"
+			fi
+
+			if [[ "$(svn list $reproot/tags | grep -c ^release-$newversion)" != "0" ]]; then
+				echo "Release $newversion already exists. Try again."
+			else
+				valid=1
+			fi
+		else
+			echo "Invalid release number."
+		fi
+		;;
+	0)
+		echo
+		echo "Aborted."
+		exit 0
+		;;
+		
+	*)
+		echo "Invalid."
+		;;
+	esac
 done
 
 # reassure that everything is correct
 if [[ "$micro" != "0" ]]; then
-    oldrelease="$major.$minor.$point.$micro"
+	oldrelease="$major.$minor.$point.$micro"
 else
-    oldrelease="$major.$minor.$point"
+	oldrelease="$major.$minor.$point"
 fi
 
 if [[ "$newmicro" != "0" ]]; then
-    newrelease="$newmajor.$newminor.$newpoint.$newmicro"
+	newrelease="$newmajor.$newminor.$newpoint.$newmicro"
 else
-    newrelease="$newmajor.$newminor.$newpoint"
+	newrelease="$newmajor.$newminor.$newpoint"
 fi
 
 echo
@@ -223,9 +223,9 @@ echo
 
 read -n1 -p "Is this correct? [yN] " choice
 if [[ "$choice" != "y" && "$choice" != "Y" ]]; then
-    echo
-    echo "Aborted."
-    exit 0
+	echo
+	echo "Aborted."
+	exit 0
 fi
 
 echo; echo
@@ -238,8 +238,8 @@ echo "temporarily adjusting release.h..."
 
 mv release.h release.h.old
 sed -e "/svnversion.h/d" \
-    -e "/RELEASE_TYPE/ s/\".*\"/\"RELEASE\"/" \
-    -e "/RELEASE_VERSION/ s/\".*\"/\"$newrelease\"/" release.h.old > release.h
+	-e "/RELEASE_TYPE/ s/\".*\"/\"RELEASE\"/" \
+	-e "/RELEASE_VERSION/ s/\".*\"/\"$newrelease\"/" release.h.old > release.h
 rm -f release.h.old 
 
 
@@ -271,8 +271,8 @@ tmp=$RELEASE_TMP
 store=$RELEASE_STORE
 
 [[ -d $tmp/madwifi-release ]] || {
-    echo "creating packaging directory..."
-    mkdir $tmp/madwifi-release || exit 1
+	echo "creating packaging directory..."
+	mkdir $tmp/madwifi-release || exit 1
 }
 
 # remove old directories
