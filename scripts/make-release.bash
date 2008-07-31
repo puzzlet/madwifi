@@ -53,6 +53,8 @@ check_dir_prereq "RELEASE_STORE"
 valid=0
 repos=$(svn info | grep "Repository Root" | cut -d" " -f3)
 for f in ~/.subversion/auth/svn.simple/*; do
+	[ -f $f ] || continue
+	
 	if [[ "$(grep -c "$repos" $f)" != "0" ]]; then
 		valid=1
 		break
