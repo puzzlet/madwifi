@@ -97,7 +97,8 @@ svn info > /dev/null 2>&1 || {
 }
 
 # check if local working copy has uncommitted changes
-if [[ ! -z "$(svn status)" ]]; then
+changes="$(svn status | sed -e "/^X/d" -e "/^$/d" -e "/external item/d")"
+if [[ ! -z "$changes" ]]; then
 	echo
 	echo "ERROR:"
 	echo "Your working copy has changes which are not yet committed."
