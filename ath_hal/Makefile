@@ -45,8 +45,11 @@ TOP = $(obj)/..
 
 include $(TOP)/Makefile.inc
 
+HALBIN := $(TARGET).bin
+HALOBJ := $(TARGET).hal.o
+
 obj-m		+= ath_hal.o
-ath_hal-objs	:= ah_os.o $(TARGET).hal.o
+ath_hal-objs	:= ah_os.o $(HALOBJ)
 
 hostprogs-y	:= uudecode
 
@@ -79,7 +82,7 @@ endif
 quiet_cmd_uudecode = UUDECODE $@
       cmd_uudecode = $(obj)/uudecode -o $@ $<
 
-$(obj)/$(TARGET)._hal.o: $(HAL)/public/$(TARGET).hal.o.uu $(obj)/uudecode
+$(HALBIN) $(obj)/$(HALBIN): $(HAL)/public/$(TARGET).hal.o.uu $(obj)/uudecode
 ifdef LINUX24
 	$(cmd_uudecode)
 else
@@ -92,7 +95,7 @@ quiet_cmd_unmangle = UNMANGLE $@
       cmd_unmangle = $(filter-out -O binary -S,$(OBJCOPY)) \
 		$$(cat $(TOP)/scripts/hal_unmangle.objcopy) $< $@
 
-$(obj)/$(TARGET).hal.o: $(obj)/$(TARGET)._hal.o
+$(HALOBJ) $(obj)/$(HALOBJ): $(obj)/$(HALBIN)
 ifdef LINUX24
 	$(cmd_unmangle)
 else
