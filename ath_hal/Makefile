@@ -82,7 +82,7 @@ endif
 quiet_cmd_uudecode = UUDECODE $@
       cmd_uudecode = $(obj)/uudecode -o $@ $<
 
-$(HALBIN) $(obj)/$(HALBIN): $(HAL)/public/$(TARGET).hal.o.uu $(obj)/uudecode
+$(filter-out ./,$(obj)/)$(HALBIN): $(HAL)/public/$(TARGET).hal.o.uu $(obj)/uudecode
 ifdef LINUX24
 	$(cmd_uudecode)
 else
@@ -95,7 +95,7 @@ quiet_cmd_unmangle = UNMANGLE $@
       cmd_unmangle = $(filter-out -O binary -S,$(OBJCOPY)) \
 		$$(cat $(TOP)/scripts/hal_unmangle.objcopy) $< $@
 
-$(HALOBJ) $(obj)/$(HALOBJ): $(obj)/$(HALBIN)
+$(filter-out ./,$(obj)/)$(HALOBJ): $(obj)/$(HALBIN)
 ifdef LINUX24
 	$(cmd_unmangle)
 else
