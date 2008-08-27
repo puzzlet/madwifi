@@ -691,7 +691,6 @@ int ieee80211_vap_setup(struct ieee80211com *, struct net_device *,
 int ieee80211_vap_attach(struct ieee80211vap *, ifm_change_cb_t, ifm_stat_cb_t);
 void ieee80211_vap_detach(struct ieee80211vap *);
 void ieee80211_mark_dfs(struct ieee80211com *, struct ieee80211_channel *);
-void ieee80211_dfs_test_return(struct ieee80211com *, u_int8_t);
 void ieee80211_announce(struct ieee80211com *);
 void ieee80211_announce_channels(struct ieee80211com *);
 int ieee80211_media_change(struct net_device *);

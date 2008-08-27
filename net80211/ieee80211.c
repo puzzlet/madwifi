@@ -1136,20 +1136,6 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 EXPORT_SYMBOL(ieee80211_mark_dfs);
 
 void
-ieee80211_dfs_test_return(struct ieee80211com *ic, u_int8_t ieeeChan)
-{
-	struct net_device *dev = ic->ic_dev;
-
-	/* Return to the original channel we were on before the test mute. */
-	if_printf(dev, "Returning to channel %d\n", ieeeChan);
-	printk(KERN_DEBUG "Returning to chan %d\n", ieeeChan);
-	ic->ic_chanchange_chan = ieeeChan;
-	ic->ic_chanchange_tbtt = IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
-	ic->ic_flags |= IEEE80211_F_CHANSWITCH;
-}
-EXPORT_SYMBOL(ieee80211_dfs_test_return);
-
-void
 ieee80211_announce(struct ieee80211com *ic)
 {
 /* Disabled - creates noise but no useful information. */
