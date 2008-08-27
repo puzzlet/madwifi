@@ -317,27 +317,40 @@ MODULE_PARM_DESC(debug, "Enable IEEE80211_MSG_CRYPTO");
 static int __init
 init_crypto_wep_test(void)
 {
-	struct ieee80211com ic;
-	struct ieee80211vap vap;
+	struct ieee80211com *ic;
+	struct ieee80211vap *vap;
 	int i, pass, total;
 
-	memset(&ic, 0, sizeof(ic));
-	memset(&vap, 0, sizeof(vap));
-	vap.iv_ic = &ic;
+	ic = kzalloc(sizeof(*ic), GFP_KERNEL);
+	if (!ic)
+		return -ENOMEM;
+
+	ieee80211_crypto_attach(ic);
+
+	vap = kzalloc(sizeof(*vap), GFP_KERNEL);
+	if (!vap) {
+		kfree(ic);
+		return -ENOMEM;
+	}
+
+	vap->iv_ic = ic;
 	if (debug)
-		vap.iv_debug = IEEE80211_MSG_CRYPTO;
-	ieee80211_crypto_attach(&ic);
-	ieee80211_crypto_vattach(&vap);
+		vap->iv_debug = IEEE80211_MSG_CRYPTO;
+
+	ieee80211_crypto_vattach(vap);
+
 	pass = 0;
 	total = 0;
 	for (i = 0; i < ARRAY_SIZE(weptests); i++)
 		if (tests & (1 << i)) {
 			total++;
-			pass += runtest(&vap, &weptests[i]);
+			pass += runtest(vap, &weptests[i]);
 		}
 	printk("%u of %u 802.11i WEP test vectors passed\n", pass, total);
-	ieee80211_crypto_vdetach(&vap);
-	ieee80211_crypto_detach(&ic);
+	ieee80211_crypto_vdetach(vap);
+	ieee80211_crypto_detach(ic);
+	kfree(vap);
+	kfree(ic);
 	return (pass == total ? 0 : -ENXIO);
 }
 module_init(init_crypto_wep_test);
