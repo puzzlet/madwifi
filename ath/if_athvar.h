@@ -537,7 +537,7 @@ struct ath_vap {
 	atomic_t av_beacon_alloc;       /* set to 1 when the next beacon needs
 					   to be recomputed */
 #else
-	unsigned int av_beacon_alloc;
+	unsigned long av_beacon_alloc;
 #endif
 };
 #define	ATH_VAP(_v)	((struct ath_vap *)(_v))
