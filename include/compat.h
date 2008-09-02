@@ -131,9 +131,7 @@
 } while (0)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
-#ifndef GFP_KERNEL
-typedef unsigned int gfp_t;
-#endif
+#define gfp_t unsigned int
 
 static inline void *_kzalloc(size_t size, gfp_t flags)
 {
