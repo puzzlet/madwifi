@@ -131,15 +131,19 @@
 } while (0)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
-typedef int gfp_t;
+#ifndef GFP_KERNEL
+typedef unsigned int gfp_t;
+#endif
 
-static inline void *kzalloc(size_t size, gfp_t flags)
+static inline void *_kzalloc(size_t size, gfp_t flags)
 {
 	void *p = kmalloc(size, flags);
 	if (likely(p != NULL))
 		memset(p, 0, size);
 	return p;
 }
+
+#define kzalloc(size, flags) _kzalloc(size, flags)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,21)
