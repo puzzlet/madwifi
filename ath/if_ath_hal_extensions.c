@@ -161,3 +161,72 @@ ath5k_chip_name(enum ath5k_srev_type type, u_int16_t val)
 
 	return name;
 }
+
+
+void
+ath_hw_beacon_stop(struct ath_softc *sc) {
+	HAL_BEACON_TIMERS btimers;
+
+	btimers.bt_intval = 0;
+	btimers.bt_nexttbtt = 0;
+	btimers.bt_nextdba = 0xffffffff;
+	btimers.bt_nextswba = 0xffffffff;
+	btimers.bt_nextatim = 0;
+
+	ath_hal_setbeacontimers(sc->sc_ah, &btimers);
+}
+
+
+/*
+ * IBSS mode: check the ATIM window size and fix it if necessary.
+ *
+ * the need for this function arises from the problem that due to unlucky timing
+ * of beacon timer configuration (which we try to avoid) and due to unlucky
+ * timing of local TSF updates (triggered by the reception of a beacon with the
+ * same BSSID - something we can't avoid) the beacon timers can be up updated
+ * seperately, leaving one of them in the past, not beeing updated until the
+ * timers wrap around. due to the fact that the beacon interval does not fit
+ * into the timer period (16 bit) a whole number of times the size of the ATIM
+ * window can get bigger than desired.
+ *
+ * usually we have an ATIM window size of 1 but this function is written to
+ * handle other window sizes as well.
+ */
+int
+ath_hw_check_atim(struct ath_softc *sc, int window, int intval)
+{
+	struct ath_hal *ah = sc->sc_ah;
+	unsigned int nbtt, atim, is5210 = 0;
+
+	if (ATH_SREV_FROM_AH(ah) >= AR5K_SREV_VER_AR5416)
+		return 0; /* AR5416+ doesn't do ATIM in HW */
+
+	if (ATH_SREV_FROM_AH(ah) == AR5K_SREV_VER_AR5210) {
+		nbtt = OS_REG_READ(ah, AR5K_TIMER0_5210);
+		atim = OS_REG_READ(ah, AR5K_TIMER3_5210);
+		is5210 = 1;
+	}
+	else {
+		nbtt = OS_REG_READ(ah, AR5K_TIMER0_5211);
+		atim = OS_REG_READ(ah, AR5K_TIMER3_5211);
+	}
+
+	/*
+	 * check if the ATIM window is still correct:
+	 *   1.) usually ATIM should be NBTT + window
+	 *   2.) nbtt already updated
+	 *   3.) nbtt already updated and has wrapped around
+	 *   4.) atim has wrapped around
+	 */
+	if ((atim - nbtt != window) &&				/* 1.) */
+	    (nbtt - atim != intval - window) &&			/* 2.) */
+	    ((nbtt | 0x10000) - atim != intval - window) &&	/* 3.) */
+	    ((atim | 0x10000) - nbtt != window)) {		/* 4.) */
+		if (is5210)
+			OS_REG_WRITE(ah, AR5K_TIMER3_5210, nbtt + window );
+		else
+			OS_REG_WRITE(ah, AR5K_TIMER3_5211, nbtt + window );
+		return atim - nbtt;
+	}
+	return 0;
+}

@@ -5388,11 +5388,15 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 	u_int32_t tsftu, hw_tsftu;
 	u_int32_t intval, nexttbtt = 0;
 	int reset_tsf = 0;
+	unsigned long irqstate;
 
 	if (vap == NULL)
 		vap = TAILQ_FIRST(&ic->ic_vaps);   /* XXX */
 
 	ni = vap->iv_bss;
+
+	/* TSF calculation is timing critical - we don't want to be interrupted here */
+	local_irq_save(irqstate);
 
 	hw_tsf = ath_hal_gettsf64(ah);
 	tsf = le64_to_cpu(ni->ni_tstamp.tsf);
@@ -5569,15 +5573,28 @@ ath_beacon_config(struct ath_softc *sc, struct ieee80211vap *vap)
 				~(HAL_BEACON_RESET_TSF | HAL_BEACON_ENA));
 #endif
 		sc->sc_nexttbtt = nexttbtt;
+
+		/* stop beacons before reconfiguring the timers to avoid race
+		 * conditions. ath_hal_beaconinit will start them again */
+		ath_hw_beacon_stop(sc);
+
 		ath_hal_beaconinit(ah, nexttbtt, intval);
 		if (intval & HAL_BEACON_RESET_TSF) {
 			sc->sc_last_tsf = 0;
 		}
 		sc->sc_bmisscount = 0;
 		ath_hal_intrset(ah, sc->sc_imask);
+
+		if (ath_hw_check_atim(sc, 1, intval & HAL_BEACON_PERIOD)) {
+			DPRINTF(sc, ATH_DEBUG_BEACON,
+				"fixed atim window after beacon init\n");
+		}
 	}
 
 ath_beacon_config_debug:
+
+	local_irq_restore(irqstate);
+
 	/* We print all debug messages here, in order to preserve the
 	 * time critical aspect of this function. */
 	DPRINTF(sc, ATH_DEBUG_BEACON,
@@ -6327,6 +6344,14 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 			DPRINTF(sc, ATH_DEBUG_BEACON, 
 				"Updated beacon timers\n");
 		}
+
+		if (IEEE80211_ADDR_EQ(ni->ni_bssid, vap->iv_bss->ni_bssid)) {
+			if (ath_hw_check_atim(sc, 1, vap->iv_bss->ni_intval)) {
+				DPRINTF(sc, ATH_DEBUG_BEACON,
+					"fixed atim window after beacon recv\n");
+			}
+		}
+
 		/* NB: Fall Through */
 	case IEEE80211_FC0_SUBTYPE_PROBE_RESP:
 		if (vap->iv_opmode == IEEE80211_M_IBSS &&

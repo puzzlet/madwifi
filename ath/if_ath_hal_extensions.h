@@ -176,6 +176,35 @@
 #define AR5K_STA_ID1_ACKCTS_6MB		0x01000000	/* Use 6Mbit/s for ACK/CTS (?) */
 #define AR5K_STA_ID1_BASE_RATE_11B	0x02000000	/* Use 11b base rate (for ACK/CTS ?) [5211+] */
 
+/*
+ * PCU beacon control register
+ */
+#define AR5K_BEACON_5210	0x8024
+#define AR5K_BEACON_5211	0x8020
+
+/*
+ * Next beacon time register
+ */
+#define AR5K_TIMER0_5210	0x802c
+#define AR5K_TIMER0_5211	0x8028
+/*
+ * Next DMA beacon alert register
+ */
+#define AR5K_TIMER1_5210	0x8030
+#define AR5K_TIMER1_5211	0x802c
+
+/*
+ * Next software beacon alert register
+ */
+#define AR5K_TIMER2_5210	0x8034
+#define AR5K_TIMER2_5211	0x8030
+
+/*
+ * Next ATIM window time register
+ */
+#define AR5K_TIMER3_5210	0x8038
+#define AR5K_TIMER3_5211	0x8034
+
 
 enum ath5k_srev_type {
 	AR5K_VERSION_VER,
@@ -241,6 +270,8 @@ enum ath5k_dmasize {
 int ath_set_ack_bitrate(struct ath_softc *sc, int);
 int ar_device(int devid);
 const char * ath5k_chip_name(enum ath5k_srev_type type, u_int16_t val);
+void ath_hw_beacon_stop(struct ath_softc *sc);
+int ath_hw_check_atim(struct ath_softc *sc, int window, int intval);
 
 static inline unsigned long field_width(unsigned long mask, unsigned long shift)
 {
