@@ -4284,26 +4284,88 @@ ath_mode_init(struct net_device *dev)
 			rfilt, mfilt[0], mfilt[1]);
 }
 
-static inline int 
-ath_slottime2timeout(struct ath_softc *sc, int slottime)
+/* returns aSIFSTime based on current channel settings */
+
+static int
+ath_default_sifs(struct ath_softc *sc)
 {
-	/* IEEE 802.11 2007 9.2.8 says the ACK timeout shall be SIFSTime +
-	 * slot time (+ PHY RX start delay). HAL seems to use a constant of 8
+	/* Turbo mode. FIXME : what is the correct value? */
+	if (sc->sc_dturbo || (sc->sc_curchan.privFlags & CHANNEL_ST))
+		return 8;
+	
+	if (sc->sc_curchan.channelFlags & CHANNEL_2GHZ) {
+
+		/* default : 802.11b or 802.11g with short/long slot time */
+		return 10;
+	} else if (sc->sc_curchan.channelFlags & CHANNEL_5GHZ) {
+
+		/* 802.11a/10MHz (half rates) */
+		if (sc->sc_curchan.channelFlags & CHANNEL_HALF)
+			return 64;
+
+		/* 802.11a/5MHz (quarter rates) */
+		if (sc->sc_curchan.channelFlags & CHANNEL_QUARTER)
+			return 32;
+
+		/* default : 802.11a/20MHz */
+		return 16;
+	}
+
+	/* incorrect value for channelFlags, returns a default value */
+	return 10;
+}
+
+static inline int 
+ath_slottime2timeout(struct ath_softc *sc, int aSlotTime)
+{
+	/* IEEE 802.11-2007 9.2.8 says the ACK timeout shall be aSIFSTime +
+	 * aSlotTime (+ aPHY-RX-START-Delay). HAL seems to use a constant of 8
 	 * for OFDM overhead and 18 for CCK overhead.
-	 *
-	 * XXX: Update based on emperical evidence (potentially save 15us per
-	 * timeout). */
-	if (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_A) ==
-				IEEE80211_CHAN_A) ||
-	    (((sc->sc_curchan.channelFlags & IEEE80211_CHAN_108G) ==
-	      			IEEE80211_CHAN_108G) && 
-	     (sc->sc_ic.ic_flags & IEEE80211_F_SHSLOT)))
-		/* Short slot time: 802.11a, and 802.11g turbo in turbo mode
-		 * with short slot time. */
-		return slottime + 8;
-	else
-		/* Constant for CCK MIB processing time. */
-		return slottime + 18;
+	 */
+
+	int aSIFSTime;
+
+	aSIFSTime = ath_default_sifs(sc);
+	/* FIXME : we neglect aPHY-RX-START-Delay */
+	return aSIFSTime + aSlotTime;
+}
+
+/* returns aSlotTime in us based on the current channel settings. This value
+ * does not take into account air propagation time */
+
+static int
+ath_default_slottime(struct ath_softc *sc)
+{
+	struct ieee80211com *ic = &sc->sc_ic;
+
+	/* Turbo mode */
+	if (sc->sc_dturbo || (sc->sc_curchan.privFlags & CHANNEL_ST))
+		return 6;
+	
+	if (sc->sc_curchan.channelFlags & CHANNEL_2GHZ) {
+
+		/* 802.11g with short slot time */
+		if (ic->ic_flags & IEEE80211_F_SHSLOT)
+			return 9;
+		
+		/* default : 802.11b or 802.11g with long slot time */
+		return 20;
+	} else if (sc->sc_curchan.channelFlags & CHANNEL_5GHZ) {
+
+		/* 802.11a/10MHz (half rates) */
+		if (sc->sc_curchan.channelFlags & CHANNEL_HALF)
+			return 13;
+
+		/* 802.11a/5MHz (quarter rates) */
+		if (sc->sc_curchan.channelFlags & CHANNEL_QUARTER)
+			return 21;
+
+		/* default : 802.11a/20MHz */
+		return 9;
+	}
+
+	/* incorrect value for channelFlags, returns a default value */
+	return 20;
 }
 
 static inline int 
@@ -4337,22 +4399,19 @@ ath_getctstimeout(struct ath_softc *sc)
 }
 
 /*
- * Set the slot time based on the current setting.
+ * Set the slot time, ACK timeout, CTS timeout HW registers based on the
+ * current setting.
  */
 static inline void
 ath_setslottime(struct ath_softc *sc)
 {
-	struct ieee80211com *ic = &sc->sc_ic;
 	struct ath_hal *ah = sc->sc_ah;
 
 	if (sc->sc_slottimeconf > 0) /* manual override */
 		ath_hal_setslottime(ah, sc->sc_slottimeconf);
-	else if (sc->sc_dturbo || (sc->sc_curchan.privFlags & CHANNEL_ST))
-		ath_hal_setslottime(ah, HAL_SLOT_TIME_6);
-	else if (ic->ic_flags & IEEE80211_F_SHSLOT)
-		ath_hal_setslottime(ah, HAL_SLOT_TIME_9);
 	else
-		ath_hal_setslottime(ah, HAL_SLOT_TIME_20);
+		ath_hal_setslottime(ah, ath_default_slottime(sc));
+
 	sc->sc_updateslot = OK;
 	ath_setacktimeout(sc);
 	ath_setctstimeout(sc);
@@ -10535,18 +10594,14 @@ ath_estimate_max_distance(struct ath_softc *sc)
 static inline int 
 ath_distance2slottime(struct ath_softc *sc, int distance)
 {
-	/* Allowance for air propagation (roundtrip time) should be at least 
-	 * 5us per the standards.
-	 * 
-	 * So let's set a minimum distance to accomodate this: 
-	 * roundtrip time = ((distance / speed_of_light) * 2)
-	 * distance = ((time * 300 ) / 2) or ((5 * 300) / 2) = 750 m */
-	int rtdist = distance * 2;
+	/* IEEE 802.11-2007 10.4.3.2 defines aAirPropagationTime as being
+	 * twice the propagation time for a signal to cross the maximum
+	 * distance */
+
 	int c = 299;	/* Speed of light in vacuum in m/us. */ 
-	/* IEEE 802.11 2007 10l.4.3.2. In us. */
-	int aAirPropagation = MAX(5, howmany(rtdist, c));
-	/* XXX: RX/TX turnaround & MAC delay. */
-	return ath_ccatime(sc) + aAirPropagation;
+	/* IEEE 802.11 2007 10.4.3.2. In us. */
+	int aAirPropagationTime = (distance * 2) / c;
+	return ath_default_slottime(sc) + aAirPropagationTime;
 }
 
 static inline int 
