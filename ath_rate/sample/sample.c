@@ -941,7 +941,7 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 static void
 ath_rate_cb(void *arg, struct ieee80211_node *ni)
 {
-	ath_rate_ctl_reset(ni->ni_ic->ic_dev->priv, ni);
+	ath_rate_ctl_reset(netdev_priv(ni->ni_ic->ic_dev), ni);
 }
 
 /*
@@ -959,7 +959,7 @@ ath_rate_newstate(struct ieee80211vap *vap, enum ieee80211_state newstate)
 			 */
 			ieee80211_iterate_nodes(&ic->ic_sta, ath_rate_cb, NULL);
 		}
-		ath_rate_newassoc(ic->ic_dev->priv, ATH_NODE(vap->iv_bss), 1);
+		ath_rate_newassoc(netdev_priv(ic->ic_dev), ATH_NODE(vap->iv_bss), 1);
 	}
 }
 

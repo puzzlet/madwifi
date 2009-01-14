@@ -1524,7 +1524,7 @@ static void ath_rp_clear(struct ath_softc *sc)
 static void ath_rp_tasklet(TQUEUE_ARG data)
 {
 	struct net_device *dev = (struct net_device *)data;
-	struct ath_softc *sc = dev->priv;
+	struct ath_softc *sc = netdev_priv(dev);
 
 	if (sc->sc_rp_analyze != NULL)
 		sc->sc_rp_analyze(sc);

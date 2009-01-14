@@ -181,7 +181,7 @@ EXPORT_SYMBOL(ieee80211_getmgtframe);
 static void
 ieee80211_vlan_register(struct net_device *dev, struct vlan_group *grp)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 
 	vap->iv_vlgrp = grp;
 }
@@ -192,7 +192,7 @@ ieee80211_vlan_register(struct net_device *dev, struct vlan_group *grp)
 static void
 ieee80211_vlan_add_vid(struct net_device *dev, unsigned short vid)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 
 	if (vap->iv_vlgrp != NULL)
 		vap->iv_bss->ni_vlan = vid;
@@ -204,7 +204,7 @@ ieee80211_vlan_add_vid(struct net_device *dev, unsigned short vid)
 static void
 ieee80211_vlan_kill_vid(struct net_device *dev, unsigned short vid)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 
 	if (vap->iv_vlgrp != NULL)
 		vlan_group_set_device(vap->iv_vlgrp, vid, NULL);
@@ -378,18 +378,18 @@ EXPORT_SYMBOL(ieee80211_notify_michael_failure);
 int
 ieee80211_load_module(const char *modname)
 {
-#ifdef CONFIG_KMOD
+#if defined(CONFIG_KMOD) || (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
 	int rv;
 	rv = request_module("%s", modname);
 	if (rv < 0)
 		printk(KERN_ERR "failed to automatically load module: %s; " \
 			"errno: %d\n", modname, rv);
 	return rv;
-#else /* CONFIG_KMOD */
+#else /* CONFIG_KMOD || 2.6.27+ */
 	printk(KERN_ERR "Unable to load needed module: %s; no support for " \
 			"automatic module loading\n", modname);
 	return -ENOSYS;
-#endif /* CONFIG_KMOD */
+#endif /* CONFIG_KMOD || 2.6.27+ */
 }
 
 
@@ -967,8 +967,8 @@ ieee80211_rcv_dev_event(struct notifier_block *this, unsigned long event,
 
 	switch (event) {
 	case NETDEV_CHANGENAME:
-		ieee80211_virtfs_vdetach(dev->priv);
-		ieee80211_virtfs_latevattach(dev->priv);
+		ieee80211_virtfs_vdetach(netdev_priv(dev));
+		ieee80211_virtfs_latevattach(netdev_priv(dev));
 		return NOTIFY_DONE;
 	default:
 		break;

@@ -755,7 +755,7 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 static void
 ath_rate_cb(void *arg, struct ieee80211_node *ni)
 {
-		ath_rate_ctl_reset(ni->ni_ic->ic_dev->priv, ni);
+		ath_rate_ctl_reset(netdev_priv(ni->ni_ic->ic_dev), ni);
 }
 
 /* Reset the rate control state for each 802.11 state transition. */
@@ -771,7 +771,7 @@ ath_rate_newstate(struct ieee80211vap *vap, enum ieee80211_state newstate)
 				ieee80211_iterate_nodes(&ic->ic_sta,
 						ath_rate_cb, NULL);
 			}
-			ath_rate_newassoc(ic->ic_dev->priv,
+			ath_rate_newassoc(netdev_priv(ic->ic_dev),
 					ATH_NODE(vap->iv_bss), 1);
 		}
 }
@@ -960,7 +960,7 @@ ath_proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 		(struct ieee80211_node_table *)&vap->iv_ic->ic_sta;
 	unsigned int x = 0;
 	unsigned int this_tp, this_prob, this_eprob;
-	struct ath_softc *sc = vap->iv_ic->ic_dev->priv;;
+	struct ath_softc *sc = netdev_priv(vap->iv_ic->ic_dev);
 
 	IEEE80211_NODE_TABLE_LOCK_IRQ(nt);
 	TAILQ_FOREACH(ni, &nt->nt_node, ni_list) {

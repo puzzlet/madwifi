@@ -952,7 +952,7 @@ ieee80211_init(struct net_device *dev, int forcescan)
 {
 #define	IS_RUNNING(_dev) \
 	((_dev->flags & (IFF_RUNNING|IFF_UP)) == (IFF_RUNNING|IFF_UP))
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *parent = ic->ic_dev;
 
@@ -1095,7 +1095,7 @@ EXPORT_SYMBOL(ieee80211_start_running);
 int
 ieee80211_stop(struct net_device *dev)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *parent = ic->ic_dev;
 

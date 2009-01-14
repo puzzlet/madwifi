@@ -199,7 +199,7 @@ init_ath_wmac(u_int16_t devid, u_int16_t wlanNum, struct ar531x_config *config)
 		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;
 	}
-	sc = dev->priv;
+	sc = netdev_priv(dev);
 	sc->aps_sc.sc_dev = dev;
 
 	/*

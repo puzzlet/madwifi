@@ -201,7 +201,7 @@ ieee80211_classify(struct ieee80211_node *ni, struct sk_buff *skb)
 int
 ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *parent = ic->ic_dev;
 	struct ieee80211_node *ni = NULL;
@@ -309,7 +309,7 @@ bad:
  * SKB is consumed in all cases.
  */
 void ieee80211_parent_queue_xmit(struct sk_buff *skb) {
-	struct ieee80211vap *vap = skb->dev->priv;
+	struct ieee80211vap *vap = netdev_priv(skb->dev);
 
 	vap->iv_devstats.tx_packets++;
 	vap->iv_devstats.tx_bytes += skb->len;

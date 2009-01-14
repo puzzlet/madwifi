@@ -407,7 +407,7 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 #define	IEEE80211_C_OPMODE \
 	(IEEE80211_C_IBSS | IEEE80211_C_HOSTAP | IEEE80211_C_AHDEMO | \
 	 IEEE80211_C_MONITOR)
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 	struct net_device *parent = ic->ic_dev;
 	int err;
 
@@ -1262,7 +1262,7 @@ media_status(enum ieee80211_opmode opmode, const struct ieee80211_channel *chan)
 static void
 ieee80211com_media_status(struct net_device *dev, struct ifmediareq *imr)
 {
-	struct ieee80211com *ic = dev->priv;	/* XXX */
+	struct ieee80211com *ic = netdev_priv(dev);	/* XXX */
 
 	imr->ifm_status = IFM_AVALID;
 	if (!TAILQ_EMPTY(&ic->ic_vaps))
@@ -1314,7 +1314,7 @@ media2mode(const struct ifmedia_entry *ime, enum ieee80211_phymode *mode)
 static int
 ieee80211com_media_change(struct net_device *dev)
 {
-	struct ieee80211com *ic = dev->priv;	/* XXX */
+	struct ieee80211com *ic = netdev_priv(dev);	/* XXX */
 	struct ieee80211vap *vap;
 	struct ifmedia_entry *ime = ic->ic_media.ifm_cur;
 	enum ieee80211_phymode newphymode;
@@ -1418,7 +1418,7 @@ checkrate(struct ieee80211com *ic, enum ieee80211_phymode mode, int rate)
 int
 ieee80211_media_change(struct net_device *dev)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ifmedia_entry *ime = vap->iv_media.ifm_cur;
 	enum ieee80211_phymode newmode;
@@ -1456,7 +1456,7 @@ EXPORT_SYMBOL(ieee80211_media_change);
 void
 ieee80211_media_status(struct net_device *dev, struct ifmediareq *imr)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
 	enum ieee80211_phymode mode;
 	struct ieee80211_rateset *rs;
@@ -1662,7 +1662,7 @@ EXPORT_SYMBOL(ieee80211_media2rate);
 static struct net_device_stats *
 ieee80211_getstats(struct net_device *dev)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 	struct net_device_stats *stats = &vap->iv_devstats;
 
 	/* XXX: Total guess as to what to count where */
@@ -1701,7 +1701,7 @@ ieee80211_change_mtu(struct net_device *dev, int mtu)
 static void
 ieee80211_set_multicast_list(struct net_device *dev)
 {
-	struct ieee80211vap *vap = dev->priv;
+	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
 	struct net_device *parent = ic->ic_dev;
 

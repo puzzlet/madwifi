@@ -214,7 +214,7 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		printk(KERN_ERR "%s: no memory for device state\n", dev_info);
 		goto bad2;
 	}
-	sc = dev->priv;
+	sc = netdev_priv(dev);
 	sc->aps_sc.sc_dev = dev;
 	sc->aps_sc.sc_iobase = mem;
 
@@ -295,7 +295,7 @@ static void
 ath_pci_remove(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
-	struct ath_pci_softc *sc = dev->priv;
+	struct ath_pci_softc *sc = netdev_priv(dev);
 
 	ath_detach(dev);
 	if (dev->irq)
@@ -313,7 +313,7 @@ ath_pci_suspend(struct pci_dev *pdev, pm_message_t state)
 	struct net_device *dev = pci_get_drvdata(pdev);
 
 	ath_suspend(dev);
-	PCI_SAVE_STATE(pdev, ((struct ath_pci_softc *)dev->priv)->aps_pmstate);
+	PCI_SAVE_STATE(pdev, ((struct ath_pci_softc *)netdev_priv(dev))->aps_pmstate);
 	pci_disable_device(pdev);
 	return pci_set_power_state(pdev, PCI_D3hot);
 }
@@ -330,7 +330,7 @@ ath_pci_resume(struct pci_dev *pdev)
 		return err;
 
 	/* XXX - Should this return nonzero on fail? */
-	PCI_RESTORE_STATE(pdev,	((struct ath_pci_softc *)dev->priv)->aps_pmstate);
+	PCI_RESTORE_STATE(pdev,	((struct ath_pci_softc *)netdev_priv(dev))->aps_pmstate);
 
 	err = pci_enable_device(pdev);
 	if (err)

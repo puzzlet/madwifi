@@ -292,7 +292,7 @@ ath_rate_ctl_start(struct ath_softc *sc, struct ieee80211_node *ni)
 static void
 ath_rate_cb(void *arg, struct ieee80211_node *ni)
 {
-	ath_rate_update(ni->ni_ic->ic_dev->priv, ni, (long) arg);
+	ath_rate_update(netdev_priv(ni->ni_ic->ic_dev), ni, (long) arg);
 }
 
 /*
@@ -302,7 +302,7 @@ static void
 ath_rate_newstate(struct ieee80211vap *vap, enum ieee80211_state state)
 {
 	struct ieee80211com *ic = vap->iv_ic;
-	struct ath_softc *sc = ic->ic_dev->priv;
+	struct ath_softc *sc = netdev_priv(ic->ic_dev);
 	struct ieee80211_node *ni;
 
 	if (state == IEEE80211_S_INIT)
