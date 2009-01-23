@@ -5368,7 +5368,7 @@ ath_beacon_send(struct ath_softc *sc, int *needmark, uint64_t hw_tsf)
 		else if (sc->sc_beacon_cal) {
 			printk("%s: %s: now=%lu lastcal=%lu expires=%lu remaining=%u ms\n", 
 			       SC_DEV_NAME(sc),
-			       __FUNCTION__,
+			       __func__,
 			       jiffies
 			       (sc->sc_lastcal)
 			       (sc->sc_lastcal + (sc->sc_calinterval_sec * HZ))
