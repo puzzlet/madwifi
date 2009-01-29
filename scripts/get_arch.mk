@@ -43,6 +43,12 @@ ARCH-y = $(ARCH)
 endif
 endif
 
+ifeq (ppc,$(ARCH-y))
+ifeq (,$(wildcard $(KERNELPATH)/arch/ppc))
+ARCH-y = powerpc
+endif
+endif
+
 # Don't allow ARCH to be overridden by a different value.
 ifeq (,$(ARCH))
 ARCH = $(ARCH-y)
