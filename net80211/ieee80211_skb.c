@@ -129,9 +129,6 @@ static void skb_print_message(
 		func, line,
 		expanded_message);
 	va_end(args);
-#ifdef IEEE80211_DEBUG_REFCNT
-	dump_stack();
-#endif
 }
 
 #ifdef IEEE80211_DEBUG_REFCNT

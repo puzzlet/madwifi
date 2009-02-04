@@ -12366,8 +12366,6 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **bf)
 	DPRINTF(sc, ATH_DEBUG_TXBUF, 
 		"[TXBUF=%03d/%03d] returned txbuf %p.\n", 
 		ath_get_buffer_count(sc), ATH_TXBUF);
-	if (DFLAG_ISSET(sc, ATH_DEBUG_TXBUF))
-		dump_stack();
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	if (netif_queue_stopped(sc->sc_dev) && 
 	    (ath_get_buffers_available(sc) > ATH_TXBUF_MGT_RESERVED) && 
