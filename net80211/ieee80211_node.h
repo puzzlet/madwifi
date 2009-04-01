@@ -276,8 +276,6 @@ struct ieee80211_node *ieee80211_find_rxnode(struct ieee80211com *,
 struct ieee80211_node *ieee80211_find_txnode(struct ieee80211vap *,
 	const u_int8_t *);
 
-void ieee80211_free_node(struct ieee80211_node *ni);
-
 /* Reference counting only needs to be locked out against the transitions,
  * 0->1 and 1->0 (i.e., when we do not own the reference we are getting).
  * This only happens when finding the a node reference from the node table,

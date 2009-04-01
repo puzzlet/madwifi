@@ -1384,7 +1384,7 @@ ieee80211_find_txnode(struct ieee80211vap *vap, const u_int8_t *mac)
 EXPORT_SYMBOL(ieee80211_find_txnode);
 
 /* Context: hwIRQ, softIRQ and process context. */
-void
+static void
 ieee80211_free_node(struct ieee80211_node *ni)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
@@ -1402,7 +1402,6 @@ ieee80211_free_node(struct ieee80211_node *ni)
 
 	vap->iv_ic->ic_node_free(ni);
 }
-EXPORT_SYMBOL(ieee80211_free_node);
 
 static void _reset_node(void *arg, struct ieee80211_node *ni)
 {
