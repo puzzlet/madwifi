@@ -112,7 +112,7 @@ endif
 
 .PHONY: clean
 clean:
-	rm -f *~ *.o *.ko *.mod.c uudecode .*.cmd
+	rm -f *~ *.o *.ko *.bin *.mod.c uudecode .*.cmd
 	rm -f modules.order .depend .version .*.o.flags .*.o.d
 	rm -rf .tmp_versions
 
