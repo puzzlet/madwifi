@@ -7323,7 +7323,7 @@ ath_txq_update(struct ath_softc *sc, struct ath_txq *txq, int ac)
 	qi.tqi_aifs = wmep->wmep_aifsn;
 	qi.tqi_cwmin = (1 << wmep->wmep_logcwmin) - 1;
 	qi.tqi_cwmax = (1 << wmep->wmep_logcwmax) - 1;
-	qi.tqi_burstTime = wmep->wmep_txopLimit / 32; /* 32 us units. */
+	qi.tqi_burstTime = IEEE80211_TXOP_TO_US(wmep->wmep_txopLimit);
 
 	if (!ath_hal_settxqueueprops(ah, txq->axq_qnum, &qi)) {
 		EPRINTF(sc, "Unable to update hardware queue "
