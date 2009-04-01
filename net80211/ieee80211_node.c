@@ -75,7 +75,6 @@ static struct ieee80211_node *node_alloc(struct ieee80211vap *);
 static void node_cleanup(struct ieee80211_node *);
 static void node_free(struct ieee80211_node *);
 
-static int32_t node_count(struct ieee80211com *ic);
 static u_int8_t node_getrssi(const struct ieee80211_node *);
 
 static void node_table_leave_locked(struct ieee80211_node_table *, 
@@ -108,7 +107,6 @@ ieee80211_node_attach(struct ieee80211com *ic)
 	ic->ic_node_free = node_free;
 	ic->ic_node_cleanup = node_cleanup;
 
-	ic->ic_node_count = node_count;
 	ic->ic_node_getrssi = node_getrssi;
 }
 
@@ -918,12 +916,6 @@ node_free(struct ieee80211_node *ni)
 	IEEE80211_NODE_SAVEQ_DESTROY(ni);
 
 	FREE(ni, M_80211_NODE);
-}
-
-static int32_t
-node_count(struct ieee80211com *ic)
-{
-	return atomic_read(&ic->ic_node_counter);
 }
 
 static u_int8_t
@@ -2157,12 +2149,3 @@ ieee80211_unref_node(struct ieee80211_node **pni)
 	*pni = NULL;
 }
 EXPORT_SYMBOL(ieee80211_unref_node);
-
-int32_t 
-ieee80211_get_node_count(struct ieee80211com *ic)
-{
-	return node_count(ic);
-}
-EXPORT_SYMBOL(ieee80211_get_node_count);
-
-
