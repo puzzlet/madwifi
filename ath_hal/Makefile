@@ -106,9 +106,6 @@ endif
 install:
 	test -d $(DESTDIR)/$(KMODPATH) || mkdir -p $(DESTDIR)/$(KMODPATH)
 	install -m 0644 ath_hal.$(KMODSUF) $(DESTDIR)/$(KMODPATH)
-ifneq ($(strip $(ALQ)),0)
-	install -m 0644 alq.$(KMODSUF) $(DESTDIR)/$(KMODPATH)
-endif
 
 .PHONY: clean
 clean:
