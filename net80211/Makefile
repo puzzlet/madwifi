@@ -76,9 +76,9 @@ wlan_scan_ap-objs := ieee80211_scan_ap.o
 
 include $(TOP)/Makefile.inc
 
-INCS += -I$(TOP) -I$(ATH_HAL) -I$(HAL)
+INCS += -I$(TOP) -I$(HAL)
 
-EXTRA_CFLAGS+=$(INCS) $(COPTS) -DOPT_AH_H=\"public/$(TARGET).opt_ah.h\"
+EXTRA_CFLAGS+=$(INCS) $(COPTS)
 
 -include $(TOPDIR)/Rules.make
 

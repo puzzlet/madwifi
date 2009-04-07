@@ -36,7 +36,7 @@
  * $Id: br1 $
  */
 
-#include "hal/ah_devid.h"
+#include "ath_hal/ah_devid.h"
 #include "if_media.h"
 #include <net80211/ieee80211_var.h>
 #include "if_athvar.h"

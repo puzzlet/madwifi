@@ -133,13 +133,11 @@ clean:
 	done
 	-$(MAKE) -C $(TOOLS) clean
 	rm -rf .tmp_versions
-	rm -f modules.order *.symvers svnversion.h
+	rm -f modules.order *.symvers Module.markers svnversion.h
 
 .PHONY: info
 info:
 	@echo "The following settings will be used for compilation:"
-	@echo "TARGET       : $(TARGET)"
-	@echo "ARCH         : $(ARCH)"
 	@echo "BUS          : $(BUS)"
 	@echo "KERNELRELEASE: $(KERNELRELEASE)"
 	@echo "KERNELPATH   : $(KERNELPATH)"

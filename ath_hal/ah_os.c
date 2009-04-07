@@ -1081,7 +1081,6 @@ ath_hal_sysctl_unregister(void)
 /*
  * Module glue.
  */
-#include "version.h"
 #if 0
 static char *dev_info = "ath_hal";
 #endif
@@ -1089,11 +1088,8 @@ static char *dev_info = "ath_hal";
 MODULE_AUTHOR("Errno Consulting, Sam Leffler");
 MODULE_DESCRIPTION("Atheros Hardware Access Layer (HAL)");
 MODULE_SUPPORTED_DEVICE("Atheros WLAN devices");
-#ifdef MODULE_VERSION
-MODULE_VERSION(TARGET ": " ATH_HAL_VERSION);
-#endif
 #ifdef MODULE_LICENSE
-MODULE_LICENSE("Proprietary");
+MODULE_LICENSE("Dual BSD/GPL");
 #endif
 
 EXPORT_SYMBOL(ath_hal_probe);
@@ -1118,18 +1114,10 @@ static void _kmmio_logmsg(struct ath_hal *ah, u8 write, u_int address, u_int32_t
 static int __init
 init_ath_hal(void)
 {
-	const char *sep;
-	int i;
 #ifdef MMIOTRACE
 	kmmio_logmsg = _kmmio_logmsg;
 #endif
 
-	sep = "";
-	for (i = 0; ath_hal_buildopts[i] != NULL; i++) {
-		printk("%s%s", sep, ath_hal_buildopts[i]);
-		sep = ", ";
-	}
-	printk(")\n");
 	ath_hal_sysctl_register();
 	return (0);
 }

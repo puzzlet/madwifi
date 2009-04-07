@@ -44,8 +44,8 @@
  * at build time.  i.e. inline for speed, or non-inline for debugging visibility
  * into the HAL methods being called (despite obfuscation).
  * 
- * The if_ath_hal.h file is generated from hal/ah.h at build time by the build
- * system.
+ * The if_ath_hal.h file is generated from ath_hal/ah.h at build time by the
+ * build system.
  */
 #ifndef _IF_ATH_HAL_MACROS_H_
 #define _IF_ATH_HAL_MACROS_H_

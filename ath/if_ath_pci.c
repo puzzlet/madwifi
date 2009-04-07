@@ -113,6 +113,7 @@ static struct pci_device_id ath_pci_id_table[] __devinitdata = {
 	{ 0x168c, 0x001d, PCI_ANY_ID, PCI_ANY_ID }, /* PCI Express ???  */
 	{ 0x168c, 0x0023, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0x0024, PCI_ANY_ID, PCI_ANY_ID },
+	{ 0x168c, 0x0027, PCI_ANY_ID, PCI_ANY_ID },
 	{ 0x168c, 0x9013, PCI_ANY_ID, PCI_ANY_ID }, /* sonicwall */
 	{ 0 }
 };
@@ -271,7 +272,7 @@ ath_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		dev_info, dev->name, athname ? athname : "Atheros ???",
 		(unsigned long long)phymem, dev->irq);
 
-	if (vdevice == AR5418_DEVID)
+	if (vdevice == AR5416_DEVID_PCIE)
 		sc->aps_sc.sc_dmasize_stomp = 1;
 
 	/* ready to process interrupts */

@@ -45,62 +45,100 @@ TOP = $(obj)/..
 
 include $(TOP)/Makefile.inc
 
-HALBIN := $(TARGET).bin
-HALOBJ := $(TARGET).hal.o
-
 obj-m		+= ath_hal.o
-ath_hal-objs	:= ah_os.o $(HALOBJ)
+ath_hal-objs	:= \
+	ah.o \
+	ah_eeprom_v1.o \
+	ah_eeprom_v14.o \
+	ah_eeprom_v3.o \
+	ah_os.o \
+	ah_regdomain.o \
+	ar5210/ar5210_attach.o \
+	ar5210/ar5210_beacon.o \
+	ar5210/ar5210_interrupts.o \
+	ar5210/ar5210_keycache.o \
+	ar5210/ar5210_misc.o \
+	ar5210/ar5210_phy.o \
+	ar5210/ar5210_power.o \
+	ar5210/ar5210_recv.o \
+	ar5210/ar5210_reset.o \
+	ar5210/ar5210_xmit.o \
+	ar5211/ar5211_attach.o \
+	ar5211/ar5211_beacon.o \
+	ar5211/ar5211_interrupts.o \
+	ar5211/ar5211_keycache.o \
+	ar5211/ar5211_misc.o \
+	ar5211/ar5211_phy.o \
+	ar5211/ar5211_power.o \
+	ar5211/ar5211_recv.o \
+	ar5211/ar5211_reset.o \
+	ar5211/ar5211_xmit.o \
+	ar5212/ar2316.o \
+	ar5212/ar2317.o \
+	ar5212/ar2413.o \
+	ar5212/ar2425.o \
+	ar5212/ar5111.o \
+	ar5212/ar5112.o \
+	ar5212/ar5212_ani.o \
+	ar5212/ar5212_attach.o \
+	ar5212/ar5212_beacon.o \
+	ar5212/ar5212_eeprom.o \
+	ar5212/ar5212_gpio.o \
+	ar5212/ar5212_interrupts.o \
+	ar5212/ar5212_keycache.o \
+	ar5212/ar5212_misc.o \
+	ar5212/ar5212_phy.o \
+	ar5212/ar5212_power.o \
+	ar5212/ar5212_recv.o \
+	ar5212/ar5212_reset.o \
+	ar5212/ar5212_rfgain.o \
+	ar5212/ar5212_xmit.o \
+	ar5212/ar5413.o \
+	ar5416/ar2133.o \
+	ar5416/ar5416_ani.o \
+	ar5416/ar5416_attach.o \
+	ar5416/ar5416_beacon.o \
+	ar5416/ar5416_cal.o \
+	ar5416/ar5416_cal_adcdc.o \
+	ar5416/ar5416_cal_adcgain.o \
+	ar5416/ar5416_cal_iq.o \
+	ar5416/ar5416_eeprom.o \
+	ar5416/ar5416_gpio.o \
+	ar5416/ar5416_interrupts.o \
+	ar5416/ar5416_keycache.o \
+	ar5416/ar5416_misc.o \
+	ar5416/ar5416_phy.o \
+	ar5416/ar5416_power.o \
+	ar5416/ar5416_recv.o \
+	ar5416/ar5416_reset.o \
+	ar5416/ar5416_xmit.o \
+	ar5416/ar9160_attach.o
 
-hostprogs-y	:= uudecode
-
-# For older 2.6 kernels
-host-progs	:= $(hostprogs-y)
+ifeq ($(strip $(BUS)),AHB)
+ath_hal-objs += \
+	ar5312/ar5312_attach.o \
+	ar5312/ar5312_eeprom.o \
+	ar5312/ar5312_gpio.o \
+	ar5312/ar5312_interrupts.o \
+	ar5312/ar5312_misc.o \
+	ar5312/ar5312_power.o \
+	ar5312/ar5312_reset.o \
+	ar5312/ar5315_gpio.o
+endif
 
 ifdef LINUX24
 export-objs	:= ah_os.o
 endif
 
-INCS += -I$(ATH_HAL) -I$(HAL)
+INCS += -I$(HAL)
 
-EXTRA_CFLAGS+= $(INCS) $(COPTS) -DOPT_AH_H=\"public/$(TARGET).opt_ah.h\"
-
-ifneq (,$(filter xscale% arm%,$(TARGET)))
-LDFLAGS += --no-warn-mismatch
-endif
+EXTRA_CFLAGS+= $(INCS) $(COPTS)
 
 -include $(TOPDIR)/Rules.make
 
 .PHONY: all
 all:
 	$(MAKE) -C $(KERNELPATH) SUBDIRS=$(shell pwd) modules
-
-ifdef LINUX24
-$(obj)/uudecode: $(obj)/uudecode.c
-	$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
-endif
-
-quiet_cmd_uudecode = UUDECODE $@
-      cmd_uudecode = $(obj)/uudecode -o $@ $<
-
-$(filter-out ./,$(obj)/)$(HALBIN): $(HAL)/public/$(TARGET).hal.o.uu $(obj)/uudecode
-ifdef LINUX24
-	$(cmd_uudecode)
-else
-	$(call if_changed,uudecode)
-endif
-
-# Replace as many hashed names as possible with meaningful
-# ones in the symbol table of the binary kernel module for HAL.
-quiet_cmd_unmangle = UNMANGLE $@
-      cmd_unmangle = $(filter-out -O binary -S,$(OBJCOPY)) \
-		$$(cat $(TOP)/scripts/hal_unmangle.objcopy) $< $@
-
-$(filter-out ./,$(obj)/)$(HALOBJ): $(obj)/$(HALBIN)
-ifdef LINUX24
-	$(cmd_unmangle)
-else
-	$(call if_changed,unmangle)
-endif
 
 .PHONY: install
 install:
@@ -109,8 +147,9 @@ install:
 
 .PHONY: clean
 clean:
-	rm -f *~ *.o *.ko *.bin *.mod.c uudecode .*.cmd
+	rm -f *~ *.o *.ko *.mod.c .*.cmd
 	rm -f modules.order .depend .version .*.o.flags .*.o.d
+	rm -f ar*/*~ ar*/*.o ar*/.*.cmd
 	rm -rf .tmp_versions
 
 ath_hal.o: $(addprefix $(obj)/,$(ath_hal-objs))

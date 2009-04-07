@@ -84,29 +84,6 @@ If the kernel was built outside the source directory, KERNELPATH should
 point to the output directory where .config is located, not to the
 sources.
 
-This distribution includes support for a variety of target platforms.
-Because of the binary nature of the HAL not all platforms are supported
-(the list grows as time permits).  The supported target platforms can be
-found with:
-
-  $ ls hal/public/*.inc
-
-A target specifies the CPU architecture, byte order (unless implied by
-the CPU), and the ABI/file format.  For most popular platforms, the
-build system will find the appropriate files.  When cross-compiling or
-compiling for less common platforms, the target platform may need to be
-specified using the TARGET variable, e.g:
-
-  $ make TARGET=armv4-le-elf
-
-Consult the contents of the .inc file to find out what the target
-platform is and what toolchain was used to build the HAL object module. 
-Beware of mixing toolchains; some target platforms require that the HAL
-and driver be built with the same toolchain (i.e. compiler, assembler,
-and linker) and the same compiler flags.  If you get warnings about
-incompatible compiler flags, chances are that you are compiling for a
-wrong target or using an incompatible compiler.
-
 
 Cross-compiling
 ---------------
@@ -115,17 +92,13 @@ The build system is designed to support cross-compiling without any
 modification to the distribution files.  It should be sufficient to
 specify any parameters on the make command line.
 
-In most cases, only KERNELPATH and CROSS_COMPILE need to be defined. 
-CROSS_COMPILE is the prefix for cross-compiling tools.  For instance, if
-the cross compiler is called arm-linux-gcc, set CROSS_COMPILE to
-"arm-linux-":
+In most cases, only KERNELPATH, ARCH and CROSS_COMPILE need to be
+defined.  ARCH is the architecture of the kernel.  CROSS_COMPILE is the
+prefix for cross-compiling tools.  For instance, if compiling for ARM
+and the cross compiler is called arm-linux-gcc, set ARCH to "arm" and
+CROSS_COMPILE to "arm-linux-":
 
-  $ make KERNELPATH=/usr/src/linux-arm CROSS_COMPILE=arm-linux-
-
-The build system determines ARCH and TARGET based on the .config file in
-the Linux build tree.  TARGET still may need to be provided on the
-command line some uncommon systems.  If ARCH is determined incorrectly,
-please report it.
+  $ make KERNELPATH=/usr/src/linux-arm ARCH=arm CROSS_COMPILE=arm-linux-
 
 If the compiler needs additional flags to compile userspace binaries,
 you can redefine CC to include those flags.

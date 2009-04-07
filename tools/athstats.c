@@ -52,12 +52,11 @@
 #include <signal.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <err.h>
 
-/* We don't need the real TARGET.opt_ah.h */
-#define OPT_AH_H <stdio.h>
 #include "ah_desc.h"
 
 #include "wireless_copy.h"

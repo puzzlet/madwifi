@@ -9,43 +9,105 @@ srctree ?= .
 TOP = $(srctree)/$(src)/..
 
 include $(TOP)/BuildCaps.inc
-include $(TOP)/ath_hal/ah_target.inc
 
-ATH_HAL=$(TOP)/ath_hal
 COMPAT=	$(TOP)/include
-HAL=	$(TOP)/hal
+HAL=	$(TOP)/ath_hal
 
 INCS = -include $(COMPAT)/compat.h -I$(COMPAT)
-INCS += -I$(ATH_HAL) -I$(HAL)
+INCS += -I$(HAL)
 
-EXTRA_CFLAGS += $(INCS) $(COPTS) -DOPT_AH_H=\"public/$(TARGET).opt_ah.h\" \
-			-DTARGET=\"$(TARGET)\"
+EXTRA_CFLAGS += $(INCS) $(COPTS)
 
-ifneq (,$(filter xscale% arm%,$(TARGET)))
-LDFLAGS := --no-warn-mismatch
+ath_hal-objs	:= \
+	ah.o \
+	ah_eeprom_v1.o \
+	ah_eeprom_v14.o \
+	ah_eeprom_v3.o \
+	ah_os.o \
+	ah_regdomain.o \
+	ar5210/ar5210_attach.o \
+	ar5210/ar5210_beacon.o \
+	ar5210/ar5210_interrupts.o \
+	ar5210/ar5210_keycache.o \
+	ar5210/ar5210_misc.o \
+	ar5210/ar5210_phy.o \
+	ar5210/ar5210_power.o \
+	ar5210/ar5210_recv.o \
+	ar5210/ar5210_reset.o \
+	ar5210/ar5210_xmit.o \
+	ar5211/ar5211_attach.o \
+	ar5211/ar5211_beacon.o \
+	ar5211/ar5211_interrupts.o \
+	ar5211/ar5211_keycache.o \
+	ar5211/ar5211_misc.o \
+	ar5211/ar5211_phy.o \
+	ar5211/ar5211_power.o \
+	ar5211/ar5211_recv.o \
+	ar5211/ar5211_reset.o \
+	ar5211/ar5211_xmit.o \
+	ar5212/ar2316.o \
+	ar5212/ar2317.o \
+	ar5212/ar2413.o \
+	ar5212/ar2425.o \
+	ar5212/ar5111.o \
+	ar5212/ar5112.o \
+	ar5212/ar5212_ani.o \
+	ar5212/ar5212_attach.o \
+	ar5212/ar5212_beacon.o \
+	ar5212/ar5212_eeprom.o \
+	ar5212/ar5212_gpio.o \
+	ar5212/ar5212_interrupts.o \
+	ar5212/ar5212_keycache.o \
+	ar5212/ar5212_misc.o \
+	ar5212/ar5212_phy.o \
+	ar5212/ar5212_power.o \
+	ar5212/ar5212_recv.o \
+	ar5212/ar5212_reset.o \
+	ar5212/ar5212_rfgain.o \
+	ar5212/ar5212_xmit.o \
+	ar5212/ar5413.o \
+	ar5416/ar2133.o \
+	ar5416/ar5416_ani.o \
+	ar5416/ar5416_attach.o \
+	ar5416/ar5416_beacon.o \
+	ar5416/ar5416_cal.o \
+	ar5416/ar5416_cal_adcdc.o \
+	ar5416/ar5416_cal_adcgain.o \
+	ar5416/ar5416_cal_iq.o \
+	ar5416/ar5416_eeprom.o \
+	ar5416/ar5416_gpio.o \
+	ar5416/ar5416_interrupts.o \
+	ar5416/ar5416_keycache.o \
+	ar5416/ar5416_misc.o \
+	ar5416/ar5416_phy.o \
+	ar5416/ar5416_power.o \
+	ar5416/ar5416_recv.o \
+	ar5416/ar5416_reset.o \
+	ar5416/ar5416_xmit.o \
+	ar5416/ar9160_attach.o
+
+ifeq ($(strip $(BUS)),AHB)
+ath_hal-objs += \
+	ar5312/ar5312_attach.o \
+	ar5312/ar5312_eeprom.o \
+	ar5312/ar5312_gpio.o \
+	ar5312/ar5312_interrupts.o \
+	ar5312/ar5312_misc.o \
+	ar5312/ar5312_power.o \
+	ar5312/ar5312_reset.o \
+	ar5312/ar5315_gpio.o
 endif
 
 ifneq ($(VERSION).$(PATCHLEVEL),2.4)
 obj-$(CONFIG_ATHEROS) += ath_hal.o
-ath_hal-objs	:= ah_os.o $(TARGET).hal.o
-
-hostprogs-y := uudecode
-host-progs := $(hostprogs-y)
 endif
 
 ifeq ($(VERSION).$(PATCHLEVEL),2.4)
-obj-$(CONFIG_ATHEROS) += ah_os.o $(TARGET).hal.o
+obj-$(CONFIG_ATHEROS) += $(ath_hal-objs)
 
 O_TARGET := ath_hal.o
 include $(TOPDIR)/Rules.make
 
 export-objs	:= ah_os.o
 list-multi	:= ath_hal.o
-
-uudecode: uudecode.c
-	$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
 endif
-
-$(obj)/$(TARGET).hal.o: $(HAL)/public/$(TARGET).hal.o.uu $(obj)/uudecode
-	$(Q)echo "deps_$@ :=" >$(@D)/.$(@F).cmd
-	$(Q)$(obj)/uudecode -o $@ $<

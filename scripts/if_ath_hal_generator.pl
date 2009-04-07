@@ -50,21 +50,21 @@ use warnings;
 #
 my %wrapper_names = (
     "ah_beaconInit"               => "ath_hal_beaconinit",
+    "ah_clrMulticastFilterIndex"  => "ath_hal_clearmcastfilter",
     "ah_detach"                   => undef,
+    "ah_detectCardPresent"        => "ath_hal_detectcardpresent",
+    "ah_disable"                  => "ath_hal_disable",
     "ah_disablePhyErrDiag"        => "ath_hal_disablePhyDiag",
     "ah_enablePhyErrDiag"         => "ath_hal_enablePhyDiag",
     "ah_enableReceive"            => "ath_hal_rxena",
     "ah_fillTxDesc"               => "ath_hal_filltxdesc",
     "ah_getAckCTSRate"            => "ath_hal_getackctsrate",
-    "ah_setAckCTSRate"            => "ath_hal_setackctsrate",
-    "ah_updateMibCounters"        => "ath_hal_updatemibcounters",
-    "ah_getAntennaSwitch"         => "ath_hal_getantennaswitch",
-    "ah_setAntennaSwitch"         => "ath_hal_setantennaswitch",
     "ah_getAckTimeout"            => "ath_hal_getacktimeout",
+    "ah_getAntennaSwitch"         => "ath_hal_getantennaswitch",
     "ah_getBssIdMask"             => "ath_hal_getbssidmask",
+    "ah_getCTSTimeout"            => "ath_hal_getctstimeout",
     "ah_getCapability"            => "ath_hal_getcapability",
     "ah_getChanNoise"             => "ath_hal_get_channel_noise",
-    "ah_getCTSTimeout"            => "ath_hal_getctstimeout",
     "ah_getDefAntenna"            => "ath_hal_getdefantenna",
     "ah_getDiagState"             => "ath_hal_getdiagstate",
     "ah_getInterrupts"            => "ath_hal_intrget",
@@ -76,41 +76,45 @@ my %wrapper_names = (
     "ah_getRfGain"                => "ath_hal_getrfgain",
     "ah_getRxDP"                  => "ath_hal_getrxbuf",
     "ah_getRxFilter"              => "ath_hal_getrxfilter",
+    "ah_getSifsTime"              => "ath_hal_getsifstime",
     "ah_getSlotTime"              => "ath_hal_getslottime",
     "ah_getTsf32"                 => "ath_hal_gettsf32",
     "ah_getTsf64"                 => "ath_hal_gettsf64",
     "ah_getTxDP"                  => "ath_hal_gettxbuf",
     "ah_getTxIntrQueue"           => "ath_hal_gettxintrtxqs",
     "ah_getTxQueueProps"          => "ath_hal_gettxqueueprops",
-    "ah_gpioCfgOutput"            => "ath_hal_gpioCfgOutput",
-    "ah_gpioSet"                  => "ath_hal_gpioset",
-    "ah_gpioGet"                  => "ath_hal_gpioget",
-    "ah_gpioSetIntr"              => "ath_hal_gpiosetintr",
     "ah_gpioCfgInput"             => "ath_hal_gpiCfgInput",
+    "ah_gpioCfgOutput"            => "ath_hal_gpioCfgOutput",
+    "ah_gpioGet"                  => "ath_hal_gpioget",
+    "ah_gpioSet"                  => "ath_hal_gpioset",
+    "ah_gpioSetIntr"              => "ath_hal_gpiosetintr",
     "ah_isInterruptPending"       => "ath_hal_intrpend",
     "ah_isKeyCacheEntryValid"     => "ath_hal_keyisvalid",
     "ah_numTxPending"             => "ath_hal_numtxpending",
     "ah_perCalibration"           => "ath_hal_calibrate",
+    "ah_perCalibrationN"          => "ath_hal_calibrate11n",
     "ah_phyDisable"               => "ath_hal_phydisable",
-    "ah_disable"                  => "ath_hal_disable",
     "ah_procMibEvent"             => "ath_hal_mibevent",
     "ah_procRxDesc"               => "ath_hal_rxprocdesc",
     "ah_procTxDesc"               => "ath_hal_txprocdesc",
-    "ah_radarWait"                => "ath_hal_radar_wait",
     "ah_releaseTxQueue"           => "ath_hal_releasetxqueue",
     "ah_reqTxIntrDesc"            => "ath_hal_txreqintrdesc",
     "ah_reset"                    => "ath_hal_reset",
+    "ah_resetCalValid"            => "ath_hal_resetcalvalid",
     "ah_resetKeyCacheEntry"       => "ath_hal_keyreset",
     "ah_resetStationBeaconTimers" => "ath_hal_beaconreset",
     "ah_resetTsf"                 => "ath_hal_resettsf",
     "ah_resetTxQueue"             => "ath_hal_resettxqueue",
     "ah_rxMonitor"                => "ath_hal_rxmonitor",
+    "ah_setAckCTSRate"            => "ath_hal_setackctsrate",
     "ah_setAckTimeout"            => "ath_hal_setacktimeout",
+    "ah_setAntennaSwitch"         => "ath_hal_setantennaswitch",
+    "ah_setBeaconTimers"          => "ath_hal_setbeacontimers",
     "ah_setBssIdMask"             => "ath_hal_setbssidmask",
+    "ah_setCTSTimeout"            => "ath_hal_setctstimeout",
     "ah_setCapability"            => "ath_hal_setcapability",
     "ah_setChannel"               => "ath_hal_setchannel",
     "ah_setCoverageClass"         => "ath_hal_setcoverageclass",
-    "ah_setCTSTimeout"            => "ath_hal_setctstimeout",
     "ah_setDecompMask"            => "ath_hal_setdecompmask",
     "ah_setDefAntenna"            => "ath_hal_setdefantenna",
     "ah_setInterrupts"            => "ath_hal_intrset",
@@ -122,15 +126,15 @@ my %wrapper_names = (
     "ah_setMulticastFilterIndex"  => "ath_hal_setmcastfilterindex",
     "ah_setPCUConfig"             => "ath_hal_setopmode",
     "ah_setPowerMode"             => "ath_hal_setpower",
+    "ah_setRegulatoryDomain"      => "ath_hal_setregulatorydomain",
     "ah_setRxDP"                  => "ath_hal_putrxbuf",
     "ah_setRxFilter"              => "ath_hal_setrxfilter",
-    "ah_setRegulatoryDomain"      => "ath_hal_setregulatorydomain",
+    "ah_setSifsTime"              => "ath_hal_setsifstime",
     "ah_setSlotTime"              => "ath_hal_setslottime",
     "ah_setStationBeaconTimers"   => "ath_hal_beacontimers",
     "ah_setTxDP"                  => "ath_hal_puttxbuf",
-    "ah_setTxQueueProps"          => "ath_hal_settxqueueprops",
     "ah_setTxPowerLimit"          => "ath_hal_settxpowlimit",
-    "ah_setBeaconTimers"          => "ath_hal_setbeacontimers",
+    "ah_setTxQueueProps"          => "ath_hal_settxqueueprops",
     "ah_setupRxDesc"              => "ath_hal_setuprxdesc",
     "ah_setupTxDesc"              => "ath_hal_setuptxdesc",
     "ah_setupTxQueue"             => "ath_hal_setuptxqueue",
@@ -141,11 +145,10 @@ my %wrapper_names = (
     "ah_stopPcuReceive"           => "ath_hal_stoppcurecv",
     "ah_stopTxDma"                => "ath_hal_stoptxdma",
     "ah_updateCTSForBursting"     => "ath_hal_updateCTSForBursting",
+    "ah_updateMibCounters"        => "ath_hal_updatemibcounters",
     "ah_updateTxTrigLevel"        => "ath_hal_updatetxtriglevel",
     "ah_waitForBeaconDone"        => "ath_hal_waitforbeacon",
-    "ah_writeAssocid"             => "ath_hal_setassocid",
-    "ah_clrMulticastFilterIndex"  => "ath_hal_clearmcastfilter",
-    "ah_detectCardPresent"        => "ath_hal_detectcardpresent"
+    "ah_writeAssocid"             => "ath_hal_setassocid"
 );
 
 #
@@ -207,6 +210,7 @@ EOF
 my $footer = <<EOF
 
 #include "if_ath_hal_wrappers.h"
+#include "if_ath_hal_extensions.h"
 
 #endif				/* #ifndef _IF_ATH_HAL_H_ */
  /* *** THIS IS A GENERATED FILE -- DO NOT EDIT *** */
@@ -418,7 +422,6 @@ sub main () {
     }
     generate_output();
     close OUTPUT;
-    exec "./madwifi-indent $output_header";
 }
 
 main();

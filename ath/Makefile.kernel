@@ -9,10 +9,8 @@ srctree ?= .
 TOP = $(srctree)/$(src)/..
 
 include $(TOP)/BuildCaps.inc
-include $(TOP)/ath_hal/ah_target.inc
 
-ATH_HAL=$(TOP)/ath_hal
-HAL=	$(TOP)/hal
+HAL=	$(TOP)/ath_hal
 WLAN=	$(TOP)/net80211
 COMPAT=	$(TOP)/include
 
@@ -31,9 +29,9 @@ endif
 COPTS	+= -DDFS_DOMAIN_ETSI -DDFS_DOMAIN_FCC
 
 INCS = -include $(COMPAT)/compat.h -I$(COMPAT)
-INCS += -I$(TOP) -I$(ATH_HAL) -I$(HAL) -I$(WLAN)
+INCS += -I$(TOP) -I$(HAL) -I$(WLAN)
 
-EXTRA_CFLAGS += $(INCS) $(COPTS) -DOPT_AH_H=\"public/$(TARGET).opt_ah.h\"
+EXTRA_CFLAGS += $(INCS) $(COPTS)
 
 ifneq ($(VERSION).$(PATCHLEVEL),2.4)
 obj-$(CONFIG_ATHEROS)	+= ath_$(BUSNAME).o

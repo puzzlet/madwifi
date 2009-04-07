@@ -241,24 +241,9 @@ static inline HAL_BOOL ath_hal_settsfadjust(struct ath_hal *ah, u_int32_t v)
 	return (ath_hal_setcapability(ah, HAL_CAP_TSF_ADJUST, 1, v, NULL));
 }
 
-static inline HAL_BOOL ath_hal_xrsupported(struct ath_hal *ah)
-{
-	return ath_hal_getcapability(ah, HAL_CAP_XR, 0, NULL) == HAL_OK;
-}
-
 static inline HAL_BOOL ath_hal_wmetkipmic(struct ath_hal *ah)
 {
 	return (ath_hal_getcapability(ah, HAL_CAP_WME_TKIPMIC, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_halfrate_chansupported(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_CHAN_HALFRATE, 0, NULL) == HAL_OK);
-}
-
-static inline HAL_BOOL ath_hal_quarterrate_chansupported(struct ath_hal *ah)
-{
-	return (ath_hal_getcapability(ah, HAL_CAP_CHAN_QUARTERRATE, 0, NULL) == HAL_OK);
 }
 
 static inline HAL_BOOL ath_hal_hasrfsilent(struct ath_hal *ah)

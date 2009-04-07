@@ -107,7 +107,7 @@ the PCI vendor ID with a tool like lspci, the Atheros vendor ID is
   00:13.0 Ethernet controller: Unknown device 168c:0012 (rev 01)
 
 but beware that some vendors use alternate vendor IDs (e.g 3Com, IBM).
-The file hal/ah_devid.h has a list of known PCI IDs.
+The file ath_hal/ah_devid.h has a list of known PCI IDs.
 
 
 Building the driver

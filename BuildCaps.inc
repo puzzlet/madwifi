@@ -14,7 +14,7 @@ export ATH_CAP_SUPERG_COMP=0
 endif
 
 ifndef ATH_CAP_XR
-export ATH_CAP_XR=1
+export ATH_CAP_XR=0
 endif
 
 ifndef ATH_CAP_TPC

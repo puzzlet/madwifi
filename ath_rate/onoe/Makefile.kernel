@@ -10,16 +10,14 @@ srctree ?= .
 TOP = $(srctree)/$(src)/../..
 
 include $(TOP)/BuildCaps.inc
-include $(TOP)/ath_hal/ah_target.inc
 
 ATH=	$(TOP)/ath
-ATH_HAL=$(TOP)/ath_hal
 COMPAT=	$(TOP)/include
-HAL=	$(TOP)/hal
+HAL=	$(TOP)/ath_hal
 
 INCS = -include $(COMPAT)/compat.h -I$(COMPAT)
-INCS += -I$(TOP) -I$(ATH) -I$(ATH_HAL) -I$(HAL)
-EXTRA_CFLAGS += $(INCS) $(COPTS) -DOPT_AH_H=\"public/$(TARGET).opt_ah.h\"
+INCS += -I$(TOP) -I$(ATH) -I$(HAL)
+EXTRA_CFLAGS += $(INCS) $(COPTS)
 
 ifneq ($(VERSION).$(PATCHLEVEL),2.4)
 obj-$(CONFIG_ATHEROS) += ath_rate_onoe.o
