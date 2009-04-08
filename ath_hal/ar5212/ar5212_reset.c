@@ -2525,6 +2525,7 @@ ar5212GetLowerUpperValues(uint16_t v, uint16_t *lp, uint16_t listSize,
 		}
 	}
 	HALASSERT(AH_FALSE);		/* should not reach here */
+	*vlo = *vhi = 0;
 }
 
 /*

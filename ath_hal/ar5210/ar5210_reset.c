@@ -691,6 +691,7 @@ getGainF(struct ath_hal *ah, const struct tpcMap *pRD,
 			"%s: no valid entries in the pcdac table: %d\n",
 			__func__, pcdac);
 #endif
+		*dBm = 0;
 		return 63;
 	}
 	if (i >= AR_TP_SCALING_ENTRIES) {

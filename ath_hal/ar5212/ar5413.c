@@ -324,6 +324,8 @@ GetLowerUpperIndex(int16_t v, const uint16_t *lp, uint16_t listSize,
 			return;
 		}
 	}
+	HALASSERT(AH_FALSE);		/* should not reach here */
+	*vlo = *vhi = 0;
 }
 
 /*

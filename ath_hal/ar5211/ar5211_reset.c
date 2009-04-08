@@ -1877,6 +1877,9 @@ ar5211GetLowerUpperValues(uint16_t value,
 			return;
 		}
 	}
+	HALASSERT(AH_FALSE);		/* should not reach here */
+	*pLowerValue = *pList;
+	*pUpperValue = *pList;
 }
 
 /*
