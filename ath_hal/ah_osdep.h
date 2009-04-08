@@ -66,13 +66,14 @@ struct ath_hal_chip *AR5212_chip_ptr __attribute__((__weak__));	\
 struct ath_hal_chip *AR5312_chip_ptr __attribute__((__weak__));	\
 struct ath_hal_chip *AR5416_chip_ptr __attribute__((__weak__));	\
 struct ath_hal_chip *AR9160_chip_ptr __attribute__((__weak__));	\
-struct ath_hal_chip **ah_chips_ptrs[] = {			\
+struct ath_hal_chip *const *ah_chips_ptrs[] = {			\
 	&AR5210_chip_ptr,					\
 	&AR5211_chip_ptr,					\
 	&AR5212_chip_ptr,					\
 	&AR5312_chip_ptr,					\
 	&AR5416_chip_ptr,					\
-	&AR9160_chip_ptr					\
+	&AR9160_chip_ptr,					\
+	NULL							\
 }
 
 #define DECLARE_ah_rfs \
@@ -83,14 +84,15 @@ struct ath_hal_rf *RF2425_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5111_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5112_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5413_rf_ptr __attribute__((__weak__));	\
-struct ath_hal_rf **ah_rfs_ptrs[] = {				\
+struct ath_hal_rf *const *ah_rfs_ptrs[] = {				\
 	&RF2316_rf_ptr,						\
 	&RF2317_rf_ptr,						\
 	&RF2413_rf_ptr,						\
 	&RF2425_rf_ptr,						\
 	&RF5111_rf_ptr,						\
 	&RF5112_rf_ptr,						\
-	&RF5413_rf_ptr						\
+	&RF5413_rf_ptr,						\
+	NULL							\
 }
 
 #define OS_SET_DECLARE(set, ptype)				\
@@ -100,10 +102,8 @@ struct ath_hal_rf **ah_rfs_ptrs[] = {				\
 	typeof(sym) *__CONCAT(sym,_ptr) = &sym
 
 #define OS_SET_FOREACH(pvar, set)				\
-	int _i;							\
-	for (_i = 0, pvar = __CONCAT(set,_ptrs)[_i];		\
-	     _i < ARRAY_SIZE(__CONCAT(set,_ptrs));		\
-	     _i++, pvar = __CONCAT(set,_ptrs)[_i]) if (*pvar)
+	typeof(pvar) *ppvar = __CONCAT(set,_ptrs);		\
+	for (pvar = *ppvar; pvar; pvar = *++ppvar) if (*pvar)
 
 /* Byte order/swapping support. */
 #define AH_LITTLE_ENDIAN	1234
