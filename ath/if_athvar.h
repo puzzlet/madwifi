@@ -103,11 +103,13 @@ typedef void *TQUEUE_ARG;
 /*
  * Guess how the interrupt handler should work.
  */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 #if !defined(IRQ_NONE)
 typedef void irqreturn_t;
 #define	IRQ_NONE
 #define	IRQ_HANDLED
 #endif /* !defined(IRQ_NONE) */
+#endif /* Linux < 2.6.29 */
 
 #ifndef SET_MODULE_OWNER
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23)
