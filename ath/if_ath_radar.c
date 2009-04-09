@@ -122,31 +122,31 @@ struct radar_pattern_specification {
 
 static struct radar_pattern_specification radar_patterns[] = {
 #ifdef DFS_DOMAIN_ETSI
-	{"ETSI [ 200]", 4900, 5100, AH_FALSE, 20, 3, 4, 10, 4,  8, AH_TRUE},
-	{"ETSI [ 300]", 3267, 3399, AH_FALSE, 20, 3, 4, 10, 4,  6, AH_TRUE},
-	{"ETSI [ 500]", 1960, 2040, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
-	{"ETSI [ 750]", 1307, 1359, AH_FALSE, 20, 5, 4, 15, 4, 13, AH_TRUE},
-	{"ETSI [ 800]", 1225, 1275, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
-	{"ETSI [1000]",  980, 1020, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
-	{"ETSI [1200]",  817,  849, AH_FALSE, 20, 5, 4, 15, 4, 13, AH_TRUE},
-	{"ETSI [1500]",  653,  679, AH_FALSE, 20, 5, 4, 15, 4,  6, AH_TRUE},
-	{"ETSI [1600]",  613,  637, AH_FALSE, 20, 5, 4, 15, 4,  7, AH_TRUE},
-	{"ETSI [2000]",  490,  510, AH_FALSE, 20, 7, 4, 20, 4, 10, AH_TRUE},
-	{"ETSI [2300]",  426,  442, AH_FALSE, 20, 9, 4, 25, 6, 20, AH_TRUE},
-	{"ETSI [3000]",  327,  339, AH_FALSE, 20, 7, 4, 20, 5, 20, AH_TRUE},
-	{"ETSI [3500]",  280,  290, AH_FALSE, 20, 9, 4, 25, 2, 20, AH_TRUE},
-	{"ETSI [4000]",  245,  255, AH_FALSE, 20, 7, 4, 20, 5, 20, AH_TRUE},
+	{"ETSI - PRF200",  4900, 5100, AH_FALSE, 20, 3, 4, 10, 4,  8, AH_TRUE},
+	{"ETSI - PRF300",  3267, 3399, AH_FALSE, 20, 3, 4, 10, 4,  6, AH_TRUE},
+	{"ETSI - PRF500",  1960, 2040, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
+	{"ETSI - PRF750",  1307, 1359, AH_FALSE, 20, 5, 4, 15, 4, 13, AH_TRUE},
+	{"ETSI - PRF800",  1225, 1275, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
+	{"ETSI - PRF1000",  980, 1020, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
+	{"ETSI - PRF1200",  817,  849, AH_FALSE, 20, 5, 4, 15, 4, 13, AH_TRUE},
+	{"ETSI - PRF1500",  653,  679, AH_FALSE, 20, 5, 4, 15, 4,  6, AH_TRUE},
+	{"ETSI - PRF1600",  613,  637, AH_FALSE, 20, 5, 4, 15, 4,  7, AH_TRUE},
+	{"ETSI - PRF2000",  490,  510, AH_FALSE, 20, 7, 4, 20, 4, 10, AH_TRUE},
+	{"ETSI - PRF2300",  426,  442, AH_FALSE, 20, 9, 4, 25, 6, 20, AH_TRUE},
+	{"ETSI - PRF3000",  327,  339, AH_FALSE, 20, 7, 4, 20, 5, 20, AH_TRUE},
+	{"ETSI - PRF3500",  280,  290, AH_FALSE, 20, 9, 4, 25, 2, 20, AH_TRUE},
+	{"ETSI - PRF4000",  245,  255, AH_FALSE, 20, 7, 4, 20, 5, 20, AH_TRUE},
 #endif
 #ifdef DFS_DOMAIN_FCC
-	{"FCC [1,1399-1714]", 1399, 1714, AH_TRUE, 10, 5, 10, 18, 4,  6, AH_FALSE},
-	{"FCC [2,147-235]",    147,  235, AH_TRUE, 10, 8, 10, 29, 6, 12, AH_FALSE},
-	{"FCC [3-4,196-273]",  196,  273, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC [3-4,275-352]",  275,  352, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC [3-4,354-431]",  354,  431, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC [3-4,433-510]",  433,  510, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC [3-4,235-313]",  235,  313, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC [3-4,314-392]",  314,  392, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC [3-4,393-471]",  393,  471, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE}
+	{"FCC - Type 1",   1399, 1714, AH_TRUE, 10, 5, 10, 18, 4,  6, AH_FALSE},
+	{"FCC - Type 2",    147,  235, AH_TRUE, 10, 8, 10, 29, 6, 12, AH_FALSE},
+	{"FCC - Type 3-4",  196,  273, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
+	{"FCC - Type 3-4",  275,  352, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
+	{"FCC - Type 3-4",  354,  431, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
+	{"FCC - Type 3-4",  433,  510, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
+	{"FCC - Type 3-4",  235,  313, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
+	{"FCC - Type 3-4",  314,  392, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
+	{"FCC - Type 3-4",  393,  471, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE}
 #endif
 };
 
