@@ -210,6 +210,13 @@ typedef unsigned long resource_size_t;
 #define request_module(_fmt, _modname) request_module(_modname)
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
+#ifndef spin_lock_irqsave_nested
+#define spin_lock_irqsave_nested(_lock, _flags, _subclass) \
+	spin_lock_irqsave(_lock, _flags)
+#endif
+#endif
+
 #endif /* __KERNEL__ */
 
 #endif /* _ATH_COMPAT_H_ */
