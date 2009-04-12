@@ -1643,6 +1643,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
 		if (ATH_TXQ_SETUP(sc, i)) {
 			txq = &sc->sc_txq[i];
+			(void)lclass;	/* mark as used */
 			spin_lock_irqsave_nested(&txq->axq_lock,
 						 __axq_lockflags[i], lclass++);
 		}
