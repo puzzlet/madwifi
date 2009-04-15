@@ -1184,7 +1184,7 @@ ath_detach(struct net_device *dev)
 	ATH_BBUF_LOCK_DESTROY(sc);
 	ATH_GBUF_LOCK_DESTROY(sc);
 	ATH_HAL_LOCK_DESTROY(sc);
-	dev->stop = NULL; /* prevent calling ath_stop again */
+	dev->flags &= ~IFF_RUNNING; /* mark as stopped */
 	unregister_netdev(dev);
 	return 0;
 }
