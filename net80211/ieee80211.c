@@ -400,6 +400,18 @@ ieee80211_ifdetach(struct ieee80211com *ic)
 }
 EXPORT_SYMBOL(ieee80211_ifdetach);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
+static const struct net_device_ops ieee80211_netdev_ops = {
+	.ndo_get_stats		= ieee80211_getstats,
+	.ndo_open		= ieee80211_open,
+	.ndo_stop		= ieee80211_stop,
+	.ndo_start_xmit		= ieee80211_hardstart,
+	.ndo_set_multicast_list = ieee80211_set_multicast_list,
+	.ndo_change_mtu 	= ieee80211_change_mtu,
+	.ndo_do_ioctl		= ieee80211_ioctl,
+};
+#endif
+
 int
 ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 	const char *name, int opmode, int flags)
@@ -421,6 +433,7 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 			strncpy(dev->name, name, sizeof(dev->name));
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 	dev->get_stats = ieee80211_getstats;
 	dev->open = ieee80211_open;
 	dev->stop = ieee80211_stop;
@@ -428,6 +441,9 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 	dev->set_multicast_list = ieee80211_set_multicast_list;
  	dev->change_mtu = ieee80211_change_mtu;
 	dev->do_ioctl = ieee80211_ioctl;
+#else
+	dev->netdev_ops = &ieee80211_netdev_ops;
+#endif
 	dev->tx_queue_len = 0;			/* NB: bypass queuing */
 	dev->hard_header_len = parent->hard_header_len;
 	/*
@@ -1733,7 +1749,11 @@ ieee80211_set_multicast_list(struct net_device *dev)
 	IEEE80211_UNLOCK_IRQ(ic);
 
 	/* XXX: Merge multicast list into parent device */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 	parent->set_multicast_list(ic->ic_dev);
+#else
+	parent->netdev_ops->ndo_set_multicast_list(ic->ic_dev);
+#endif
 }
 
 void

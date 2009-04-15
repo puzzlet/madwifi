@@ -962,8 +962,14 @@ ieee80211_rcv_dev_event(struct notifier_block *this, unsigned long event,
 	void *ptr)
 {
 	struct net_device *dev = (struct net_device *)ptr;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 	if (!dev || dev->open != &ieee80211_open)
 		return 0;
+#else
+	if (!dev || dev->netdev_ops->ndo_open != &ieee80211_open)
+		return 0;
+#endif
 
 	switch (event) {
 	case NETDEV_CHANGENAME:

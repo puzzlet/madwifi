@@ -470,6 +470,20 @@ MODULE_PARM_DESC(ieee80211_debug, "Load-time 802.11 debug output enable");
 				(bssid)[0] |= (((id) << 2) | 0x02);	\
 		} while (0)
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
+static const struct net_device_ops ath_netdev_ops = {
+	.ndo_open		= ath_init,
+	.ndo_stop		= ath_stop,
+	.ndo_start_xmit		= ath_hardstart,
+	.ndo_tx_timeout 	= ath_tx_timeout,
+	.ndo_set_multicast_list = ath_mode_init,
+	.ndo_do_ioctl		= ath_ioctl,
+	.ndo_get_stats		= ath_getstats,
+	.ndo_set_mac_address	= ath_set_mac_address,
+	.ndo_change_mtu 	= ath_change_mtu,
+};
+#endif
+
 /* Initialize ath_softc structure */
 
 int
@@ -818,16 +832,20 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 	}
 
 	/* NB: ether_setup is done by bus-specific code */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 	dev->open = ath_init;
 	dev->stop = ath_stop;
 	dev->hard_start_xmit = ath_hardstart;
 	dev->tx_timeout = ath_tx_timeout;
-	dev->watchdog_timeo = 5 * HZ;
 	dev->set_multicast_list = ath_mode_init;
 	dev->do_ioctl = ath_ioctl;
 	dev->get_stats = ath_getstats;
 	dev->set_mac_address = ath_set_mac_address;
 	dev->change_mtu = ath_change_mtu;
+#else
+	dev->netdev_ops = &ath_netdev_ops;
+#endif
+	dev->watchdog_timeo = 5 * HZ;
 	dev->tx_queue_len = ATH_TXBUF - ATH_TXBUF_MGT_RESERVED;
 #ifdef USE_HEADERLEN_RESV
 	dev->hard_header_len += sizeof(struct ieee80211_qosframe) +
@@ -12144,8 +12162,13 @@ ath_rcv_dev_event(struct notifier_block *this, unsigned long event,
 	struct net_device *dev = (struct net_device *)ptr;
 	struct ath_softc *sc = (struct ath_softc *)netdev_priv(dev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 	if (!dev || !sc || dev->open != &ath_init)
 		return 0;
+#else
+	if (!dev || !sc || dev->netdev_ops->ndo_open != &ath_init)
+		return 0;
+#endif
 
 	switch (event) {
 	case NETDEV_CHANGENAME:
