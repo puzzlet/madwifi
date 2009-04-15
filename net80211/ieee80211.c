@@ -426,9 +426,6 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 	dev->stop = ieee80211_stop;
 	dev->hard_start_xmit = ieee80211_hardstart;
 	dev->set_multicast_list = ieee80211_set_multicast_list;
-#if 0
-	dev->set_mac_address = ieee80211_set_mac_address;
-#endif
  	dev->change_mtu = ieee80211_change_mtu;
 	dev->tx_queue_len = 0;			/* NB: bypass queuing */
 	dev->hard_header_len = parent->hard_header_len;
