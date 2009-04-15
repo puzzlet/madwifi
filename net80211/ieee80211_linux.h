@@ -628,6 +628,7 @@ void ieee80211_vlan_vdetach(struct ieee80211vap *);
 #define	free_netdev(dev)	kfree(dev)
 #endif
 
+int ieee80211_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd);
 void ieee80211_ioctl_vattach(struct ieee80211vap *);
 void ieee80211_ioctl_vdetach(struct ieee80211vap *);
 struct ifreq;

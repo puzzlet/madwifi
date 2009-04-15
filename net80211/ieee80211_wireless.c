@@ -5778,7 +5778,7 @@ static struct iw_handler_def ieee80211_iw_handler_def = {
 /*
  * Handle private ioctl requests.
  */
-static int
+int
 ieee80211_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
 	struct ieee80211vap *vap = netdev_priv(dev);
@@ -5854,7 +5854,6 @@ ieee80211_ioctl_vattach(struct ieee80211vap *vap)
 {
 	struct net_device *dev = vap->iv_dev;
 
-	dev->do_ioctl = ieee80211_ioctl;
 #if IW_HANDLER_VERSION < 7
 	dev->get_wireless_stats = ieee80211_iw_getstats;
 #endif
