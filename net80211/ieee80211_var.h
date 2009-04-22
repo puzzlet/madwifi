@@ -511,14 +511,6 @@ struct ieee80211com {
 	/* MHz to IEEE channel conversion */
 	u_int (*ic_mhz2ieee)(struct ieee80211com *, u_int, u_int);
 
-#ifdef ATH_REVERSE_ENGINEERING
-	/* debug and reverse engineering hooks */
-	void (*ic_registers_dump)(struct ieee80211com *);
-	void (*ic_registers_mark)(struct ieee80211com *);
-	void (*ic_registers_dump_delta)(struct ieee80211com *);
-	unsigned int (*ic_write_register)(struct ieee80211com *, unsigned int, unsigned int);
-	unsigned int (*ic_read_register)(struct ieee80211com *, unsigned int, unsigned int*);
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 	int (*ic_debug_ath_iwpriv)(struct ieee80211com *, unsigned int param, unsigned int value);
 };
 

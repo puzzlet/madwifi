@@ -974,8 +974,6 @@ do80211priv(struct iwreq *iwr, const char *ifname, int op, void *data, size_t le
 			IOCTL_ERR(IEEE80211_IOCTL_DELMAC),
 			IOCTL_ERR(IEEE80211_IOCTL_WDSADDMAC),
 			IOCTL_ERR(IEEE80211_IOCTL_WDSDELMAC),
-			IOCTL_ERR(IEEE80211_IOCTL_READREG),
-			IOCTL_ERR(IEEE80211_IOCTL_WRITEREG),
 		};
 		op -= SIOCIWFIRSTPRIV;
 		if (0 <= op && op < ARRAY_SIZE(opnames))

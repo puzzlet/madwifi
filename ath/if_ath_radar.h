@@ -28,9 +28,6 @@
 #define AR5K_AR5212_PHY_ERR_FIL		    0x810c
 #define AR5K_AR5212_PHY_ERR_FIL_RADAR	0x00000020
 
-/* AR5K_PHY_RADAR register definition reverse engineered with 
- * ATH_REVERSE_ENGINEERING. */
-
 /* PHY radar detection register [5111+] */
 #define	AR5K_PHY_RADAR			0x9954
 

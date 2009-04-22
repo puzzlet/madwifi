@@ -25,14 +25,6 @@ ifndef ATH_CAP_TX99
 export ATH_CAP_TX99=0
 endif
 
-# WARNING: The use of these extensions may introduce a security risk (someone can peek/poke registers on your Atheros device)
-ifndef ATH_REVERSE_ENGINEERING
-export ATH_REVERSE_ENGINEERING=0
-endif
-ifndef ATH_REVERSE_ENGINEERING_WITH_NO_FEAR 
-export ATH_REVERSE_ENGINEERING_WITH_NO_FEAR=0
-endif
-
 #
 # directives
 #
@@ -58,13 +50,4 @@ endif
 
 ifneq ($(strip $(ATH_CAP_TX99)),0)
 COPTS+= -DATH_TX99_DIAG=1
-endif
-
-# WARNING: The use of these extensions may introduce a security risk (someone can peek/poke registers on your Atheros device)
-ifneq ($(strip $(ATH_REVERSE_ENGINEERING)),0)
-COPTS+= -DATH_REVERSE_ENGINEERING=1
-endif
-ifneq ($(strip $(ATH_REVERSE_ENGINEERING_WITH_NO_FEAR)),0)
-COPTS+= -DATH_REVERSE_ENGINEERING_WITH_NO_FEAR=1 -DATH_REVERSE_ENGINEERING=1
-
 endif

@@ -1596,51 +1596,6 @@ ieee80211_ioctl_giwtxpow(struct net_device *dev, struct iw_request_info *info,
 	return 0;
 }
 
-#ifdef ATH_REVERSE_ENGINEERING
-static int
-ieee80211_dump_registers(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
-{
-	unsigned int *params = (unsigned int *)extra;
-	struct ieee80211vap *vap = netdev_priv(dev);
-	struct ieee80211com *ic = vap->iv_ic;
-	switch (params[1]) {
-	case 2:
-		ic->ic_registers_mark(ic);
-		break;
-	case 1:
-		ic->ic_registers_dump_delta(ic);
-		break;
-	case 0:
-	default:
-		ic->ic_registers_dump(ic);
-		break;
-	}
-	return 0;
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-#ifdef ATH_REVERSE_ENGINEERING
-static int
-ieee80211_ioctl_writereg(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
-{
-	unsigned int *params = (unsigned int *)extra;
-	struct ieee80211vap *vap = netdev_priv(dev);
-	struct ieee80211com *ic = vap->iv_ic;
-	return ic->ic_write_register(ic, params[0], params[1]);
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
-#ifdef ATH_REVERSE_ENGINEERING
-static int
-ieee80211_ioctl_readreg(struct net_device *dev, struct iw_request_info *info, void *w, char *extra)
-{
-	unsigned int *params = (unsigned int *)extra;
-	struct ieee80211vap *vap = netdev_priv(dev);
-	struct ieee80211com *ic = vap->iv_ic;
-	return ic->ic_read_register(ic, params[0], &params[0]);
-}
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
-
 struct waplistreq {	/* XXX: not the right place for declaration? */
 	struct ieee80211vap *vap;
 	struct sockaddr addr[IW_MAX_AP];
@@ -2872,11 +2827,6 @@ ieee80211_ioctl_setparam(struct net_device *dev, struct iw_request_info *info,
 		else
 			ic->ic_flags_ext &= ~IEEE80211_FEXT_MARKDFS;
 		break;
-#ifdef ATH_REVERSE_ENGINEERING
-	case IEEE80211_PARAM_DUMPREGS:
-		ieee80211_dump_registers(dev, info, w, extra);
-		break;
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 	default:
 		retv = EOPNOTSUPP;
 		break;
@@ -5662,18 +5612,6 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_scanbufs" },
 	{ IEEE80211_PARAM_LEAKTXBUFS,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "debug_leaktxbufs" },
-	
-#ifdef ATH_REVERSE_ENGINEERING
-	/*
-	Diagnostic dump of device registers
-	*/
-	{ IEEE80211_PARAM_DUMPREGS,
-	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "dumpregs" },
-	{ IEEE80211_IOCTL_READREG,
-	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "readreg" },
-	{ IEEE80211_IOCTL_WRITEREG,
-	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 2, 0, "writereg" },
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 };
 
 #define set_handler(x,f) [x - SIOCIWFIRST] = (iw_handler) f
@@ -5757,10 +5695,6 @@ static const iw_handler ieee80211_priv_handlers[] = {
 	set_priv(IEEE80211_IOCTL_WDSADDMAC, ieee80211_ioctl_wdsmac),
 	set_priv(IEEE80211_IOCTL_WDSDELMAC, ieee80211_ioctl_wdsdelmac),
 	set_priv(IEEE80211_IOCTL_KICKMAC, ieee80211_ioctl_kickmac),
-#ifdef ATH_REVERSE_ENGINEERING
-	set_priv(IEEE80211_IOCTL_READREG, ieee80211_ioctl_readreg),
-	set_priv(IEEE80211_IOCTL_WRITEREG, ieee80211_ioctl_writereg),
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 };
 
 static struct iw_handler_def ieee80211_iw_handler_def = {

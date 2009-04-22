@@ -340,11 +340,6 @@ enum {
 #define	ATH_KEYMAX	128		/* max key cache size we handle */
 #define	ATH_KEYBYTES	(ATH_KEYMAX / NBBY)	/* storage space in bytes */
 
-#ifdef ATH_REVERSE_ENGINEERING
-#define MIN_REGISTER_ADDRESS	0x0000		/* PCI register addresses are taken as releative to the appropriate BAR */
-#define MAX_REGISTER_ADDRESS	0xc000 		/* AR5212/AR5213 seems to have a 48k address range */
-#define MAX_REGISTER_NAME_LEN	32		/* Maximum length of register nicknames in debug output */
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 /*
  * Convert from net80211 layer values to Ath layer values. Hopefully this will
  * be optimised away when the two constants are the same.
@@ -812,10 +807,6 @@ struct ath_softc {
 	struct ctl_table *sc_sysctls;
 
 	struct timer_list sc_mib_enable;
-
-#ifdef ATH_REVERSE_ENGINEERING
-	u_int8_t register_snapshot[MAX_REGISTER_ADDRESS];
-#endif /* #ifdef ATH_REVERSE_ENGINEERING */
 
 #ifdef ATH_SUPERG_DYNTURBO
 	struct timer_list sc_dturbo_switch_mode;/* AP scan timer */
