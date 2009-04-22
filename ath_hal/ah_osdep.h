@@ -56,8 +56,6 @@
 
 /* Linker-assisted set support */
 #define	__STRING(x)	#x
-#define __CONCAT1(x,y)	x ## y
-#define __CONCAT(x,y)	__CONCAT1(x,y)
 
 #define DECLARE_ah_chips \
 struct ath_hal_chip *AR5210_chip_ptr __attribute__((__weak__));	\
@@ -84,7 +82,7 @@ struct ath_hal_rf *RF2425_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5111_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5112_rf_ptr __attribute__((__weak__));	\
 struct ath_hal_rf *RF5413_rf_ptr __attribute__((__weak__));	\
-struct ath_hal_rf *const *ah_rfs_ptrs[] = {				\
+struct ath_hal_rf *const *ah_rfs_ptrs[] = {			\
 	&RF2316_rf_ptr,						\
 	&RF2317_rf_ptr,						\
 	&RF2413_rf_ptr,						\
@@ -96,13 +94,13 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {				\
 }
 
 #define OS_SET_DECLARE(set, ptype)				\
-	__CONCAT(DECLARE_,set)
+	DECLARE_##set
 
 #define OS_DATA_SET(set, sym)					\
-	typeof(sym) *__CONCAT(sym,_ptr) = &sym
+	typeof(sym) *sym##_ptr = &sym
 
 #define OS_SET_FOREACH(pvar, set)				\
-	typeof(pvar) *ppvar = __CONCAT(set,_ptrs);		\
+	typeof(pvar) *ppvar = set##_ptrs;			\
 	for (pvar = *ppvar; pvar; pvar = *++ppvar) if (*pvar)
 
 /* Byte order/swapping support. */
