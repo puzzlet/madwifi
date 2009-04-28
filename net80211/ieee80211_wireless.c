@@ -3929,11 +3929,14 @@ ieee80211_ioctl_getchaninfo(struct net_device *dev,
 {
 	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
-	struct ieee80211req_chaninfo chans;
+	struct ieee80211req_chaninfo *chans;
 	u_int8_t reported[IEEE80211_CHAN_BYTES];	/* XXX stack usage? */
 	int i;
 
-	memset(&chans, 0, sizeof(chans));
+	chans = kzalloc(sizeof(*chans), GFP_KERNEL);
+	if (!chans)
+		return -ENOMEM;
+
 	memset(&reported, 0, sizeof(reported));
 	for (i = 0; i < ic->ic_nchans; i++) {
 		const struct ieee80211_channel *c = &ic->ic_channels[i];
@@ -3957,12 +3960,14 @@ ieee80211_ioctl_getchaninfo(struct net_device *dev,
 			if (c1)
 				c = c1;
 			/* Copy the entire structure, whereas it used to just copy a few fields */
-			memcpy(&chans.ic_chans[chans.ic_nchans], c, sizeof(struct ieee80211_channel));
-			if (++chans.ic_nchans >= IEEE80211_CHAN_MAX)
+			memcpy(&chans->ic_chans[chans->ic_nchans], c,
+			       sizeof(struct ieee80211_channel));
+			if (++chans->ic_nchans >= IEEE80211_CHAN_MAX)
 				break;
 		}
 	}
-	memcpy(extra, &chans, sizeof(struct ieee80211req_chaninfo));
+	memcpy(extra, chans, sizeof(struct ieee80211req_chaninfo));
+	kfree(chans);
 	return 0;
 }
 
