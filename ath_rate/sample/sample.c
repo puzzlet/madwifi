@@ -681,31 +681,7 @@ ath_rate_tx_complete(struct ath_softc *sc,
 			MAC_ADDR(an->an_node.ni_macaddr), __func__);
 		return;
 	}
-
 	mrr = sc->sc_mrretry && !(ic->ic_flags & IEEE80211_F_USEPROT) && ENABLE_MRR;
-
-
-	if (sc->sc_mrretry && ts->ts_status) {
-		/* this packet failed */
-		DPRINTF(sc, ATH_DEBUG_RATE, "%s: " MAC_FMT " size %u rate/try %u/%u %u/%u %u/%u %u/%u status %s retries (%u/%u)\n",
-			dev_info,
-			MAC_ADDR(an->an_node.ni_macaddr),
-			bin_to_size(size_to_bin(frame_size)),
-			sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate0)].ieeerate,
-				MS(ds->ds_ctl2, AR_XmitDataTries0),
-			sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate1)].ieeerate,
-				MS(ds->ds_ctl2, AR_XmitDataTries1),
-			sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate2)].ieeerate,
-				MS(ds->ds_ctl2, AR_XmitDataTries2),
-			sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate3)].ieeerate,
-				MS(ds->ds_ctl2, AR_XmitDataTries3),
-			ts->ts_status ? "FAIL" : "OK",
-			short_tries, long_tries);
-	}
-
-	mrr = sc->sc_mrretry && !(ic->ic_flags & IEEE80211_F_USEPROT) && ENABLE_MRR;
-
-
 	if (!mrr || !(ts->ts_rate & HAL_TXSTAT_ALTRATE)) {
 		/* only one rate was used */
 		int ndx = rate_to_ndx(sn, final_rate);
@@ -718,7 +694,7 @@ ath_rate_tx_complete(struct ath_softc *sc,
 				short_tries, long_tries, ts->ts_status);
 		}
 	} else {
-		unsigned int rate[4], tries[4];
+		unsigned int rate[4], tries[4], hwrate[4];
 		int ndx[4];
 		int finalTSIdx = ts->ts_finaltsi;
 
@@ -726,19 +702,31 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		 * Process intermediate rates that failed.
 		 */
 
-		rate[0] = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate0)].ieeerate;
+		if (sc->sc_ah->ah_magic != 0x20065416) {
+			hwrate[0] = MS(ds->ds_ctl3, AR_XmitRate0);
+			hwrate[1] = MS(ds->ds_ctl3, AR_XmitRate1);
+			hwrate[2] = MS(ds->ds_ctl3, AR_XmitRate2);
+			hwrate[3] = MS(ds->ds_ctl3, AR_XmitRate3);
+		} else {
+			hwrate[0] = MS(ds->ds_ctl3, AR5416_XmitRate0);
+			hwrate[1] = MS(ds->ds_ctl3, AR5416_XmitRate1);
+			hwrate[2] = MS(ds->ds_ctl3, AR5416_XmitRate2);
+			hwrate[3] = MS(ds->ds_ctl3, AR5416_XmitRate3);
+		}
+
+		rate[0] = sc->sc_hwmap[hwrate[0]].ieeerate;
 		tries[0] = MS(ds->ds_ctl2, AR_XmitDataTries0);
 		ndx[0] = rate_to_ndx(sn, rate[0]);
 
-		rate[1] = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate1)].ieeerate;
+		rate[1] = sc->sc_hwmap[hwrate[1]].ieeerate;
 		tries[1] = MS(ds->ds_ctl2, AR_XmitDataTries1);
 		ndx[1] = rate_to_ndx(sn, rate[1]);
 
-		rate[2] = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate2)].ieeerate;
+		rate[2] = sc->sc_hwmap[hwrate[2]].ieeerate;
 		tries[2] = MS(ds->ds_ctl2, AR_XmitDataTries2);
 		ndx[2] = rate_to_ndx(sn, rate[2]);
 
-		rate[3] = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate3)].ieeerate;
+		rate[3] = sc->sc_hwmap[hwrate[3]].ieeerate;
 		tries[3] = MS(ds->ds_ctl2, AR_XmitDataTries3);
 		ndx[3] = rate_to_ndx(sn, rate[3]);
 

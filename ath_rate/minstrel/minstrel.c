@@ -470,10 +470,10 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		int tries = 0;
 		int mrr;
 		int final_ndx;
-		int rate0, tries0, ndx0;
-		int rate1, tries1, ndx1;
-		int rate2, tries2, ndx2;
-		int rate3, tries3, ndx3;
+		int rate0, tries0, ndx0, hwrate0;
+		int rate1, tries1, ndx1, hwrate1;
+		int rate2, tries2, ndx2, hwrate2;
+		int rate3, tries3, ndx3, hwrate3;
 
 		/* This is the index in the retry chain we finish at.
 		 * With no retransmits, it is always 0.
@@ -520,19 +520,31 @@ ath_rate_tx_complete(struct ath_softc *sc,
 		 * call will always return 6,3,2,2. For some packets, we can
 		 * get a mrr of 0, -1, -1, -1, which indicates there is no
 		 * chain installed for that packet */
-		rate0 = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate0)].ieeerate;
+		if (sc->sc_ah->ah_magic != 0x20065416) {
+			hwrate0 = MS(ds->ds_ctl3, AR_XmitRate0);
+			hwrate1 = MS(ds->ds_ctl3, AR_XmitRate1);
+			hwrate2 = MS(ds->ds_ctl3, AR_XmitRate2);
+			hwrate3 = MS(ds->ds_ctl3, AR_XmitRate3);
+		} else {
+			hwrate0 = MS(ds->ds_ctl3, AR5416_XmitRate0);
+			hwrate1 = MS(ds->ds_ctl3, AR5416_XmitRate1);
+			hwrate2 = MS(ds->ds_ctl3, AR5416_XmitRate2);
+			hwrate3 = MS(ds->ds_ctl3, AR5416_XmitRate3);
+		}
+
+		rate0 = sc->sc_hwmap[hwrate0].ieeerate;
 		tries0 = MS(ds->ds_ctl2, AR_XmitDataTries0);
 		ndx0 = rate_to_ndx(sn, rate0);
 
-		rate1 = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate1)].ieeerate;
+		rate1 = sc->sc_hwmap[hwrate1].ieeerate;
 		tries1 = MS(ds->ds_ctl2, AR_XmitDataTries1);
 		ndx1 = rate_to_ndx(sn, rate1);
 
-		rate2 = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate2)].ieeerate;
+		rate2 = sc->sc_hwmap[hwrate2].ieeerate;
 		tries2 = MS(ds->ds_ctl2, AR_XmitDataTries2);
 		ndx2 = rate_to_ndx(sn, rate2);
 
-		rate3 = sc->sc_hwmap[MS(ds->ds_ctl3, AR_XmitRate3)].ieeerate;
+		rate3 = sc->sc_hwmap[hwrate3].ieeerate;
 		tries3 = MS(ds->ds_ctl2, AR_XmitDataTries3);
 		ndx3 = rate_to_ndx(sn, rate3);
 
