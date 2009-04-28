@@ -158,7 +158,7 @@ static u_int32_t interval_to_frequency(u_int32_t pri);
 int ath_radar_is_enabled(struct ath_softc *sc)
 {
 	struct ath_hal *ah = sc->sc_ah;
-	if (ar_device(sc->devid) >= 5211)
+	if (ar_device(sc) >= 5211)
 		return ((OS_REG_READ(ah, AR5K_AR5212_PHY_ERR_FIL) & 
 			 AR5K_AR5212_PHY_ERR_FIL_RADAR) && 
 			(sc->sc_imask & HAL_INT_RXPHY) && 
@@ -243,7 +243,7 @@ int ath_radar_update(struct ath_softc *sc)
 	/* configure radar pulse detector register using default values, but do
 	 * not toggle the enable bit.  XXX: allow tweaking?? */
 	ath_radar_set_params(sc, NULL);
-	if (ar_device(sc->devid) >= 5211) {
+	if (ar_device(sc) >= 5211) {
 		HAL_INT old_ier = ath_hal_intrget(ah);
 		HAL_INT new_ier = old_ier;
 		unsigned int old_radar = OS_REG_READ(ah, AR5K_PHY_RADAR);

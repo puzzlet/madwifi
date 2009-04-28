@@ -268,7 +268,7 @@ enum ath5k_dmasize {
 
 
 int ath_set_ack_bitrate(struct ath_softc *sc, int);
-int ar_device(int devid);
+int ar_device(struct ath_softc *sc);
 const char * ath5k_chip_name(enum ath5k_srev_type type, u_int16_t val);
 void ath_hw_beacon_stop(struct ath_softc *sc);
 int ath_hw_check_atim(struct ath_softc *sc, int window, int intval);

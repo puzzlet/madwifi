@@ -80,56 +80,35 @@ static struct ath5k_srev_name srev_names[] = {
 	{ "xxxxx",	AR5K_VERSION_RAD,	AR5K_SREV_UNKNOWN },
 };
 
+#define	AR5210_MAGIC	0x19980124
+#define	AR5211_MAGIC	0x19570405
+#define	AR5212_MAGIC	0x19541014
+#define	AR5416_MAGIC	0x20065416
 
 int
-ar_device(int devid)
+ar_device(struct ath_softc *sc)
 {
-	switch (devid) {
-	case AR5210_DEFAULT:
-	case AR5210_PROD:
-	case AR5210_AP:
+	int magic = sc->sc_ah->ah_magic;
+
+	switch (magic) {
+	case AR5210_MAGIC:
 		return 5210;
-	case AR5211_DEFAULT:
-	case AR5311_DEVID:
-	case AR5211_LEGACY:
-	case AR5211_FPGA11B:
+	case AR5211_MAGIC:
 		return 5211;
-	case AR5212_DEFAULT:
-	case AR5212_DEVID:
-	case AR5212_FPGA:
-	case AR5212_DEVID_IBM:
-	case AR5212_AR5312_REV2:
-	case AR5212_AR5312_REV7:
-	case AR5212_AR2313_REV8:
-	case AR5212_AR2315_REV6:
-	case AR5212_AR2315_REV7:
-	case AR5212_AR2317_REV1:
-	case AR5212_DEVID_0014:
-	case AR5212_DEVID_0015:
-	case AR5212_DEVID_0016:
-	case AR5212_DEVID_0017:
-	case AR5212_DEVID_0018:
-	case AR5212_DEVID_0019:
-	case AR5212_AR2413:
-	case AR5212_AR5413:
-	case AR5212_AR5424:
-	case AR5212_DEVID_FF19:
+	case AR5212_MAGIC:
 		return 5212;
-	case AR5213_SREV_1_0:
-	case AR5213_SREV_REG:
-	case AR_SUBVENDOR_ID_NOG:
-	case AR_SUBVENDOR_ID_NEW_A:
-		return 5213;
+	case AR5416_MAGIC:
+		return 5416;
 	default:
-		return 0; /* unknown */
+		printk(KERN_WARNING "unknown HAL magic 0x%08x\n", magic);
+		return 0;
 	}
 }
-
 
 int
 ath_set_ack_bitrate(struct ath_softc *sc, int high)
 {
-	if (ar_device(sc->devid) == 5212 || ar_device(sc->devid) == 5213) {
+	if (ar_device(sc) == 5212) {
 		/* set ack to be sent at low bit-rate */
 		u_int32_t v = AR5K_STA_ID1_BASE_RATE_11B | AR5K_STA_ID1_ACKCTS_6MB;
 		if (high)
