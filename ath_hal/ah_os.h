@@ -121,16 +121,6 @@ void __ahdecl ath_hal_free(void *p);
 #define	labs(_a)		__builtin_labs(_a)
 #endif
 
-#define HAL_DEBUG_OFF			0
-/* Show register accesses */
-#define HAL_DEBUG_REGOPS 		1
-/* Show decoded register dump (include name, etc) */
-#define HAL_DEBUG_REGOPS_DECODED 	2
-/* Show bit-fields where we put decode logic in */
-#define HAL_DEBUG_REGOPS_BITFIELDS    	3
-/* Add a read before a write to show 'changes', may have side-effects */
-#define HAL_DEBUG_REGOPS_DELTAS	 	4
-
 /* XXX: This should be stored per-device for proper multi-radio support */
 extern const char *ath_hal_func;
 extern const char *ath_hal_device;

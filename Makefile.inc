@@ -154,14 +154,6 @@ ifndef ATH_DEBUG
 export ATH_DEBUG=1
 endif
 
-ifndef MMIOTRACE
-export MMIOTRACE=0
-endif
-
-ifeq ($(strip $(MMIOTRACE)),1)
-EXTRA_CFLAGS += -DMMIOTRACE=1
-endif
-
 ifeq ($(strip $(ATH_DEBUG_SPINLOCKS)),1)
 COPTS+= -DATH_DEBUG_SPINLOCKS=1
 endif
