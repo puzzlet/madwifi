@@ -264,6 +264,27 @@ ath_hal_printf(struct ath_hal *ah, HAL_BOOL prefer_alq, const char *fmt, ...)
 }
 EXPORT_SYMBOL(ath_hal_printf);
 
+#ifdef AH_DEBUG
+extern const char *ath_hal_ether_sprintf(const uint8_t *mac)
+{
+	static char buf[18];
+	sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2],
+		mac[3], mac[4], mac[5]);
+	return buf;
+}
+
+void
+HALDEBUG(struct ath_hal *ah, u_int mask, const char* fmt, ...)
+{
+	if (ath_hal_debug & mask) {
+		__va_list ap;
+		va_start(ap, fmt);
+		_hal_vprintf(ah, AH_FALSE, fmt, ap);
+		va_end(ap);
+	}
+}
+#endif /* AH_DEBUG */
+
 /* Lookup a friendly name for a register address (for any we have nicknames
  * for). Names were taken from openhal ar5212regs.h. Return AH_TRUE if the
  * name is a known ar5212 register, and AH_FALSE otherwise. */

@@ -214,6 +214,7 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {			\
 #if defined(AH_DEBUG) || defined(AH_REGOPS_FUNC) || defined(AH_DEBUG_ALQ)
 #define OS_REG_WRITE(_ah, _reg, _val)	ath_hal_reg_write(_ah, _reg, _val)
 #define OS_REG_READ(_ah, _reg)		ath_hal_reg_read(_ah, _reg)
+struct ath_hal;
 extern void __ahdecl ath_hal_reg_write(struct ath_hal *ah, u_int reg,
 				       u_int32_t val);
 extern u_int32_t __ahdecl ath_hal_reg_read(struct ath_hal *ah, u_int reg);
@@ -225,6 +226,9 @@ extern u_int32_t __ahdecl ath_hal_reg_read(struct ath_hal *ah, u_int reg);
 /* Delay n microseconds. */
 extern void __ahdecl ath_hal_delay(int);
 #define OS_DELAY(_n)		ath_hal_delay(_n)
+
+/* Uptime in milliseconds, used by debugging code only */
+#define OS_GETUPTIME(_ah)	((int)(1000 * jiffies / HZ))
 
 #define OS_INLINE	__inline
 #define OS_MEMZERO(_a, _n)	ath_hal_memzero((_a), (_n))
