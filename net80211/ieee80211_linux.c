@@ -288,7 +288,7 @@ ieee80211_notify_sta_stats(struct ieee80211_node *ni)
 	static const char *tag = "STA-TRAFFIC-STAT";
 	struct net_device *dev = vap->iv_dev;
 	union iwreq_data wreq;
-	char buf[1024];
+	char buf[256];
 
 	snprintf(buf, sizeof(buf), "%s\nmac=" MAC_FMT "\nrx_packets=%u\nrx_bytes=%llu\n"
 			"tx_packets=%u\ntx_bytes=%llu\n", tag,

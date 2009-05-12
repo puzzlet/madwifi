@@ -105,7 +105,7 @@ static void skb_print_message(
 {
 	va_list args;
 	char skb_count[32] = { '\0' };
-	char expanded_message[1024] = { '\0' };
+	char expanded_message[256] = { '\0' };
 	if (show_counter) {
 #ifdef IEEE80211_DEBUG_REFCNT
 		snprintf(skb_count, 

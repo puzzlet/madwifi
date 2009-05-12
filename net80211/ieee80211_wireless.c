@@ -1628,17 +1628,21 @@ ieee80211_ioctl_iwaplist(struct net_device *dev, struct iw_request_info *info,
 {
 	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
-	struct waplistreq req;		/* XXX off stack */
+	struct waplistreq *req;
 
-	req.vap = vap;
-	req.i = 0;
-	ieee80211_scan_iterate(ic, waplist_cb, &req);
+	req = kmalloc(sizeof(struct waplistreq), GFP_KERNEL);
+	if (!req)
+		return -ENOMEM;
 
-	data->length = req.i;
-	memcpy(extra, &req.addr, req.i * sizeof(req.addr[0]));
+	req->vap = vap;
+	req->i = 0;
+	ieee80211_scan_iterate(ic, waplist_cb, req);
+
+	data->length = req->i;
+	memcpy(extra, &req->addr, req->i * sizeof(req->addr[0]));
 	data->flags = 1;		/* signal quality present (sort of) */
-	memcpy(extra + req.i * sizeof(req.addr[0]), &req.qual,
-		req.i * sizeof(req.qual[0]));
+	memcpy(extra + req->i * sizeof(req->addr[0]), &req->qual,
+		req->i * sizeof(req->qual[0]));
 
 	return 0;
 }
