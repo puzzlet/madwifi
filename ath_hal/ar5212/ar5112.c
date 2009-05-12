@@ -363,7 +363,6 @@ ar5112SetPowerTable(struct ath_hal *ah,
 	uint16_t    numPcd;
 	int16_t     powTableLXPD[2][64];
 	int16_t     powTableHXPD[2][64];
-	int16_t     tmpPowerTable[64];
 	uint16_t    xgainList[2];
 	uint16_t    xpdMask;
 
@@ -430,11 +429,9 @@ ar5112SetPowerTable(struct ath_hal *ah,
 			OS_MEMCPY(&powers[0], &pRawCh->pDataPerXPD[jj].pwr_t4[0],
 				numPcd * sizeof(int16_t));
 			if (!getFullPwrTable(numPcd, &pcdacs[0], &powers[0],
-				pRawCh->maxPower_t4, &tmpPowerTable[0])) {
+				pRawCh->maxPower_t4, powTableLXPD[kk])) {
 				return AH_FALSE;
 			}
-			OS_MEMCPY(&powTableLXPD[kk][0], &tmpPowerTable[0],
-				64*sizeof(int16_t));
 		} else {
 			jj = xgainList[0];
 			numPcd = pRawCh->pDataPerXPD[jj].numPcdacs;
@@ -444,11 +441,9 @@ ar5112SetPowerTable(struct ath_hal *ah,
 				&pRawCh->pDataPerXPD[jj].pwr_t4[0],
 				numPcd*sizeof(int16_t));
 			if (!getFullPwrTable(numPcd, &pcdacs[0], &powers[0],
-				pRawCh->maxPower_t4, &tmpPowerTable[0])) {
+				pRawCh->maxPower_t4, powTableLXPD[kk])) {
 				return AH_FALSE;
 			}
-			OS_MEMCPY(&powTableLXPD[kk][0], &tmpPowerTable[0],
-				64 * sizeof(int16_t));
 
 			jj = xgainList[1];
 			numPcd = pRawCh->pDataPerXPD[jj].numPcdacs;
@@ -458,11 +453,9 @@ ar5112SetPowerTable(struct ath_hal *ah,
 				&pRawCh->pDataPerXPD[jj].pwr_t4[0],
 				numPcd * sizeof(int16_t));
 			if (!getFullPwrTable(numPcd, &pcdacs[0], &powers[0],
-				pRawCh->maxPower_t4, &tmpPowerTable[0])) {
+				pRawCh->maxPower_t4, powTableHXPD[kk])) {
 				return AH_FALSE;
 			}
-			OS_MEMCPY(&powTableHXPD[kk][0], &tmpPowerTable[0],
-				64 * sizeof(int16_t));
 		}
 		kk++;
 	}
