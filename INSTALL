@@ -32,7 +32,7 @@ Linux 2.4.x kernels starting with 2.4.22 and 2.6 kernels should work
 without problems.  Due to quick pace of Linux development, there is no
 way compatibility with the future 2.6 kernels can be ensured.  However,
 the latest 2.6 kernel at the time of the release should be expected to
-work.
+work.  For AHB support, Linux 2.6.19 or newer is required.
 
 Automatic module loading support (CONFIG_KMOD) is highly recommended;
 otherwise, you'll need to load all required modules manually.
