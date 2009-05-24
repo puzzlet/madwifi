@@ -123,6 +123,16 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {			\
 #endif
 #endif				/* AH_BYTE_ORDER */
 
+/* 32-bit sparc gets iowrite32() and ioread32() in Linux 2.6.18 */
+#if (defined(CONFIG_SPARC32) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18)))
+#ifndef iowrite32
+#define iowrite32(_val, _addr) writel(_val, _addr)
+#endif
+#ifndef ioread32
+#define ioread32(_addr) readl(_addr)
+#endif
+#endif
+
 /*
  * The HAL programs big-endian platforms to use byte-swapped hardware registers.
  * This is done to avoid the byte swapping needed to access PCI devices.
