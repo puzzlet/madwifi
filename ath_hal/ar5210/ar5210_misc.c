@@ -330,11 +330,11 @@ ar5210WriteAssocid(struct ath_hal *ah, const uint8_t *bssid, uint16_t assocId)
 uint64_t
 ar5210GetTsf64(struct ath_hal *ah)
 {
-	uint32_t low1, low2, u32;
+	uint32_t low1, low2, up32;
 
 	/* sync multi-word read */
 	low1 = OS_REG_READ(ah, AR_TSF_L32);
-	u32 = OS_REG_READ(ah, AR_TSF_U32);
+	up32 = OS_REG_READ(ah, AR_TSF_U32);
 	low2 = OS_REG_READ(ah, AR_TSF_L32);
 	if (low2 < low1) {	/* roll over */
 		/*
@@ -347,9 +347,9 @@ ar5210GetTsf64(struct ath_hal *ah)
 		 * read which can be noticeable when doing things
 		 * like timestamping packets in monitor mode.
 		 */
-		u32++;
+		up32++;
 	}
-	return (((uint64_t) u32) << 32) | ((uint64_t) low2);
+	return (((uint64_t) up32) << 32) | ((uint64_t) low2);
 }
 
 /*
