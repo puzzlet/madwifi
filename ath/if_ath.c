@@ -1681,7 +1681,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 						"TXQ%d: restoring"
 						" TXDP:%08llx\n",
  						txq->axq_qnum,
- 						(u_int64_t)bf->bf_daddr);
+ 						(unsigned long long)bf->bf_daddr);
 					ath_hw_puttxbuf(sc, txq->axq_qnum,
 							bf->bf_daddr,
 							__func__);
@@ -1923,7 +1923,7 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int *pneedmark, u_int64_t 
 
 			DPRINTF(sc, ATH_DEBUG_TSF,
 				"rs_tstamp=%10llx count=%d\n",
-				bf->bf_tsf, count);
+				(unsigned long long)bf->bf_tsf, count);
 
 			/* compute rollover */
 			if (last_rs_tstamp > rs->rs_tstamp) {
@@ -2192,7 +2192,7 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int *pneedmark, u_int64_t 
 			rollover++;
 			DPRINTF(sc, ATH_DEBUG_TSF,
 				"%d rollover detected for hw_tsf=%10llx\n",
-				rollover, hw_tsf);
+				rollover, (unsigned long long)hw_tsf);
 		}
 
 		last_rs_tstamp = 0;
@@ -2221,14 +2221,15 @@ ath_intr_process_rx_descriptors(struct ath_softc *sc, int *pneedmark, u_int64_t 
 
 				DPRINTF(sc, ATH_DEBUG_TSF,
 					"bf_tsf=%10llx hw_tsf=%10llx\n",
-					bf->bf_tsf, hw_tsf);
+					(unsigned long long)bf->bf_tsf,
+					(unsigned long long)hw_tsf);
 
 				if (bf->bf_tsf < sc->sc_last_tsf) {
 					DPRINTF(sc, ATH_DEBUG_TSF, 
 						"TSF error: bf_tsf=%10llx "
 						"sc_last_tsf=%10llx\n",
-						bf->bf_tsf,
-						sc->sc_last_tsf);
+						(unsigned long long)bf->bf_tsf,
+						(unsigned long long)sc->sc_last_tsf);
 				}
 				sc->sc_last_tsf = bf->bf_tsf;
 			}
@@ -2419,7 +2420,8 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 			DPRINTF(sc, ATH_DEBUG_BEACON,
 				"ath_intr HAL_INT_SWBA at "
 				"tsf %10llx nexttbtt %10llx\n",
-				hw_tsf, (u_int64_t)sc->sc_nexttbtt << 10);
+				(unsigned long long)hw_tsf,
+				(unsigned long long)sc->sc_nexttbtt << 10);
 
 			/* Software beacon alert--time to send a beacon.
 			 * Handle beacon transmission directly; deferring
@@ -2892,7 +2894,7 @@ ath_txq_dump(struct ath_softc *sc, struct ath_txq *txq)
 		DPRINTF(sc, ATH_DEBUG_WATCHDOG, "  [%3u] bf_daddr:%08llx "
 			"ds_link:%08x %s\n",
 			j++,
-			(u_int64_t)bf->bf_daddr, bf->bf_desc->ds_link,
+			(unsigned long long)bf->bf_daddr, bf->bf_desc->ds_link,
 			status == HAL_EINPROGRESS ? "pending" : "done");
 	}
 }
@@ -2961,7 +2963,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 		DPRINTF(sc, ATH_DEBUG_XMIT, 
 				"link[%u]=%08llx (%p)\n",
 				txq->axq_qnum, 
-  				(u_int64_t)bf->bf_daddr, bf->bf_desc);
+  				(unsigned long long)bf->bf_daddr, bf->bf_desc);
 
 		/* We do not start tx on this queue as it will be done as
 		 * "CAB" data at DTIM intervals. */
@@ -2979,7 +2981,7 @@ ath_tx_txqaddbuf(struct ath_softc *sc, struct ieee80211_node *ni,
 				"link[%u] (%08x)=%08llx (%p)\n",
 				txq->axq_qnum, 
 				ath_get_last_ds_link(txq),
-				(u_int64_t)bf->bf_daddr, bf->bf_desc);
+				(unsigned long long)bf->bf_daddr, bf->bf_desc);
 
 		ath_hal_txstart(ah, txq->axq_qnum);
 		sc->sc_dev->trans_start = jiffies;
@@ -3029,7 +3031,7 @@ ath_tx_startraw(struct net_device *dev, struct ath_buf *bf, struct sk_buff *skb)
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 					skb->data, pktlen, BUS_DMA_TODEVICE);
 	DPRINTF(sc, ATH_DEBUG_XMIT, "skb=%p [data %p len %u] skbaddr %08llx\n",
-		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
+		skb, skb->data, skb->len, (unsigned long long)bf->bf_skbaddr);
 
 	bf->bf_skb = skb;
 #ifdef ATH_SUPERG_FF
@@ -5724,7 +5726,8 @@ ath_descdma_setup(struct ath_softc *sc,
 	ds = dd->dd_desc;
 	DPRINTF(sc, ATH_DEBUG_RESET, "%s DMA map: %p (%lu) -> %08llx (%lu)\n",
 		dd->dd_name, ds, (u_long) dd->dd_desc_len,
-		(u_int64_t)dd->dd_desc_paddr, /*XXX*/ (u_long) dd->dd_desc_len);
+		(unsigned long long)dd->dd_desc_paddr,
+		/*XXX*/ (u_long) dd->dd_desc_len);
 
 	/* allocate buffers */
 	bsize = sizeof(struct ath_buf) * nbuf;
@@ -6138,7 +6141,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 				DPRINTF(sc, ATH_DEBUG_XMIT, 
 						"link[%u]=%08llx (%p)\n",
 						wmeq->axq_qnum, 
-						(u_int64_t)bf_tmp->bf_daddr, 
+						(unsigned long long)bf_tmp->bf_daddr,
 						bf_tmp->bf_desc);
 
 				/* Update the rate information. (?) */
@@ -6442,15 +6445,18 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 					"Beacon transmitted at %10llx, "
 					"received at %10llx(%lld), hw TSF "
 					"%10llx(%lld)\n",
-					beacon_tsf,
-					rtsf, rtsf - beacon_tsf,
-					hw_tsf, hw_tsf - beacon_tsf);
+					(unsigned long long)beacon_tsf,
+					(unsigned long long)rtsf,
+					(long long)(rtsf - beacon_tsf),
+					(unsigned long long)hw_tsf,
+					(long long)(hw_tsf - beacon_tsf));
 
 			if (beacon_tsf > rtsf) {
 				DPRINTF(sc, ATH_DEBUG_BEACON,
 						"IBSS merge: rtsf %10llx "
 						"beacon's tsf %10llx\n",
-						rtsf, beacon_tsf);
+						(unsigned long long)rtsf,
+						(unsigned long long)beacon_tsf);
 				do_merge = 1;
 			}
 
@@ -7646,12 +7652,12 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 		skb->data, pktlen, BUS_DMA_TODEVICE);
 	DPRINTF(sc, ATH_DEBUG_XMIT, "skb %p [data %p len %u] skbaddr %08llx\n",
-		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
+		skb, skb->data, skb->len, (unsigned long long)bf->bf_skbaddr);
 #else /* ATH_SUPERG_FF case */
 	bf->bf_skbaddr = bus_map_single(sc->sc_bdev,
 		skb->data, skb->len, BUS_DMA_TODEVICE);
 	DPRINTF(sc, ATH_DEBUG_XMIT, "skb %p [data %p len %u] skbaddr %08llx\n",
-		skb, skb->data, skb->len, (u_int64_t)bf->bf_skbaddr);
+		skb, skb->data, skb->len, (unsigned long long)bf->bf_skbaddr);
 	/* NB: ensure skb->len had been updated for each skb so we don't need pktlen */
 	{
 		struct sk_buff *skbtmp = skb;
@@ -7663,7 +7669,7 @@ ath_tx_start(struct net_device *dev, struct ieee80211_node *ni,
 			DPRINTF(sc, ATH_DEBUG_XMIT, "skb%d (FF) %p "
 				"[data %p len %u] skbaddr %08llx\n", 
 				i, skbtmp, skbtmp->data, skbtmp->len,
-				(u_int64_t)bf->bf_skbaddrff[i]);
+				(unsigned long long)bf->bf_skbaddrff[i]);
 			i++;
 		}
 		bf->bf_numdescff = i;
@@ -10286,7 +10292,7 @@ ath_printrxbuf(const struct ath_buf *bf, int done)
 	const struct ath_desc *ds = bf->bf_desc;
 	u_int8_t status = done ? rs->rs_status : 0;
 	printk("R (%p %08llx) %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s%s%s%s\n",
-		ds, (u_int64_t)bf->bf_daddr,
+		ds, (unsigned long long)bf->bf_daddr,
 		ds->ds_link, ds->ds_data,
 		ds->ds_ctl0, ds->ds_ctl1,
 		ds->ds_hw[0], ds->ds_hw[1],
@@ -10311,7 +10317,7 @@ ath_printtxbuf(const struct ath_buf *bf, int done)
 
 	DPRINTF(sc, ATH_DEBUG_ANY, 
 		"T (%p %08llx) %08x %08x %08x %08x %08x %08x %08x %08x%s%s%s%s%s%s\n",
-		ds, (u_int64_t)bf->bf_daddr,
+		ds, (unsigned long long)bf->bf_daddr,
 		ds->ds_link, ds->ds_data,
 		ds->ds_ctl0, ds->ds_ctl1,
 		ds->ds_hw[0], ds->ds_hw[1], ds->ds_hw[2], ds->ds_hw[3],

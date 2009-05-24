@@ -850,10 +850,10 @@ static HAL_BOOL rp_analyze_short_pulse(
 				"%s: %s skipped (last pulse isn't old enough to"
 				" match this pattern).  %10llu >= %10llu.\n",
 				SC_DEV_NAME(sc), pattern->name,
-				(u_int64_t)(
+				(unsigned long long)(
 					pattern->min_rep_int * 
 					pattern->min_evts), 
-				(u_int64_t)t1);
+				(unsigned long long)t1);
 			continue;
 		}
 
@@ -926,8 +926,12 @@ static HAL_BOOL rp_analyze_short_pulse(
 					" < t0_max).  t1=%10llu t0_max=%10llu "
 					"t_min=%10llu t_max=%10llu matched=%u "
 					"missed=%u\n", SC_DEV_NAME(sc),
-					pattern->name, t1, t0_max, 
-					t_min, t_max, matched, missed);
+					pattern->name,
+					(unsigned long long)t1,
+					(unsigned long long)t0_max,
+					(unsigned long long)t_min,
+					(unsigned long long)t_max,
+					matched, missed);
 				break;
 			}
 			/* if we missed more than specified number of pulses,
@@ -959,14 +963,14 @@ static HAL_BOOL rp_analyze_short_pulse(
 					pattern->name,
 					pulse->rp_index,
 					"noise",
-					(u_int64_t)pulse->rp_tsf,
-					(u_int64_t)t_min,
-					(u_int64_t)t_max, 
+					(unsigned long long)pulse->rp_tsf,
+					(unsigned long long)t_min,
+					(unsigned long long)t_max,
 					(u_int8_t)pulse->rp_width, 
-					(u_int64_t)new_period, 
-					(u_int64_t)last_seen_period, 
-					(u_int64_t)mean_period, 
-					(u_int64_t)last_tsf);
+					(unsigned long long)new_period,
+					(unsigned long long)last_seen_period,
+					(unsigned long long)mean_period,
+					(unsigned long long)last_tsf);
 				/* this event is noise, ignore it */
 				pulse = pulse_prev(pulse);
 				noise++;
@@ -1013,14 +1017,14 @@ static HAL_BOOL rp_analyze_short_pulse(
 					MAX(matched + missed + partial_miss - 1,
 					    0),
 					(matched + missed + partial_miss),
-					(u_int64_t)pulse->rp_tsf,
-					(u_int64_t)t_min,
-					(u_int64_t)t_max, 
+					(unsigned long long)pulse->rp_tsf,
+					(unsigned long long)t_min,
+					(unsigned long long)t_max, 
 					(u_int8_t)pulse->rp_width, 
-					(u_int64_t)new_period, 
-					(u_int64_t)last_seen_period, 
-					(u_int64_t)mean_period, 
-					(u_int64_t)last_tsf);
+					(unsigned long long)new_period, 
+					(unsigned long long)last_seen_period, 
+					(unsigned long long)mean_period, 
+					(unsigned long long)last_tsf);
 
 				/* record tsf and period */
 				last_seen_period = new_period;
@@ -1070,11 +1074,11 @@ static HAL_BOOL rp_analyze_short_pulse(
 					MAX(matched + missed + partial_miss - 1, 
 					    0),
 					(matched + missed + partial_miss), 
-					(u_int64_t)t_min, 
-					(u_int64_t)t_max, 
-					(u_int64_t)last_seen_period, 
-					(u_int64_t)mean_period, 
-					(u_int64_t)last_tsf);
+					(unsigned long long)t_min,
+					(unsigned long long)t_max,
+					(unsigned long long)last_seen_period,
+					(unsigned long long)mean_period,
+					(unsigned long long)last_tsf);
 
 				/* update bounds */
 				t_min = adjusted_max_rep_int < t_min ? 
@@ -1584,7 +1588,7 @@ void ath_rp_record(struct ath_softc *sc, u_int64_t tsf, u_int8_t rssi,
 
 	DPRINTF(sc, ATH_DEBUG_DOTHPULSES, "%s: ath_rp_record: "
 		"tsf=%10llu rssi=%3u width=%3u%s\n", 
-		SC_DEV_NAME(sc), tsf, rssi, width,
+		SC_DEV_NAME(sc), (unsigned long long)tsf, rssi, width,
 		sc->sc_rp_ignored ? " (ignored)" : "");
 
 	if (sc->sc_rp_ignored) {
@@ -1607,21 +1611,27 @@ void ath_rp_record(struct ath_softc *sc, u_int64_t tsf, u_int8_t rssi,
 			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE, 
 				"%s: %s: ath_rp_flush: simulated tsf "
 				"reset.  tsf =%10llu, rptsf =%10llu\n", 
-				SC_DEV_NAME(sc), __func__, tsf, pulse->rp_tsf);
+				SC_DEV_NAME(sc), __func__,
+				(unsigned long long)tsf,
+				(unsigned long long)pulse->rp_tsf);
 			ath_rp_flush(sc);
 		} else if ((pulse->rp_tsf - tsf) > (1 << 15)) {
 			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 				"%s: %s: ath_rp_flush: tsf reset.  "
 				"(rp_tsf - tsf > 0x8000) tsf=%10llu, rptsf="
 				"%10llu\n", 
-				SC_DEV_NAME(sc), __func__, tsf, pulse->rp_tsf);
+				SC_DEV_NAME(sc), __func__,
+				(unsigned long long)tsf,
+				(unsigned long long)pulse->rp_tsf);
 			ath_rp_flush(sc);
 		} else {
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
 				"%s: %s: tsf jitter/bug detected: tsf =%10llu, "
 				"rptsf =%10llu, rp_tsf - tsf = %10llu\n", 
-				SC_DEV_NAME(sc), __func__, tsf, pulse->rp_tsf,
-				pulse->rp_tsf - tsf);
+				SC_DEV_NAME(sc), __func__,
+				(unsigned long long)tsf,
+				(unsigned long long)pulse->rp_tsf,
+				(unsigned long long)(pulse->rp_tsf - tsf));
 		}
 	}
 
@@ -1667,8 +1677,8 @@ void ath_rp_print_mem(struct ath_softc *sc, int analyzed_pulses_only)
 			       "analyzed=%d next=%p prev=%p\n",
 			       pulse->rp_index,
 			       pulse, 
-			       pulse->rp_tsf - oldest_tsf, 
-			       pulse->rp_tsf, 
+			       (unsigned long long)(pulse->rp_tsf - oldest_tsf),
+			       (unsigned long long)pulse->rp_tsf,
 			       pulse->rp_rssi, 
 			       pulse->rp_width, 
 			       pulse->rp_allocated, 
@@ -1703,8 +1713,8 @@ void ath_rp_print(struct ath_softc *sc, int analyzed_pulses_only)
 			       "analyzed=%d next=%p prev=%p\n",
 			       pulse->rp_index,
 			       pulse, 
-			       pulse->rp_tsf - oldest_tsf, 
-			       pulse->rp_tsf, 
+			       (unsigned long long)(pulse->rp_tsf - oldest_tsf),
+			       (unsigned long long)pulse->rp_tsf,
 			       pulse->rp_rssi, 
 			       pulse->rp_width, 
 			       pulse->rp_allocated, 

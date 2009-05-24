@@ -420,7 +420,8 @@ proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 			p += sprintf(p, " last_rx %ld.%06ld\n",
 				     t.tv_sec, t.tv_nsec / 1000);
 			p += sprintf(p, " ni_tstamp %10llu ni_rtsf %10llu\n",
-				     le64_to_cpu(ni->ni_tstamp.tsf), ni->ni_rtsf);
+				     (unsigned long long)le64_to_cpu(ni->ni_tstamp.tsf),
+				     (unsigned long long)ni->ni_rtsf);
 		}
         }
 	IEEE80211_NODE_TABLE_UNLOCK_IRQ(nt);
