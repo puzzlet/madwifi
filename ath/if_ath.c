@@ -8747,7 +8747,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 		ath_hal_mhz2ieee(ah, hchan.channel, hchan.channelFlags),
 		hchan.channel,
 		tv.tv_sec,
-		tv.tv_usec
+		(long)tv.tv_usec
 		);
 
 	/* check if it is turbo mode switch */
@@ -8833,7 +8833,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 					"channel %u -- Time: %ld.%06ld\n", 
 					ieee80211_mhz2ieee(sc->sc_curchan.channel, 
 						sc->sc_curchan.channelFlags), 
-					tv.tv_sec, tv.tv_usec);
+					tv.tv_sec, (long)tv.tv_usec);
 			/* set the timeout to normal */
 			dev->watchdog_timeo = 120 * HZ;
 			/* Disable beacons and beacon miss interrupts */
@@ -8863,7 +8863,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 				"%d -- Time: %ld.%06ld\n", 
 				ieee80211_mhz2ieee(sc->sc_curchan.channel, 
 					sc->sc_curchan.channelFlags), 
-				tv.tv_sec, tv.tv_usec);
+				tv.tv_sec, (long)tv.tv_usec);
 	return 0;
 }
 
@@ -9378,7 +9378,7 @@ ath_dfs_cac_completed(unsigned long data )
 					"completed" : "not applicable", 
 					ieee80211_mhz2ieee(sc->sc_curchan.channel, 
 						sc->sc_curchan.channelFlags), 
-					tv.tv_sec, tv.tv_usec);
+					tv.tv_sec, (long)tv.tv_usec);
 		sc->sc_dfs_cac = 0;
 		if (sc->sc_curchan.privFlags & CHANNEL_INTERFERENCE) {
 			DPRINTF(sc, ATH_DEBUG_DOTH, 
@@ -9410,7 +9410,7 @@ ath_dfs_cac_completed(unsigned long data )
 				DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, 
 						"VAP DFSWAIT_PENDING "
 						"-> RUN -- Time: %ld.%06ld\n", 
-						tv.tv_sec, tv.tv_usec);
+						tv.tv_sec, (long)tv.tv_usec);
 				/* re alloc beacons to update new channel info */
 				error = ath_beacon_alloc(sc, vap->iv_bss);
 				if (error < 0) {
@@ -9445,14 +9445,14 @@ ath_dfs_cac_completed(unsigned long data )
 					"indefinitely.  dfs_testmode is "
 					"enabled.  Waiting again. -- Time: "
 					"%ld.%06ld\n",
-					tv.tv_sec, tv.tv_usec);
+					tv.tv_sec, (long)tv.tv_usec);
 			mod_timer(&sc->sc_dfs_cac_timer,
 				  jiffies + (sc->sc_dfs_cac_period * HZ));
 		} else {
 			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, 
 					"VAP DFSWAIT_PENDING still.  "
 					"Waiting again. -- Time: %ld.%06ld\n", 
-					tv.tv_sec, tv.tv_usec);
+					tv.tv_sec, (long)tv.tv_usec);
 			mod_timer(&sc->sc_dfs_cac_timer,
 				  jiffies + (ATH_DFS_WAIT_SHORT_POLL_PERIOD * HZ));
 		}
@@ -12059,7 +12059,7 @@ ath_interrupt_dfs_cac(struct ath_softc *sc, const char *reason)
 				reason,
 				ieee80211_mhz2ieee(sc->sc_curchan.channel,
 					sc->sc_curchan.channelFlags),
-				tv.tv_sec, tv.tv_usec);
+				tv.tv_sec, (long)tv.tv_usec);
 	}
 	sc->sc_dfs_cac = 0;
 }
@@ -12132,7 +12132,7 @@ ath_radar_detected(struct ath_softc *sc, const char *cause)
 				"ichan=%3d (%4d MHz), ichan.icflags=0x%08X "
 				"-- Time: %ld.%06ld\n", 
 				ichan.ic_ieee, ichan.ic_freq, ichan.ic_flags, 
-				tv.tv_sec, tv.tv_usec);
+				tv.tv_sec, (long)tv.tv_usec);
 			/* Mark the channel */
 			sc->sc_curchan.privFlags &= ~CHANNEL_DFS_CLEAR;
 			sc->sc_curchan.privFlags |= CHANNEL_INTERFERENCE;
