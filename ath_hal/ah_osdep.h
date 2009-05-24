@@ -152,7 +152,10 @@ struct ath_hal_rf *const *ah_rfs_ptrs[] = {			\
     !defined(CONFIG_PARISC) && \
     !(defined(CONFIG_PPC64) && \
       (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,14))) && \
-    !defined(CONFIG_PPC_MERGE) && \
+    !(defined(CONFIG_PPC_MERGE) && \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))) && \
+    !(defined(CONFIG_PPC32) && \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))) && \
     !(defined(CONFIG_MIPS) && \
       (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,21)))
 # ifndef iowrite32be
