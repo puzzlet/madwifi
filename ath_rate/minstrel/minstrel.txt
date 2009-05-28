@@ -20,7 +20,8 @@ derived from
 The code released in 2005 had some algorithmic and implementation flaws (one
 of which was that it was based on the old madwifi codebase) and was shown to
 be unstable. Performance of the sample module is poor
-(http://www.madwifi.org/ticket/989), and we have observed similar issues.
+(http://www.madwifi-project.org/ticket/989), and we have observed similar
+issues.
 
 We noted:
 

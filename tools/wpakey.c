@@ -1,6 +1,6 @@
 /** WEP/WPA key setting tool for MadWifi driver, version 0.5
  *
- * (C) 2008-03-28 Georg Lukas <georg@madwifi.org>
+ * (C) 2008-03-28 Georg Lukas <georg@madwifi-project.org>
  *
  * This program can be used to debug the MadWifi Key Cache. Use with caution
  * and without warranty!

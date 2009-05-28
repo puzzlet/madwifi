@@ -49,7 +49,7 @@ fi
 check_dir_prereq "RELEASE_TMP"
 check_dir_prereq "RELEASE_STORE"
 
-# caller must have write access to the madwifi.org repository
+# caller must have write access to the madwifi-project.org repository
 valid=0
 repos=$(svn info | grep "Repository Root" | cut -d" " -f3)
 for f in ~/.subversion/auth/svn.simple/*; do

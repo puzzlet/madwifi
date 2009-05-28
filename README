@@ -64,7 +64,7 @@ binary-only form it is marked "Proprietary"; this means when you load it
 you will see messages that your system is now "tainted".
 
 A detailed discussion of the pros and cons of this design can be found
-at http://madwifi.org/wiki/HAL
+at http://madwifi-project.org/wiki/HAL
 
 If you wish to use this driver on a platform for which an ath_hal module
 is not already provided please contact the author.  Note that this is
@@ -95,7 +95,7 @@ http://customerproducts.atheros.com/customerproducts
 
 A list of products that have been reported to be supported by MadWifi
 can be found here:
-http://madwifi.org/wiki/Compatibility
+http://madwifi-project.org/wiki/Compatibility
 
 In general, if a device is identified as ``11a only'', it is almost
 certain to contain an Atheros 5210 part in it.  Most retail a+b products
@@ -167,7 +167,7 @@ Autocreation can be disabled:
   modprobe ath_pci autocreate=none
 
 Please see the following link for more information:
-http://madwifi.org/wiki/UserDocs/autocreate
+http://madwifi-project.org/wiki/UserDocs/autocreate
 
 
 Virtual APs (VAPs) and wlanconfig
@@ -257,7 +257,7 @@ summary of all non-zero statistics from the time the driver was loaded.
 By default the ath0 device is used; to override this use the -i option.
 
 A wiki page describes common MadWifi debugging methods here:
-http://madwifi.org/wiki/DevDocs/AthDebug
+http://madwifi-project.org/wiki/DevDocs/AthDebug
 
 
 Security/Crypto Support
@@ -329,7 +329,7 @@ Known Problems
 1. Ad-hoc mode is broken; symptoms are intermittent operation.
 
 Other issues might be mentioned in our ticket tracker:
-http://madwifi.org/report/1
+http://madwifi-project.org/report/1
 
 
 Getting Support
@@ -347,7 +347,7 @@ sending your request (see below).
 We also offer an IRC channel that might be a better help in urgent
 cases.  Learn more about the different ways to get support by visiting:
 
-  http://madwifi.org/wiki/Support
+  http://madwifi-project.org/wiki/Support
 
 When sending a support request or problem report be sure to include the
 version of the driver and the part identification the driver prints to
@@ -376,6 +376,6 @@ Feedback and Contributions
 Reports about reproducible bugs, feature requests and patches should be
 submitted in the form of a trouble ticket:
 
-  http://madwifi.org/newticket
+  http://madwifi-project.org/wiki/TicketSubmissionGuidelines
         
 Fixes and enhancements are encouraged. 
