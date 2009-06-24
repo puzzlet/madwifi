@@ -112,7 +112,7 @@
 	do { (void) (start); (void) (size); } while (0)
 #endif
 
-#define bus_dma_sync_single	dma_sync_single
+#define bus_dma_sync_single	dma_sync_single_for_cpu
 #define bus_map_single		dma_map_single
 #define bus_unmap_single	dma_unmap_single
 #define bus_alloc_consistent(_hwdev, _sz, _hdma)		\
