@@ -4738,6 +4738,16 @@ ath_beaconq_setup(struct ath_softc *sc)
 #endif
 	/* NB: don't enable any interrupts */
 	qnum = ath_hal_setuptxqueue(sc->sc_ah, HAL_TX_QUEUE_BEACON, &qi);
+	if (qnum < 0)
+		return -1;
+	if (qnum >= ARRAY_SIZE(sc->sc_txq)) {
+		EPRINTF(sc, "HAL hardware queue number %d(>=%zd) "
+			"is out of range.\n",
+			qnum, ARRAY_SIZE(sc->sc_txq));
+		ath_hal_releasetxqueue(sc->sc_ah, qnum);
+		return -1;
+	}
+
 	txq = &sc->sc_txq[qnum];
 	memset(txq, 0, sizeof(struct ath_txq));
 	txq->axq_qnum		= qnum;
@@ -6901,7 +6911,7 @@ ath_grppoll_txq_setup(struct ath_softc *sc, int qtype, int period)
 
 	if (sc->sc_grpplq.axq_qnum == -1) {
 		qnum = ath_hal_setuptxqueue(ah, qtype, &qi);
-		if (qnum == -1)
+		if (qnum < 0)
 			return ;
 		if (qnum >= ARRAY_SIZE(sc->sc_txq)) {
 			EPRINTF(sc, "HAL hardware queue number, %u, is out of range."
@@ -7244,7 +7254,7 @@ ath_txq_setup(struct ath_softc *sc, int qtype, int subtype)
 		qi.tqi_qflags = HAL_TXQ_TXEOLINT_ENABLE | 
 			HAL_TXQ_TXDESCINT_ENABLE;
 	qnum = ath_hal_setuptxqueue(ah, qtype, &qi);
-	if (qnum == -1) {
+	if (qnum < 0) {
 		/*
 		 * NB: don't print a message, this happens
 		 * normally on parts with too few tx queues
