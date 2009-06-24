@@ -8470,11 +8470,6 @@ ath_tx_tasklet(TQUEUE_ARG data)
 	struct ath_softc *sc = netdev_priv(dev);
 	unsigned int i;
 
-	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
-		if (!ath_txq_check(sc, &sc->sc_txq[i], __func__))
-			ath_txq_dump(sc, &sc->sc_txq[i]);
-	}
-
 	/* Process each active queue. This includes sc_cabq, sc_xrtq and
 	 * sc_uapsdq */
 	for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
