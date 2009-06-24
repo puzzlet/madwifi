@@ -6186,7 +6186,8 @@ ath_node_move_data(const struct ieee80211_node *ni)
 			bf = STAILQ_FIRST(&txq->axq_q);
 
 		if (bf) {
-			ath_hw_puttxbuf(sc, txq->axq_qnum, bf->bf_daddr, __func__);
+			ath_hw_puttxbuf(sc, txq->axq_qnum, bf->bf_daddr,
+					__func__);
 			ath_hal_txstart(ah, txq->axq_qnum);
 		}
 
@@ -6224,7 +6225,8 @@ ath_node_move_data(const struct ieee80211_node *ni)
 			}
 
 			if (bf) {
-				ath_hw_puttxbuf(sc, txq->axq_qnum, bf->bf_daddr, __func__);
+				ath_hw_puttxbuf(sc, txq->axq_qnum,
+						bf->bf_daddr, __func__);
 				ath_hal_txstart(ah, txq->axq_qnum);
 			}
 
@@ -6407,13 +6409,13 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 	case IEEE80211_FC0_SUBTYPE_BEACON:
 		/* Update beacon RSSI statistics, (apply to "pure" STA only)
 		 * AND only for our AP's beacons */
-		if (vap->iv_opmode == IEEE80211_M_STA &&
-		    sc->sc_ic.ic_opmode == IEEE80211_M_STA &&
-		    ni == vap->iv_bss)
+		if ((vap->iv_opmode == IEEE80211_M_STA) &&
+		    (sc->sc_ic.ic_opmode == IEEE80211_M_STA) &&
+		    (ni == vap->iv_bss))
 			ATH_RSSI_LPF(sc->sc_halstats.ns_avgbrssi, rssi);
 		if ((sc->sc_syncbeacon ||
 		    (vap->iv_flags_ext & IEEE80211_FEXT_APPIE_UPDATE)) &&
-		     ni == vap->iv_bss && vap->iv_state == IEEE80211_S_RUN) {
+		    (ni == vap->iv_bss) && (vap->iv_state == IEEE80211_S_RUN)) {
 			/* Resync beacon timers using the TSF of the
 			 * beacon frame we just received. */
 			vap->iv_flags_ext &= ~IEEE80211_FEXT_APPIE_UPDATE;
