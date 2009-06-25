@@ -6478,8 +6478,8 @@ ath_recv_mgmt(struct ieee80211vap * vap, struct ieee80211_node *ni_or_null,
 			/* Check sc_nexttbtt */
 			if (sc->sc_nexttbtt < hw_tu) {
 				DPRINTF(sc, ATH_DEBUG_BEACON,
-					"sc_nexttbtt (%8x TU) is in the past "
-					"(tsf %8x TU), updating timers\n",
+					"sc_nexttbtt (%u TU) is in the past "
+					"(tsf %u TU), updating timers\n",
 					sc->sc_nexttbtt, hw_tu);
 				do_merge = 1;
 			}
