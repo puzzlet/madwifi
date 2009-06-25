@@ -131,10 +131,16 @@
  * will directly convert it to TU. The rest is truncated to fit into 32 bit.
  */
 #define	IEEE80211_TSF_TO_TU(_tsf)	((u_int32_t)((_tsf) >> 10))
+#define	IEEE80211_TU_TO_TSF(_tu)	(((u_int64_t)(_tu)) << 10)
+
 #define	IEEE80211_MS_TO_TU(x)	(((x) * 1000) / 1024)
 #define	IEEE80211_TU_TO_MS(x)	(((x) * 1024) / 1000)
 #define	IEEE80211_TU_TO_JIFFIES(x) ((IEEE80211_TU_TO_MS(x) * HZ) / 1000)
 #define	IEEE80211_JIFFIES_TO_TU(x) IEEE80211_MS_TO_TU((x) * 1000 / HZ)
+
+#define	IEEE80211_TU_TO_MS_UP(x) (((x) * 1024 + 1000 - 1) / 1000)
+#define	IEEE80211_TU_TO_JIFFIES_UP(x)	\
+	((IEEE80211_TU_TO_MS_UP(x) * HZ + 1000 - 1) / 1000)
 
 #define	IEEE80211_APPIE_MAX	1024
 

@@ -2411,17 +2411,20 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 		ATH_SCHEDULE_TQUEUE(&sc->sc_rxorntq, &needmark);
 	} else {
 		if (status & HAL_INT_SWBA) {
-			struct ieee80211vap * vap;
+			struct ieee80211vap *vap;
+			u_int32_t hw_tsftu = IEEE80211_TSF_TO_TU(hw_tsf);
 
 			/* Updates sc_nexttbtt */
 			vap = TAILQ_FIRST(&sc->sc_ic.ic_vaps);
 			sc->sc_nexttbtt += vap->iv_bss->ni_intval;
 
 			DPRINTF(sc, ATH_DEBUG_BEACON,
-				"ath_intr HAL_INT_SWBA at "
-				"tsf %10llx nexttbtt %10llx\n",
+				"HAL_INT_SWBA at "
+				"hw_tsf=%10llx nexttbtt_tsf=%10llx "
+				"hwtsf_tu=%6u nexttbtt=%6u\n",
 				(unsigned long long)hw_tsf,
-				(unsigned long long)sc->sc_nexttbtt << 10);
+				(unsigned long long)IEEE80211_TU_TO_TSF(sc->sc_nexttbtt),
+				hw_tsftu, sc->sc_nexttbtt);
 
 			/* Software beacon alert--time to send a beacon.
 			 * Handle beacon transmission directly; deferring
@@ -4867,7 +4870,7 @@ ath_beacon_alloc_internal(struct ath_softc *sc, struct ieee80211_node *ni)
 		 * others get a timestamp aligned to the next interval.
 		 */
 		tuadjust = (ni->ni_intval * (ath_maxvaps - avp->av_bslot)) / ath_maxvaps;
-		tsfadjust = cpu_to_le64(tuadjust << 10);	/* TU->TSF */
+		tsfadjust = cpu_to_le64(IEEE80211_TU_TO_TSF(tuadjust));
 
 		DPRINTF(sc, ATH_DEBUG_BEACON,
 			"%s beacons, bslot %d intval %u tsfadjust(Kus) %llu\n",
@@ -8343,7 +8346,7 @@ ath_tx_processq(struct ath_softc *sc, struct ath_txq *txq)
 			 * (bits 25-10 of the TSF). */ 
 #define TSTAMP_TX_MASK  ((2 ^ (27 - 1)) - 1)    /* First 27 bits. */ 
 
-			tstamp = ts->ts_tstamp << 10;
+			tstamp = IEEE80211_TU_TO_TSF(ts->ts_tstamp);
 			bf->bf_tsf = ((bf->bf_tsf & ~TSTAMP_TX_MASK) | tstamp); 
 			if ((bf->bf_tsf & TSTAMP_TX_MASK) < tstamp) 
 				bf->bf_tsf -= TSTAMP_TX_MASK + 1; 
