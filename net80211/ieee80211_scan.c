@@ -680,7 +680,7 @@ again:
 		        	channel_type(ic->ic_curchan),
 			ieee80211_chan2ieee(ic, chan), channel_type(chan),
 			(ss->ss_flags & IEEE80211_SCAN_ACTIVE) &&
-				(chan->ic_flags & IEEE80211_CHAN_PASSIVE) == 0 ?
+				  (!IEEE80211_IS_CHAN_PASSIVE(chan)) ?
 				"active" : "passive",
 			ss->ss_mindwell, maxdwell);
 
@@ -695,7 +695,7 @@ again:
 		 * Otherwise just listen for traffic on the channel.
 		 */
 		if ((ss->ss_flags & IEEE80211_SCAN_ACTIVE) &&
-		    (chan->ic_flags & IEEE80211_CHAN_PASSIVE) == 0) {
+		    !IEEE80211_IS_CHAN_PASSIVE(chan)) {
 			struct net_device *dev = vap->iv_dev;
 			/*
 			 * Send a broadcast probe request followed by
