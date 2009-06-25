@@ -2649,10 +2649,10 @@ ath_init(struct net_device *dev)
 		goto done;
 	}
 	/* Enable interrupts. */
-	sc->sc_imask = HAL_INT_RX | HAL_INT_TX
-		| HAL_INT_RXEOL | HAL_INT_RXORN
-		| HAL_INT_FATAL | HAL_INT_GLOBAL
-		| (sc->sc_needmib ? HAL_INT_MIB : 0);
+	sc->sc_imask = HAL_INT_RX | HAL_INT_TX |
+		HAL_INT_RXEOL | HAL_INT_RXORN |
+		HAL_INT_FATAL | HAL_INT_GLOBAL|
+		(sc->sc_needmib ? HAL_INT_MIB : 0);
 
 	/* Push changes to sc_imask to hardware */
 	ath_hal_intrset(ah, sc->sc_imask);
