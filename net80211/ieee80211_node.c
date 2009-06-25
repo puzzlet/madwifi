@@ -2094,7 +2094,7 @@ ieee80211_ref_node(struct ieee80211_node *ni)
 	if (ni == NULL) {
 		printk(KERN_ERR "%s: NULL node.\n", __func__);
 		dump_stack();
-	}else if (atomic_read(&ni->ni_refcnt) < 1) {
+	} else if (atomic_read(&ni->ni_refcnt) < 1) {
 		node_print_message(IEEE80211_MSG_ANY,
 				   0 /* show counter */, 
 				   0 /* adjust refcount */, 
