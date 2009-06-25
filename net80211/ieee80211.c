@@ -409,6 +409,11 @@ static const struct net_device_ops ieee80211_netdev_ops = {
 	.ndo_set_multicast_list = ieee80211_set_multicast_list,
 	.ndo_change_mtu 	= ieee80211_change_mtu,
 	.ndo_do_ioctl		= ieee80211_ioctl,
+#if IEEE80211_VLAN_TAG_USED
+	.ndo_vlan_rx_register	= ieee80211_vlan_register,
+	.ndo_vlan_rx_add_vid	= ieee80211_vlan_add_vid,
+	.ndo_vlan_rx_kill_vid	= ieee80211_vlan_kill_vid,
+#endif
 };
 #endif
 
@@ -441,6 +446,11 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 	dev->set_multicast_list = ieee80211_set_multicast_list;
  	dev->change_mtu = ieee80211_change_mtu;
 	dev->do_ioctl = ieee80211_ioctl;
+#if IEEE80211_VLAN_TAG_USED
+	dev->vlan_rx_register = ieee80211_vlan_register;
+	dev->vlan_rx_add_vid = ieee80211_vlan_add_vid;
+	dev->vlan_rx_kill_vid = ieee80211_vlan_kill_vid;
+#endif
 #else
 	dev->netdev_ops = &ieee80211_netdev_ops;
 #endif
