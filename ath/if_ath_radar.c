@@ -92,13 +92,13 @@
 struct radar_pattern_specification {
 	/* The name of the rule/specification (i.e. what did we detect) */
 	const char *name;
-	/* Interval MIN = 1000000 / FREQ - 2% 
+	/* Interval MIN = 1000000 / FREQ - 2%
 	 * (a.k.a. Pulse/Burst Repetition Interval) */
 	u_int32_t min_rep_int;
-	/* Interval MAX = 1000000 / FREQ + 2% 
+	/* Interval MAX = 1000000 / FREQ + 2%
 	 * (a.k.a. Pulse/Burst Repetition Interval) */
 	u_int32_t max_rep_int;
-	/* Do we adjust the min/max interval values dynamically 
+	/* Do we adjust the min/max interval values dynamically
 	 * based upon running mean interval? */
 	HAL_BOOL dyn_ints;
 	/* Fuzz factor dynamic matching, as unsigned integer percentage 
@@ -844,15 +844,15 @@ static HAL_BOOL rp_analyze_short_pulse(
 		pattern = &radar_patterns[i];
 
 		/* underflow */
-		if ((pattern->min_rep_int * 
+		if ((pattern->min_rep_int *
 		     (pattern->min_evts - 1)) >= t1) {
 			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 				"%s: %s skipped (last pulse isn't old enough to"
 				" match this pattern).  %10llu >= %10llu.\n",
 				SC_DEV_NAME(sc), pattern->name,
 				(unsigned long long)(
-					pattern->min_rep_int * 
-					pattern->min_evts), 
+					pattern->min_rep_int *
+					pattern->min_evts),
 				(unsigned long long)t1);
 			continue;
 		}
@@ -860,26 +860,26 @@ static HAL_BOOL rp_analyze_short_pulse(
 		/* this min formula is to check for underflow.  It's the
 		 * minimum needed duration to gather specified number of
 		 * matches, assuming minimum match interval. */
-		t0_min = (pattern->min_rep_int * 
+		t0_min = (pattern->min_rep_int *
 			  pattern->min_evts) < t1 ?
-		    t1 - (pattern->min_rep_int * 
+		    t1 - (pattern->min_rep_int *
 			  pattern->min_evts) : 0;
 
 		/* this max formula is to stop when we exceed maximum time
 		 * period for the pattern.  It's the oldest possible TSF that
 		 * could match. */
-		t0_max = (pattern->max_rep_int * 
+		t0_max = (pattern->max_rep_int *
 			  pattern->max_evts) < t1 ?
-		    t1 - (pattern->max_rep_int * 
+		    t1 - (pattern->max_rep_int *
 			  pattern->max_evts) : 0;
 
 		/* we directly start with the timestamp before t1 */
 		pulse = pulse_prev(last_pulse);
 
 		/* initial values for t_min, t_max */
-		t_min = pattern->max_rep_int < t1 ? 
+		t_min = pattern->max_rep_int < t1 ?
 			t1 - pattern->max_rep_int : 0;
-		t_max = pattern->min_rep_int < t1 ? 
+		t_max = pattern->min_rep_int < t1 ?
 			t1 - pattern->min_rep_int : 0;
 
 		last_tsf = t1;
@@ -890,19 +890,19 @@ static HAL_BOOL rp_analyze_short_pulse(
 		missed = 0;
 		partial_miss = 0;
 		mean_period = 0;
-		adjusted_max_rep_int = 
+		adjusted_max_rep_int =
 			pattern->max_rep_int;
-		adjusted_min_rep_int = 
+		adjusted_min_rep_int =
 			pattern->min_rep_int;
 
 		for (;;) {
 			if (mean_period && pattern->dyn_ints) {
 				u_int32_t fuzz_pct = pattern->fuzz_pct;
-				adjusted_max_rep_int = 
-					MIN(nofloat_pct(mean_period, fuzz_pct), 
+				adjusted_max_rep_int =
+					MIN(nofloat_pct(mean_period, fuzz_pct),
 					    pattern->max_rep_int);
 
-				adjusted_min_rep_int = 
+				adjusted_min_rep_int =
 					MAX(nofloat_pct(mean_period, -fuzz_pct),
 					    pattern->min_rep_int);
 			}
@@ -936,21 +936,21 @@ static HAL_BOOL rp_analyze_short_pulse(
 			}
 			/* if we missed more than specified number of pulses,
 			 * we stop searching */
-			if (partial_miss > 
+			if (partial_miss >
 			    pattern->max_consecutive_missing) {
-				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE, 
+				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 					"%s: %s matching stopped (too many "
 					"consecutive pulses missing). %d>%d "
 					"matched=%u. missed=%u.\n",
 					SC_DEV_NAME(sc), pattern->name,
-					partial_miss, 
-					pattern->max_consecutive_missing, 
+					partial_miss,
+					pattern->max_consecutive_missing,
 					matched, missed);
 				break;
 			}
 
-			new_period = (u_int64_t) 
-				(last_tsf && last_tsf > pulse->rp_tsf) ? 
+			new_period = (u_int64_t)
+				(last_tsf && last_tsf > pulse->rp_tsf) ?
 					last_tsf - pulse->rp_tsf : 0;
 			if (pulse->rp_tsf > t_max) {
 				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE, 
@@ -966,7 +966,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 					(unsigned long long)pulse->rp_tsf,
 					(unsigned long long)t_min,
 					(unsigned long long)t_max,
-					(u_int8_t)pulse->rp_width, 
+					(u_int8_t)pulse->rp_width,
 					(unsigned long long)new_period,
 					(unsigned long long)last_seen_period,
 					(unsigned long long)mean_period,
@@ -982,23 +982,23 @@ static HAL_BOOL rp_analyze_short_pulse(
 				missed += partial_miss;
 				partial_miss = 0;
 				sum_periods += new_period;
-				mean_period = matched ? 
-						(sum_periods / matched) : 
+				mean_period = matched ?
+						(sum_periods / matched) :
 						0;
-				if (mean_period && 
+				if (mean_period &&
 				    pattern->dyn_ints &&
-				    (mean_period > 
-				     pattern->max_rep_int || 
-				     mean_period < 
+				    (mean_period >
+				     pattern->max_rep_int ||
+				     mean_period <
 				     pattern->min_rep_int)) {
 					DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 						"%s: %s mean period deviated "
 						"from original range [period: "
 						"%4u, range: %4u-%4u]\n",
 						SC_DEV_NAME(sc),
-						pattern->name, 
-						mean_period, 
-						pattern->min_rep_int, 
+						pattern->name,
+						mean_period,
+						pattern->min_rep_int,
 						pattern->max_rep_int);
 					break;
 				}
@@ -1019,11 +1019,11 @@ static HAL_BOOL rp_analyze_short_pulse(
 					(matched + missed + partial_miss),
 					(unsigned long long)pulse->rp_tsf,
 					(unsigned long long)t_min,
-					(unsigned long long)t_max, 
-					(u_int8_t)pulse->rp_width, 
-					(unsigned long long)new_period, 
-					(unsigned long long)last_seen_period, 
-					(unsigned long long)mean_period, 
+					(unsigned long long)t_max,
+					(u_int8_t)pulse->rp_width,
+					(unsigned long long)new_period,
+					(unsigned long long)last_seen_period,
+					(unsigned long long)mean_period,
 					(unsigned long long)last_tsf);
 
 				/* record tsf and period */
@@ -1034,17 +1034,17 @@ static HAL_BOOL rp_analyze_short_pulse(
 				pulse = pulse_prev(pulse);
 
 				/* update bounds */
-				t_min = adjusted_max_rep_int < last_tsf ? 
-					last_tsf - adjusted_max_rep_int : 
+				t_min = adjusted_max_rep_int < last_tsf ?
+					last_tsf - adjusted_max_rep_int :
 					0;
-				t_max = adjusted_min_rep_int < last_tsf ? 
-					last_tsf - adjusted_min_rep_int : 
+				t_max = adjusted_min_rep_int < last_tsf ?
+					last_tsf - adjusted_min_rep_int :
 					0;
 			} else {
 				partial_miss++;
-				/* if we missed more than specified number of 
+				/* if we missed more than specified number of
 				 * pulses, we stop searching */
-				if ((missed + partial_miss) > 
+				if ((missed + partial_miss) >
 				    pattern->max_missing) {
 					DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 						"%s: %s matching stopped (too "
@@ -1052,15 +1052,15 @@ static HAL_BOOL rp_analyze_short_pulse(
 						"%d>%d  matched=%u. missed=%u."
 						"\n",
 						SC_DEV_NAME(sc),
-						pattern->name, 
-						missed, 
-						pattern->max_missing, 
-						matched, 
+						pattern->name,
+						missed,
+						pattern->max_missing,
+						matched,
 						missed);
 					break;
 				}
-				/* Default mean period to approximate center 
-				 * of range.  Remember we are scanning 
+				/* Default mean period to approximate center
+				 * of range.  Remember we are scanning
 				 * backwards... */
 				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
 					"%s: %-17s [**] %5s [%2d:%-2d] tsf: "
@@ -1071,9 +1071,9 @@ static HAL_BOOL rp_analyze_short_pulse(
 					SC_DEV_NAME(sc),
 					pattern->name,
 					"missed",
-					MAX(matched + missed + partial_miss - 1, 
+					MAX(matched + missed + partial_miss - 1,
 					    0),
-					(matched + missed + partial_miss), 
+					(matched + missed + partial_miss),
 					(unsigned long long)t_min,
 					(unsigned long long)t_max,
 					(unsigned long long)last_seen_period,
@@ -1081,11 +1081,11 @@ static HAL_BOOL rp_analyze_short_pulse(
 					(unsigned long long)last_tsf);
 
 				/* update bounds */
-				t_min = adjusted_max_rep_int < t_min ? 
-					t_min - adjusted_max_rep_int : 
+				t_min = adjusted_max_rep_int < t_min ?
+					t_min - adjusted_max_rep_int :
 					0;
-				t_max = adjusted_min_rep_int < t_max ? 
-					t_max - adjusted_min_rep_int : 
+				t_max = adjusted_min_rep_int < t_max ?
+					t_max - adjusted_min_rep_int :
 					0;
 			}
 		}
@@ -1094,7 +1094,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 		if (matched > 1) {
 			int compare_result = CR_FALLTHROUGH;
 			int match_result = MR_MATCH;
-			/* we add one to the matched since we counted only the 
+			/* we add one to the matched since we counted only the
 			 * time differences */
 			/* matched++; not sure... */
 
@@ -1115,7 +1115,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 					compare_radar_matches(
 						matched,
 						missed, 
-						mean_period, 
+						mean_period,
 						noise,
 						pattern->min_evts,
 						pattern->max_evts,
@@ -1449,7 +1449,7 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 		}
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
 		if (DFLAG_ISSET(sc, ATH_DEBUG_DOTHFILT)) {
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT, 
+			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
 				"%s: ========================================\n",
 				DEV_NAME(sc->sc_dev));
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
@@ -1494,13 +1494,13 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
 
 			ath_rp_print(sc, 0 /* analyzed pulses only */ );
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT, 
+			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
 				"%s: ========================================\n",
 				DEV_NAME(sc->sc_dev));
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT, 
+			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
 				"%s: ==END RADAR SAMPLE======================\n",
 				DEV_NAME(sc->sc_dev));
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT, 
+			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
 				"%s: ========================================\n",
 				DEV_NAME(sc->sc_dev));
 		}
@@ -1694,8 +1694,8 @@ void ath_rp_print(struct ath_softc *sc, int analyzed_pulses_only)
 	u_int64_t oldest_tsf = ~0;
 
 	IPRINTF(sc, "Pulse dump of %spulses from ring buffer containing %d "
-	       "pulses.\n", 
-	       analyzed_pulses_only ? "analyzed " : "", 
+	       "pulses.\n",
+	       analyzed_pulses_only ? "analyzed " : "",
 	       sc->sc_rp_num);
 
 	/* Find oldest TSF value so we can print relative times */
@@ -1712,14 +1712,14 @@ void ath_rp_print(struct ath_softc *sc, int analyzed_pulses_only)
 			       "tsf=%10llu rssi=%3u width=%3u allocated=%d "
 			       "analyzed=%d next=%p prev=%p\n",
 			       pulse->rp_index,
-			       pulse, 
+			       pulse,
 			       (unsigned long long)(pulse->rp_tsf - oldest_tsf),
 			       (unsigned long long)pulse->rp_tsf,
-			       pulse->rp_rssi, 
-			       pulse->rp_width, 
-			       pulse->rp_allocated, 
-			       pulse->rp_analyzed, 
-			       pulse->list.next, 
+			       pulse->rp_rssi,
+			       pulse->rp_width,
+			       pulse->rp_allocated,
+			       pulse->rp_analyzed,
+			       pulse->list.next,
 			       pulse->list.prev);
 	}
 }
