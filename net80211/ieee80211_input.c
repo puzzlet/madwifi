@@ -4099,8 +4099,8 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		break;
 	}
 	default:
-		IEEE80211_DISCARD(vap, IEEE80211_MSG_ANY,
-			wh, "mgt", "subtype 0x%x not handled", subtype);
+		IEEE80211_DISCARD(vap, IEEE80211_MSG_ANY, wh, "mgt",
+				"subtype 0x%x not handled", subtype);
 		vap->iv_stats.is_rx_badsubtype++;
 		break;
 	}
