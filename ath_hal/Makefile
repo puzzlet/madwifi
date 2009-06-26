@@ -115,6 +115,7 @@ ath_hal-objs	:= \
 	ar5416/ar9160_attach.o
 
 ifeq ($(strip $(BUS)),AHB)
+ifeq ($(CONFIG_64BIT)),)
 ath_hal-objs += \
 	ar5312/ar5312_attach.o \
 	ar5312/ar5312_eeprom.o \
@@ -124,6 +125,7 @@ ath_hal-objs += \
 	ar5312/ar5312_power.o \
 	ar5312/ar5312_reset.o \
 	ar5312/ar5315_gpio.o
+endif
 endif
 
 ifdef LINUX24
