@@ -753,7 +753,6 @@ enum {
 	IEEE80211_ELEMID_VENDOR		= 221,	/* vendor private */
 };
 
-#define IEEE80211_CHANSWITCHANN_BYTES 	5
 #define BITCTL_BUFD_MCAST       	1
 #define BITCTL_BUFD_UCAST_AID_MASK 	((u_int8_t)~(BITCTL_BUFD_MCAST))
 #define BITCTL_BUFD_UCAST_AID_SHIFT 	1
