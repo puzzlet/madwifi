@@ -130,7 +130,6 @@ ieee80211_proto_vattach(struct ieee80211vap *vap)
 	init_timer(&vap->iv_mgtsend);
 	init_timer(&vap->iv_xrvapstart);
 	init_timer(&vap->iv_swbmiss);
-	init_timer(&vap->iv_csa_timer);
 	vap->iv_mgtsend.function = ieee80211_tx_timeout;
 	vap->iv_mgtsend.data = (unsigned long) vap;
 
@@ -1405,7 +1404,13 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 			if (arg != 0)
 				ieee80211_scan_assoc_fail(ic,
 					vap->iv_bss->ni_macaddr, arg);
-			if (ic->ic_roaming == IEEE80211_ROAMING_AUTO)
+
+			/* ic_roaming is relevant to STA mode only. Since DFS
+			 * CAC does a SCAN -> SCAN transition, this code was
+			 * causing a spurious scan that was stopping DFS CAC
+			 * altogether */
+			if (vap->iv_opmode == IEEE80211_M_STA &&
+			    ic->ic_roaming == IEEE80211_ROAMING_AUTO)
 				ieee80211_check_scan(vap,
 					IEEE80211_SCAN_ACTIVE,
 					IEEE80211_SCAN_FOREVER,
@@ -1466,7 +1471,8 @@ __ieee80211_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int 
 				break;
 			case IEEE80211_FC0_SUBTYPE_DEAUTH:
 				ieee80211_sta_leave(ni);
-				if (ic->ic_roaming == IEEE80211_ROAMING_AUTO) {
+				if (vap->iv_opmode == IEEE80211_M_STA &&
+				    ic->ic_roaming == IEEE80211_ROAMING_AUTO) {
 					/* try to reauth */
 					IEEE80211_SEND_MGMT(ni,
 						IEEE80211_FC0_SUBTYPE_AUTH, 1);

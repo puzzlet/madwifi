@@ -426,6 +426,136 @@ proc_read_nodes(struct ieee80211vap *vap, char *buf, int space)
 	return (p - buf);
 }
 
+static int
+proc_doth_print(struct ieee80211vap *vap, char *buf, int space)
+{
+	struct ieee80211com *ic = vap->iv_ic;
+	char *p = buf;
+	struct ieee80211_channel *channel;
+	int i;
+	char str[50];
+
+	for (i = 0; i < ic->ic_nchans; i++) {
+
+		/* Assume each lines needs 500 bytes max */
+		if (buf + space < p + 500)
+			break;
+
+		channel = &ic->ic_channels[i];
+
+		if ((ic->ic_chan_non_occupy[i].tv_sec == 0) &&
+		    (ic->ic_chan_non_occupy[i].tv_usec) == 0) {
+			str[0] = 0; /* empty string */
+		} else {
+			sprintf(str, " End: %ld.%06ld",
+				ic->ic_chan_non_occupy[i].tv_sec,
+				(long)ic->ic_chan_non_occupy[i].tv_usec);
+		}
+
+		p += sprintf(p,
+			"Channel %3d (%4d MHz) : %s %s %s%s%s%s\n",
+			channel->ic_ieee,
+			channel->ic_freq,
+			isset(ic->ic_chan_active, channel->ic_ieee) ?
+			     "  Active" : "Inactive",
+			IEEE80211_IS_CHAN_PASSIVE(channel) ? "  Dfs":"NoDfs",
+			IEEE80211_IS_CHAN_RADAR(channel) ? "  Radar":"NoRadar",
+			IEEE80211_IS_CHAN_INDOOR(channel) ? " Indoor" : "",
+			IEEE80211_IS_CHAN_OUTDOOR(channel) ?  " Outdoor" : "",
+			str);
+        }
+	return (p - buf);
+}
+
+static int
+proc_doth_state_print(struct ieee80211vap *vap, char *buf, int space)
+{
+	struct ieee80211com *ic = vap->iv_ic;
+	char *p = buf;
+	struct net_device *dev = ic->ic_dev;
+	struct ath_softc *sc = netdev_priv(dev);
+
+	p += sprintf(p,
+		     "sc_curchan: --- (%4d MHz)\n",
+		     sc->sc_curchan.channel);
+
+	p += sprintf(p,
+		     "  CHANNEL_DFS:%d\n"
+		     "  CHANNEL_DFS_CLEAR:%d\n"
+		     "  CHANNEL_INTERFERENCE:%d\n"
+		     "  CAC in progress:%d\n",
+		     sc->sc_curchan.privFlags & CHANNEL_DFS ? 1 : 0,
+		     sc->sc_curchan.privFlags & CHANNEL_DFS_CLEAR ? 1 : 0,
+		     sc->sc_curchan.privFlags & CHANNEL_INTERFERENCE ? 1 : 0,
+		     timer_pending(&sc->sc_dfs_cac_timer));
+
+	p += sprintf(p,
+		     "ic_curchan: %3d (%4d MHz)\n"
+		     "  IEEE80211_F_DOTH:%d\n"
+		     "  IEEE80211_IS_CHAN_RADAR:%d\n",
+		     ic->ic_curchan->ic_ieee,
+		     ic->ic_curchan->ic_freq,
+		     ic->ic_flags & IEEE80211_F_DOTH ? 1 : 0,
+		     IEEE80211_IS_CHAN_RADAR(ic->ic_curchan) ? 1 : 0);
+
+	return (p - buf);
+}
+
+static int
+proc_iv_bss_print(struct ieee80211vap *vap, char *buf, int space)
+{
+	char *p = buf;
+	const struct ieee80211_node *ni = vap->iv_bss;
+
+	p += sprintf(p, "vap:%p vap->iv_bss: %p\n",
+		     vap, ni);
+	if (ni == NULL)
+		return (p - buf);
+
+	p += sprintf(p, "ni_macaddr:	" MAC_FMT "\n"
+		     "ni_bssid:	" MAC_FMT "\n"
+		     "ni_tstamp:	0x%llx us\n"
+		     "ni_intval:	%u TU\n"
+		     "ni_capinfo:	0x%x%s%s%s%s%s%s%s%s%s%s%s%s\n",
+		     MAC_ADDR(ni->ni_macaddr),
+		     MAC_ADDR(ni->ni_bssid),
+		     le64_to_cpu(ni->ni_tstamp.tsf),
+		     ni->ni_intval,
+		     ni->ni_capinfo,
+		     ni->ni_capinfo & IEEE80211_CAPINFO_ESS ? " ESS" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_IBSS ? " IBSS" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_CF_POLLABLE ?
+		     " CF_POLLABLE" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_CF_POLLREQ ?
+		     " CF_POLLREQ" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_PRIVACY ?
+		     " PRIVACY" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_SHORT_PREAMBLE ?
+		     " SHORT_PREAMBLE" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_PBCC ? " PBCC" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_CHNL_AGILITY ?
+		     " CHANNEL_AGILITY" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_SPECTRUM_MGMT ?
+		     " SPECTRUM_MGMT" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_SHORT_SLOTTIME ?
+		     " SHORT_SLOTTIME" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_RSN ? " RSN" : "",
+		     ni->ni_capinfo & IEEE80211_CAPINFO_DSSSOFDM ?
+		     "DSSSOFDM" : "");
+
+	if (ni->ni_chan == NULL) {
+		p += sprintf(p, "ni_chan:	NULL\n");
+	} else if (ni->ni_chan == IEEE80211_CHAN_ANYC) {
+		p += sprintf(p, "ni_chan:	ANY\n");
+	} else {
+		p += sprintf(p,
+			     "ni_chan:	Frequency:%4u MHz  Channel:%3u\n",
+			     ni->ni_chan->ic_freq, ni->ni_chan->ic_ieee);
+	}
+
+	return (p - buf);
+}
+
 static ssize_t
 proc_ieee80211_read(struct file *file, char __user *buf, size_t len, loff_t *offset)
 {
@@ -448,11 +578,9 @@ proc_ieee80211_read(struct file *file, char __user *buf, size_t len, loff_t *off
 }
 
 static int
-proc_ieee80211_open(struct inode *inode, struct file *file)
+proc_common_open(struct inode *inode, struct file *file)
 {
-	struct proc_ieee80211_priv *pv = NULL;
-	struct proc_dir_entry *dp = PDE(inode);
-	struct ieee80211vap *vap = dp->data;
+	struct proc_ieee80211_priv *pv;
 
 	if (!(file->private_data = kzalloc(sizeof(struct proc_ieee80211_priv), 
 			GFP_KERNEL)))
@@ -474,8 +602,80 @@ proc_ieee80211_open(struct inode *inode, struct file *file)
 	memset(pv->rbuf, 0, MAX_PROC_IEEE80211_SIZE);
 	pv->max_wlen = MAX_PROC_IEEE80211_SIZE;
 	pv->max_rlen = MAX_PROC_IEEE80211_SIZE;
+
+	return 0;
+}
+
+static int
+proc_ieee80211_open(struct inode *inode, struct file *file)
+{
+	struct proc_ieee80211_priv *pv = NULL;
+	struct proc_dir_entry *dp = PDE(inode);
+	struct ieee80211vap *vap = dp->data;
+	int result;
+
+	result = proc_common_open(inode, file);
+	if (result != 0)
+		return result;
+
 	/* now read the data into the buffer */
+	pv = (struct proc_ieee80211_priv *) file->private_data;
 	pv->rlen = proc_read_nodes(vap, pv->rbuf, MAX_PROC_IEEE80211_SIZE);
+	return 0;
+}
+
+static int
+proc_doth_open(struct inode *inode, struct file *file)
+{
+	struct proc_ieee80211_priv *pv = NULL;
+	struct proc_dir_entry *dp = PDE(inode);
+	struct ieee80211vap *vap = dp->data;
+	int result;
+
+	result = proc_common_open(inode, file);
+	if (result != 0)
+		return result;
+
+	/* now read the data into the buffer */
+	pv = (struct proc_ieee80211_priv *) file->private_data;
+	pv->rlen = proc_doth_print(vap, pv->rbuf, MAX_PROC_IEEE80211_SIZE);
+	return 0;
+}
+
+static int
+proc_doth_state_open(struct inode *inode, struct file *file)
+{
+	struct proc_ieee80211_priv *pv = NULL;
+	struct proc_dir_entry *dp = PDE(inode);
+	struct ieee80211vap *vap = dp->data;
+	int result;
+
+	result = proc_common_open(inode, file);
+	if (result != 0)
+		return result;
+
+	/* now read the data into the buffer */
+	pv = (struct proc_ieee80211_priv *) file->private_data;
+	pv->rlen = proc_doth_state_print(vap,
+					 pv->rbuf, MAX_PROC_IEEE80211_SIZE);
+	return 0;
+}
+
+static int
+proc_iv_bss_open(struct inode *inode, struct file *file)
+{
+	struct proc_ieee80211_priv *pv = NULL;
+	struct proc_dir_entry *dp = PDE(inode);
+	struct ieee80211vap *vap = dp->data;
+	int result;
+
+	result = proc_common_open(inode, file);
+	if (result != 0)
+		return result;
+
+	/* now read the data into the buffer */
+	pv = (struct proc_ieee80211_priv *) file->private_data;
+	pv->rlen = proc_iv_bss_print(vap, pv->rbuf, MAX_PROC_IEEE80211_SIZE);
 	return 0;
 }
 
@@ -520,6 +720,27 @@ static struct file_operations proc_ieee80211_ops = {
 	.read = proc_ieee80211_read,
 	.write = proc_ieee80211_write,
 	.open = proc_ieee80211_open,
+	.release = proc_ieee80211_close,
+};
+
+static struct file_operations proc_doth_ops = {
+	.read = proc_ieee80211_read,
+	.write = proc_ieee80211_write,
+	.open = proc_doth_open,
+	.release = proc_ieee80211_close,
+};
+
+static struct file_operations proc_doth_state_ops = {
+	.read = proc_ieee80211_read,
+	.write = proc_ieee80211_write,
+	.open = proc_doth_state_open,
+	.release = proc_ieee80211_close,
+};
+
+static struct file_operations proc_iv_bss_ops = {
+	.read = proc_ieee80211_read,
+	.write = proc_ieee80211_write,
+	.open = proc_iv_bss_open,
 	.release = proc_ieee80211_close,
 };
 
@@ -808,6 +1029,9 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 
 	/* Create a proc entry listing the associated stations */
 	ieee80211_proc_vcreate(vap, &proc_ieee80211_ops, "associated_sta");
+	ieee80211_proc_vcreate(vap, &proc_doth_ops, "doth");
+	ieee80211_proc_vcreate(vap, &proc_doth_state_ops, "doth_state");
+	ieee80211_proc_vcreate(vap, &proc_iv_bss_ops, "iv_bss");
 
 	/* Recreate any other proc entries that have been registered */
 	if (vap->iv_proc) {

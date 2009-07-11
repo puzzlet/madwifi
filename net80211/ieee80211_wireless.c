@@ -74,7 +74,8 @@
 #define	RESCAN	1
 
 static void
-pre_announced_chanswitch(struct net_device *dev, u_int32_t channel, u_int32_t tbtt);
+pre_announced_chanswitch(struct net_device *dev,
+	struct ieee80211_channel *channel, u_int8_t csa_count);
 
 static int
 preempt_scan(struct net_device *dev, int max_grace, int max_wait)
@@ -686,6 +687,8 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 	else
 		i = freq->m;
 
+	/* Compute vap->iv_des_chan according to channel number i. "iwconfig
+	 * ath0 channel auto" gives i = -1. 0 & -1 means "auto" channel */
 	if ((i != 0) && (i != -1)) {
 		if (i > IEEE80211_CHAN_MAX)
 			return -EINVAL;
@@ -726,18 +729,11 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 			if (vap->iv_opmode == IEEE80211_M_HOSTAP)
 				return -EINVAL;
 		}
-		if ((vap->iv_state == IEEE80211_S_RUN) && (c == vap->iv_des_chan))
-			return 0;			/* no change, return */
-
-		/* Don't allow to change to channel with radar found */
-		if (IEEE80211_IS_CHAN_RADAR(c))
-			return -EINVAL;
-
-		/*
-		 * Mark desired channel and if running force a
-		 * radio change.
-		 */
-		vap->iv_des_chan = c;
+		if (vap->iv_des_chan == c)
+			return 0; /* no change, return */
+		/* Mark desired channel and if running force a radio
+		 * change. */
+                vap->iv_des_chan = c;
 	} else {
 		/*
 		 * Interpret channel 0 to mean "no desired channel";
@@ -745,9 +741,20 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 		 * channel.
 		 */
 		if (vap->iv_des_chan == IEEE80211_CHAN_ANYC)
-			return 0;
+			return 0; /* no change, return */
 		vap->iv_des_chan = IEEE80211_CHAN_ANYC;
 	}
+	/* Here, vap->iv_des_chan is correctly initialized */
+
+	/* Don't allow to change immediately to a channel where radar has been
+	 * found */
+	if ((vap->iv_des_chan != NULL) &&
+	    (vap->iv_des_chan != IEEE80211_CHAN_ANYC)) {
+		if (IEEE80211_IS_CHAN_RADAR(vap->iv_des_chan) &&
+		    (ic->ic_flags & IEEE80211_F_DOTH))
+			return -EBUSY;
+	}
+
 #if 0
 	if (vap->iv_des_chan != IEEE80211_CHAN_ANYC) {
 		int mode = ieee80211_chan2mode(vap->iv_des_chan);
@@ -755,28 +762,32 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 			ieee80211_setmode(ic, mode);
 	}
 #endif
-	if ((vap->iv_opmode == IEEE80211_M_MONITOR ||
-	    vap->iv_opmode == IEEE80211_M_WDS) &&
-	    vap->iv_des_chan != IEEE80211_CHAN_ANYC) {
-		/* Monitor and wds modes can switch directly. */
-		ic->ic_curchan = vap->iv_des_chan;
-		if (vap->iv_state == IEEE80211_S_RUN) {
-			ic->ic_set_channel(ic);
-		}
-	} else if (vap->iv_opmode == IEEE80211_M_HOSTAP) {
-		/* Need to use channel switch announcement on beacon if we are
-		 * up and running.  We use ic_set_channel directly if we are
-		 * "running" but not "up".  Otherwise, iv_des_chan will take
-		 * effect when we are transitioned to RUN state later. */
-		if (IS_UP(vap->iv_dev) &&
-		    (0 == (vap->iv_des_chan->ic_flags & CHANNEL_DFS))) {
-			pre_announced_chanswitch(dev,
-				ieee80211_chan2ieee(ic, vap->iv_des_chan),
-				IEEE80211_DEFAULT_CHANCHANGE_TBTT_COUNT);
-		}
-		else if (vap->iv_state == IEEE80211_S_RUN) {
+	if ((vap->iv_opmode == IEEE80211_M_MONITOR) ||
+	    (vap->iv_opmode == IEEE80211_M_WDS)) {
+		if ((vap->iv_des_chan != NULL) &&
+		    (vap->iv_des_chan != IEEE80211_CHAN_ANYC)) {
+			/* Monitor and wds modes can switch directly. */
 			ic->ic_curchan = vap->iv_des_chan;
-			ic->ic_set_channel(ic);
+			if (vap->iv_state == IEEE80211_S_RUN) {
+				ic->ic_set_channel(ic);
+			}
+		}
+	} else if (IEEE80211_IS_MODE_DFS_MASTER(vap->iv_opmode) &&
+		   (ic->ic_flags & IEEE80211_F_DOTH)) {
+		if ((vap->iv_des_chan != NULL) &&
+		    (vap->iv_des_chan != IEEE80211_CHAN_ANYC)) {
+			/* Need to use channel switch announcement on beacon
+			 * if we are up and running.  Use ic_set_channel
+			 * directly if we are "running" but not "up".
+			 * Otherwise, use iv_des_chan which will take effect
+			 * when we are transitioned to RUN state later. */
+			if (IS_UP(vap->iv_dev)) {
+				pre_announced_chanswitch(dev, vap->iv_des_chan,
+				  IEEE80211_DEFAULT_CHANCHANGE_TBTT_COUNT);
+			} else if (vap->iv_state == IEEE80211_S_RUN) {
+				ic->ic_curchan = vap->iv_des_chan;
+				ic->ic_set_channel(ic);
+			}
 		}
 	} else {
 		/* Need to go through the state machine in case we need
@@ -1568,6 +1579,8 @@ ieee80211_ioctl_hal_map(struct net_device *dev, struct iw_request_info *info,
        return 0;
 }
 
+/* iwpriv wlan0 doth_radar X simulate a radar detection where X is either 0 to
+ * switch to a random channel or the IEEE channel to switch to */
 
 static int
 ieee80211_ioctl_radar(struct net_device *dev, struct iw_request_info *info,
@@ -1576,9 +1589,20 @@ ieee80211_ioctl_radar(struct net_device *dev, struct iw_request_info *info,
 	int *params = (int *)extra;
 	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
-	if (!(ic->ic_flags & IEEE80211_F_DOTH))
-		return 0;
-	params[0] = ic->ic_test_radar(ic);
+	int switchChanRequested;
+	u_int8_t switchChan;
+
+	if (params[0] != 0) {
+		switchChanRequested = 1;
+		switchChan = params[0];
+	} else {
+		switchChanRequested = 0;
+		switchChan = 0;
+	}
+
+	ic->ic_radar_detected(ic, "local radar from user space",
+			      switchChanRequested, switchChan);
+
 	return 0;
 }
 
@@ -4446,13 +4470,18 @@ ieee80211_ioctl_getstainfo(struct net_device *dev, struct iwreq *iwr)
 }
 
 static void
-pre_announced_chanswitch(struct net_device *dev, u_int32_t channel, u_int32_t tbtt) {
+pre_announced_chanswitch(struct net_device *dev,
+			 struct ieee80211_channel *channel,
+			 u_int8_t csa_count)
+{
 	struct ieee80211vap *vap = netdev_priv(dev);
-	struct ieee80211com *ic = vap->iv_ic;
-	/* now flag the beacon update to include the channel switch IE */
-	ic->ic_flags |= IEEE80211_F_CHANSWITCH;
-	ic->ic_chanchange_chan = channel;
-	ic->ic_chanchange_tbtt = tbtt;
+
+	ieee80211_send_csa_frame(vap, IEEE80211_CSA_CAN_STOP_TX,
+				 channel->ic_ieee, csa_count);
+
+	/* Now flag the beacon update to include the channel switch IE. */
+	ieee80211_start_new_csa(vap, IEEE80211_CSA_CAN_STOP_TX,
+				channel, csa_count, 0);
 }
 
 static int
@@ -4462,11 +4491,17 @@ ieee80211_ioctl_chanswitch(struct net_device *dev, struct iw_request_info *info,
 	struct ieee80211vap *vap = netdev_priv(dev);
 	struct ieee80211com *ic = vap->iv_ic;
 	unsigned int *param = (unsigned int *)extra;
+	struct ieee80211_channel *c;
 
 	if (!(ic->ic_flags & IEEE80211_F_DOTH))
 		return 0;
 
-	pre_announced_chanswitch(dev, param[0], param[1]);
+	c = ieee80211_doth_findchan(vap, param[0]);
+	if ((c != NULL) && (c != IEEE80211_CHAN_ANYC)) {
+		pre_announced_chanswitch(dev, c, param[1]);
+	} else {
+		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -5254,7 +5289,7 @@ static const struct iw_priv_args ieee80211_priv_args[] = {
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 3,
 	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,   "getwmmparams" },
 	{ IEEE80211_IOCTL_RADAR,
-	  0, 0, "doth_radar" },
+	  IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "doth_radar" },
 	{ IEEE80211_IOCTL_HALMAP,
 	  0, 0, "dump_hal_map" },
 	/*

@@ -419,6 +419,22 @@ struct ieee80211_ie_csa {
 	u_int8_t csa_count;	/* TBTTs until Channel Switch happens */
 } __packed;
 
+/* for Action Category. Table 19a in 802.11h $7.3.1.11 */
+#define IEEE80211_ACTION_SPECTRUM_MANAGEMENT 0
+
+/* for Spectrum Management Actions. Table 20e in 802.11h $7.4.1 */
+#define IEEE80211_ACTION_S_MEASUREMENT_REQUEST 0
+#define IEEE80211_ACTION_S_MEASUREMENT_REPORT  1
+#define IEEE80211_ACTION_S_TPC_REQUEST         2
+#define IEEE80211_ACTION_S_TPC_REPORT          3
+#define IEEE80211_ACTION_S_CHANSWITCHANN       4
+
+/* for csa_mode. It must be either 0 or 1. 1 means that the receiver shall stop
+ * sending until CS. 0 imposes no requirement. See 7.3.2.20 */
+
+#define IEEE80211_CSA_CAN_STOP_TX	0
+#define IEEE80211_CSA_MUST_STOP_TX	1
+
 /* minimal Channel Switch Count in the initial announcement */
 #define IEEE80211_CSA_PROTECTION_PERIOD 3
 

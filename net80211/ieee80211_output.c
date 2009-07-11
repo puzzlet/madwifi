@@ -235,6 +235,17 @@ ieee80211_hardstart(struct sk_buff *skb, struct net_device *dev)
 		ieee80211_parent_queue_xmit(skb);
 		return NETDEV_TX_OK;
 	}
+
+	/* If we have detected a radar on the current channel, or another node
+	 * told us to stop transmitting, we no longer transmit. Note : we
+	 * still allow a monitor interface to transmit */
+	if (IEEE80211_IS_CHAN_RADAR(ic->ic_curchan) &&
+		(ic->ic_flags & IEEE80211_F_DOTH)) {
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				"%s: dropping data since we are under radar\n",
+				__func__);
+		goto bad;
+	}
 	
 	/* Cancel any running BG scan */
 	ieee80211_cancel_scan(vap);
@@ -394,7 +405,8 @@ ieee80211_send_setup(struct ieee80211vap *vap,
  * reference (and potentially freeing up any associated storage).
  */
 static void
-ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type)
+ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type,
+		      const u_int8_t da[IEEE80211_ADDR_LEN])
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
@@ -408,7 +420,7 @@ ieee80211_mgmt_output(struct ieee80211_node *ni, struct sk_buff *skb, int type)
 		skb_push(skb, sizeof(struct ieee80211_frame));
 	ieee80211_send_setup(vap, ni, wh,
 		IEEE80211_FC0_TYPE_MGT | type,
-		vap->iv_myaddr, ni->ni_macaddr, vap->iv_bssid);
+		vap->iv_myaddr, da, vap->iv_bssid);
 	/* XXX power management */
 
 	if ((SKB_CB(skb)->flags & M_LINK0) != 0 && ni->ni_challenge != NULL) {
@@ -1746,6 +1758,147 @@ ieee80211_send_probereq(struct ieee80211_node *ni,
 	return 0;
 }
 
+/* Start a new Channel Switch process. It will first check if there is already
+ * one Channel Switch process running and if so, will determine which one will
+ * run. This function must be the only function setting IEEE80211_F_CHANSWITCH
+ * in ic_flags.
+ *
+ * is_beacon_frame : true if the csa_count comes from a beacon frame we just
+ * received. */
+void
+ieee80211_start_new_csa(struct ieee80211vap *vap,
+			u_int8_t csa_mode,
+			struct ieee80211_channel *csa_chan,
+			u_int8_t csa_count,
+			int is_beacon_frame)
+{
+	struct ieee80211com *ic = vap->iv_ic;
+	u_int32_t now_tu, nexttbtt, expires_tu;
+	unsigned long now, expires;
+
+	/* 802.11h 7.3.2.20 : A value of 1 indicates that the switch will
+	 * occur immediately before the next TBTT. A value of 0 indicates that
+	 * the switch will occur at any time after the frame containing the
+	 * element is transmitted. */
+
+	now_tu	= IEEE80211_TSF_TO_TU(vap->iv_get_tsf(vap));
+	now	= jiffies;
+
+	if (csa_count == 0) {
+		expires_tu	= now_tu;
+		expires		= now;
+
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: now:%d count:%d => expires:%d\n",
+				  __func__, now, csa_count, expires);
+	} else {
+		/* csa_count includes the current frame if it is a beacon
+		 * frame. */
+		if (is_beacon_frame)
+			csa_count --;
+
+		/* Compute the closest nexttbtt, next time a beacon for this
+		 * VAP will be sent. */
+		nexttbtt = vap->iv_get_nexttbtt(vap);
+
+		/* Compute ic_csa_expires_tu = nexttbtt + csa_count *
+		 * ni_intval. */
+		expires_tu = nexttbtt +	csa_count * vap->iv_bss->ni_intval;
+
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: now_tu:%ld nexttbtt_tu:%ld "
+				  "=> expires_tu:%ld\n",
+				  __func__, now_tu, nexttbtt,
+				  expires_tu);
+
+		/* Convert to jiffies, including a margin. */
+		expires = now +
+			IEEE80211_TU_TO_JIFFIES(expires_tu - now_tu - 10) - 1;
+
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: now:%d count:%d => expires:%d\n",
+				  __func__, now, csa_count, expires);
+	}
+
+	/* If we have a CS in progress, we ignore this new CSA IE if the
+	 * channel switch time is later than the current one. */
+	if ((ic->ic_flags & IEEE80211_F_CHANSWITCH) &&
+	    (expires_tu > ic->ic_csa_expires_tu)) {
+		/* We do not ignore csa_mode if it says we must stop sending
+		 * right now. */
+		if (ic->ic_csa_mode == IEEE80211_CSA_CAN_STOP_TX &&
+		    csa_mode == IEEE80211_CSA_MUST_STOP_TX) {
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+					  "%s: Updating CSA mode\n",
+					  __func__);
+			ic->ic_csa_mode = csa_mode;
+		}
+
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: Ignored CSA IE since a sooner "
+				  "channel switch is scheduled\n", __func__);
+		return;
+	}
+
+	ic->ic_csa_mode = csa_mode;
+	ic->ic_csa_chan = csa_chan;
+	ic->ic_csa_expires_tu = expires_tu;
+	mod_timer(&ic->ic_csa_timer, expires);
+	ic->ic_flags |= IEEE80211_F_CHANSWITCH;
+}
+
+/* Send a broadcast CSA frame, announcing the new channel. References are from
+ * IEEE 802.11h-2003. CSA frame format is an "Action" frame (Type: 00, Subtype:
+ * 1101, see 7.1.3.1.2)
+ *
+ * [1] Category : 0, Spectrum Management, 7.3.1.11
+ * [1] Action : 4, Channel Switch Announcement, 7.4.1 and 7.4.1.5
+ * [1] Element ID : 37, Channel Switch Announcement, 7.3.2
+ * [1] Length : 3, 7.3.2.20
+ * [1] Channel Switch Mode : 1, stop transmission immediately
+ * [1] New Channel Number
+ * [1] Channel Switch Count in TBTT : 0, immediate channel switch
+ *
+ * csa_mode : IEEE80211_CSA_MANDATORY / IEEE80211_CSA_ADVISORY
+ * csa_chan : new IEEE channel number
+ * csa_tbtt : TBTT until Channel Switch happens */
+void
+ieee80211_send_csa_frame(struct ieee80211vap *vap,
+			 u_int8_t csa_mode,
+			 u_int8_t csa_chan,
+			 u_int8_t csa_count)
+{
+	struct ieee80211_node *ni = vap->iv_bss;
+	struct ieee80211com *ic = ni->ni_ic;
+	struct sk_buff *skb;
+	const int frm_len = 7;
+	u_int8_t *frm;
+
+	IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+			  "%s: Sending action frame with CSA IE: %u/%u/%u\n",
+			  __func__, csa_mode, csa_chan, csa_count);
+
+	skb = ieee80211_getmgtframe(&frm, frm_len);
+	if (skb == NULL) {
+		IEEE80211_NOTE(vap, IEEE80211_MSG_ANY, ni,
+			"%s: cannot get buf; size %u", __func__, frm_len);
+		vap->iv_stats.is_tx_nobuf++;
+		return ;
+	}
+
+	*frm++ = IEEE80211_ACTION_SPECTRUM_MANAGEMENT;	/* Category */
+	*frm++ = IEEE80211_ACTION_S_CHANSWITCHANN;	/* Spectrum Management */
+	*frm++ = IEEE80211_ELEMID_CHANSWITCHANN;
+	*frm++ = 3;
+	*frm++ = csa_mode;
+	*frm++ = csa_chan;
+	*frm++ = csa_count;
+
+	ieee80211_mgmt_output(ieee80211_ref_node(ni), skb,
+			      IEEE80211_FC0_SUBTYPE_ACTION,
+			      ic->ic_dev->broadcast);
+}
+
 /*
  * Send a management frame.  The node is for the destination (or ic_bss
  * when in station mode).  Nodes other than ic_bss have their reference
@@ -2181,7 +2334,8 @@ ieee80211_send_mgmt(struct ieee80211_node *ni, int type, int arg)
 		/* NOTREACHED */
 	}
 
-	ieee80211_mgmt_output(ieee80211_ref_node(ni), skb, type);
+	ieee80211_mgmt_output(ieee80211_ref_node(ni), skb, type,
+			      ni->ni_macaddr);
 	if (timer)
 		mod_timer(&vap->iv_mgtsend, jiffies + timer * HZ);
 	return 0;

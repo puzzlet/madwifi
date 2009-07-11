@@ -2690,55 +2690,47 @@ ieee80211_doth_findchan(struct ieee80211vap *vap, u_int8_t chan)
 	return c;
 }
 
+/* This function is called at the end of the Channel Shutdown procedure, just
+ * before switching to the new channel (if any) */
+
 static void
-ieee80211_doth_cancel_cs(struct ieee80211vap *vap)
+ieee80211_doth_cancel_cs(struct ieee80211com *ic)
 {
-	del_timer(&vap->iv_csa_timer);
-	if (vap->iv_csa_jiffies)
-		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-				"channel switch canceled (was: ""to %3d "
-				"(%4d MHz) in %u TBTT, mode %u)\n",
-				  vap->iv_csa_chan->ic_ieee,
-				  vap->iv_csa_chan->ic_freq,
-				vap->iv_csa_count, vap->iv_csa_mode);
-	vap->iv_csa_jiffies = 0;
+	del_timer(&ic->ic_csa_timer);
+	ic->ic_flags &= ~IEEE80211_F_CHANSWITCH;
+	ic->ic_set_dfs_clear(ic, 0);
 }
 
 static void
-ieee80211_doth_switch_channel(struct ieee80211vap *vap)
+ieee80211_doth_switch_channel(struct ieee80211com *ic)
 {
-	struct ieee80211com *ic = vap->iv_ic;
+	struct ieee80211vap *vap;
+	u_int32_t now_tu;
 
-	IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-			  "%s: Channel switch to %3d (%4d MHz) NOW!\n",
-			  __func__,
-			  vap->iv_csa_chan->ic_ieee,
-			  vap->iv_csa_chan->ic_freq);
-#if 0
-	/* XXX does not belong here? */
-	/* XXX doesn't stop management frames */
-	/* XXX who restarts the queue? */
-	/* NB: for now, error here is non-catastrophic.
-	 *     in the future we may need to ensure we
-	 *     stop xmit on this channel.
-	 */
-	netif_stop_queue(ic->ic_dev);
-#endif
+	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
+		now_tu = IEEE80211_TSF_TO_TU(vap->iv_get_tsf(vap));
 
-	vap->iv_csa_jiffies = 0; /* suppress "cancel" msg */
-	ieee80211_doth_cancel_cs(vap);
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: Channel switch to %3d (%4d MHz) NOW! "
+				  "(now_tu:%lu)\n", __func__,
+				  ic->ic_csa_chan->ic_ieee,
+				  ic->ic_csa_chan->ic_freq, now_tu);
+	}
 
-	ic->ic_curchan = ic->ic_bsschan = vap->iv_csa_chan;
+	ieee80211_doth_cancel_cs(ic);
+	ic->ic_curchan = ic->ic_bsschan = ic->ic_csa_chan;
 	ic->ic_set_channel(ic);
 }
 
-static void
+void
 ieee80211_doth_switch_channel_tmr(unsigned long arg)
 {
-	struct ieee80211vap *vap = (struct ieee80211vap *)arg;
-	ieee80211_doth_switch_channel(vap);
+	struct ieee80211com *ic = (struct ieee80211com *)arg;
+	ieee80211_doth_switch_channel(ic);
 }
 
+/* This function is called when we received an action frame or a beacon frame
+ * containing a CSA IE. */
 static int
 ieee80211_parse_csaie(struct ieee80211_node *ni, u_int8_t *frm,
 	const struct ieee80211_frame *wh)
@@ -2747,17 +2739,33 @@ ieee80211_parse_csaie(struct ieee80211_node *ni, u_int8_t *frm,
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ieee80211_channel *c;
 	struct ieee80211_ie_csa *csa_ie = (struct ieee80211_ie_csa *)frm;
+	int subtype;
 
-	if (!frm) {
-		/* we had CS underway but now we got Beacon without CSA IE */
-		/* XXX abuse? */
+	subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+	IEEE80211_DPRINTF(
+		vap, IEEE80211_MSG_DOTH,
+		"%s: Receiving %s%s%s frame with CSA IE: %u/%u/%u\n",
+		__func__,
+		subtype == IEEE80211_FC0_SUBTYPE_BEACON ? "beacon" : "",
+		subtype == IEEE80211_FC0_SUBTYPE_PROBE_RESP ? "probe response" : "",
+		subtype == IEEE80211_FC0_SUBTYPE_ACTION ? "action" : "",
+		csa_ie->csa_mode,
+		csa_ie->csa_chan,
+		csa_ie->csa_count);
 
+	if ((ic->ic_flags & IEEE80211_F_DOTH) == 0) {
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-				"%s: channel switch is scheduled, but we got "
-				"Beacon without CSA IE!\n", __func__);
-
-		ieee80211_doth_cancel_cs(vap);
+				  "%s: Ignored CSA IE since 802.11h "
+				  "support is disabled\n", __func__);
 		return 0;
+	}
+
+	if (csa_ie->csa_id != IEEE80211_ELEMID_CHANSWITCHANN) {
+		IEEE80211_DISCARD_IE(vap,
+			IEEE80211_MSG_ELEMID | IEEE80211_MSG_DOTH,
+			wh, "channel switch", "invalid element ID %u",
+			csa_ie->csa_id);
+		return -1;
 	}
 
 	if (csa_ie->csa_len != 3) {
@@ -2765,6 +2773,15 @@ ieee80211_parse_csaie(struct ieee80211_node *ni, u_int8_t *frm,
 			IEEE80211_MSG_ELEMID | IEEE80211_MSG_DOTH,
 			wh, "channel switch", "invalid length %u",
 			csa_ie->csa_len);
+		return -1;
+	}
+
+	if ((csa_ie->csa_mode != IEEE80211_CSA_CAN_STOP_TX) &&
+	    (csa_ie->csa_mode != IEEE80211_CSA_MUST_STOP_TX)) {
+		IEEE80211_DISCARD_IE(vap,
+			IEEE80211_MSG_ELEMID | IEEE80211_MSG_DOTH,
+			wh, "channel switch", "invalid CSA mode %u",
+			csa_ie->csa_mode);
 		return -1;
 	}
 
@@ -2785,111 +2802,16 @@ ieee80211_parse_csaie(struct ieee80211_node *ni, u_int8_t *frm,
 		return -1;
 	}
 
-	IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-		"%s: channel switch to %u in %u tbtt (mode %u) announced\n",
-		__func__, csa_ie->csa_chan, csa_ie->csa_count,
-		csa_ie->csa_mode);
+	ieee80211_start_new_csa(vap, csa_ie->csa_mode, c, csa_ie->csa_count,
+				subtype == IEEE80211_FC0_SUBTYPE_BEACON);
 
-	if (vap->iv_csa_jiffies) {
-		/* CSA was received recently */
-		if (c != vap->iv_csa_chan) {
-			/* XXX abuse? */
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					"%s: channel switch channel "
-					"changed from %3d (%4d MHz) to %u!\n",
-					  __func__,
-					  vap->iv_csa_chan->ic_ieee,
-					  vap->iv_csa_chan->ic_freq,
-					  csa_ie->csa_chan);
-
-			if (vap->iv_csa_count > IEEE80211_CSA_PROTECTION_PERIOD)
-				ieee80211_doth_cancel_cs(vap);
-			return 0;
-		}
-
-		if (csa_ie->csa_mode != vap->iv_csa_mode) {
-			/* Can be abused, but with no (to little) impact. */
-
-			/* CS mode change has no influence on our actions since
-			 * we don't respect cs modes at all (yet). Complain and
-			 * forget. */
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					"%s: channel switch mode changed from "
-					"%u to %u!\n", __func__,
-					vap->iv_csa_mode, csa_ie->csa_mode);
-		}
-
-		if (csa_ie->csa_count >= vap->iv_csa_count) {
-			/* XXX abuse? what for? */
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					"%s: channel switch count didn't "
-					"decrease (%u -> %u)!\n", __func__,
-					vap->iv_csa_count, csa_ie->csa_count);
-			return 0;
-		}
-
-		{
-			u_int32_t elapsed = IEEE80211_JIFFIES_TO_TU(
-			    jiffies - vap->iv_csa_jiffies);
-			u_int32_t cnt_diff = vap->iv_csa_count -
-			  csa_ie->csa_count;
-			u_int32_t expected = ni->ni_intval * cnt_diff;
-			int32_t delta = elapsed - expected;
-			if (delta < 0)
-				delta = -delta;
-			if (delta > IEEE80211_CSA_SANITY_THRESHOLD) {
-				/* XXX abuse? for now, it's safer to cancel CS
-				 * than to follow it blindly */
-				IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-						"%s: %u.%02u bintvals elapsed, "
-						"but count dropped by %u (delta"
-						" = %u TUs)\n", __func__,
-						elapsed / ni->ni_intval,
-						elapsed * 100 / ni->ni_intval
-						% 100, cnt_diff, delta);
-
-				ieee80211_doth_cancel_cs(vap);
-				return 0;
-			}
-		}
-
-		vap->iv_csa_count = csa_ie->csa_count;
-		mod_timer(&vap->iv_csa_timer, jiffies +
-				IEEE80211_TU_TO_JIFFIES(vap->iv_csa_count
-				  * ni->ni_intval + 10));
-	} else {
-		/* CSA wasn't received recently, so this is the first one in
-		 * the sequence. */
-
-#if 0
-		/* Needed for DFS / FCC ... */
-
-		if (csa_ie->csa_count < IEEE80211_CSA_PROTECTION_PERIOD) {
-			IEEE80211_DISCARD_IE(vap,
-					IEEE80211_MSG_ELEMID |
-					IEEE80211_MSG_DOTH,
-					wh, "channel switch",
-					"initial announcement: channel switch"
-					" would occur too soon (in %u tbtt)",
-					csa_ie->csa_count);
-			return 0;
-		}
-#endif
-
-		vap->iv_csa_mode = csa_ie->csa_mode;
-		vap->iv_csa_count = csa_ie->csa_count;
-		vap->iv_csa_chan = c;
-
-		vap->iv_csa_timer.function = ieee80211_doth_switch_channel_tmr;
-		vap->iv_csa_timer.data = (unsigned long)vap;
-		mod_timer(&vap->iv_csa_timer, jiffies + IEEE80211_TU_TO_JIFFIES(
-			vap->iv_csa_count * ni->ni_intval + 10));
+	/* This is an extension to 802.11h. When we receive a CSA IE with
+	 * Mode=1, then we treat it like a "remote" radar detected event. This
+	 * is needed to effectively stop transmitting */
+	if (csa_ie->csa_mode == IEEE80211_CSA_MUST_STOP_TX) {
+		ic->ic_radar_detected(ic, "remote radar from CSA IE",
+				      1, csa_ie->csa_chan);
 	}
-
-	vap->iv_csa_jiffies = jiffies;
-
-	if (vap->iv_csa_count <= 1)
-		ieee80211_doth_switch_channel(vap);
 
 	return 0;
 }
@@ -3216,6 +3138,20 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		else
 			IEEE80211_NODE_STAT(ni, rx_proberesp);
 
+		/* According to 802.11h 11.6 p47 : if a STA with
+		 * dot11SpectrumManagementRequired set to TRUE receives a
+		 * Beacon or Probe Response frames with the Spectrum
+		 * Management bit set to 1, then we behave the same way as if
+		 * Channel Availability Check is done */
+
+		if ((ic->ic_flags & IEEE80211_F_DOTH) &&
+		    (scan.capinfo & IEEE80211_CAPINFO_SPECTRUM_MGMT)) {
+			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+					  "Received an enabling signal from "
+					  MAC_FMT "\n", MAC_ADDR(wh->i_addr2));
+			ic->ic_set_dfs_clear(ic, 1);
+		}
+
 		/*
 		 * When operating in station mode, check for state updates.
 		 * Be careful to ignore beacons received while doing a
@@ -3327,7 +3263,7 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				ni->ni_flags &= ~IEEE80211_NODE_UAPSD;
 			if (scan.ath != NULL)
 				ieee80211_parse_athParams(ni, scan.ath);
-			if (scan.csa != NULL || vap->iv_csa_jiffies)
+			if (scan.csa != NULL)
 				ieee80211_parse_csaie(ni, scan.csa, wh);
 			if (scan.tim != NULL) {
 				/*
@@ -3374,6 +3310,16 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 				ieee80211_bg_scan(vap);
 			return 0;
 		}
+
+		/* ieee80211_parse_csaie() needs to be called in IBSS mode as
+		 * well. We filter on the IBSSID */
+		if ((vap->iv_opmode == IEEE80211_M_IBSS) &&
+			(scan.capinfo & IEEE80211_CAPINFO_IBSS) &&
+			IEEE80211_ADDR_EQ(wh->i_addr3, vap->iv_bssid)) {
+			if (scan.csa != NULL)
+				ieee80211_parse_csaie(ni,scan.csa,wh);
+		}
+
 		/*
 		 * If scanning, just pass information to the scan module.
 		 */
@@ -4098,6 +4044,40 @@ ieee80211_recv_mgmt(struct ieee80211vap *vap,
 		}
 		break;
 	}
+
+	case IEEE80211_FC0_SUBTYPE_ACTION: {
+		unsigned char cat, act;
+		/* we only parse Action frame from our BSSID */
+		if (!IEEE80211_ADDR_EQ(wh->i_addr3, vap->iv_bssid)) {
+			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
+					      wh->i_addr3, NULL,
+					      "%s", "not to bss");
+			vap->iv_stats.is_rx_wrongbss ++;
+			return 0;
+		}
+
+		/* parse the Category field */
+		switch (cat = *frm++) {
+		case IEEE80211_ACTION_SPECTRUM_MANAGEMENT:
+			switch (act = *frm++) {
+			case IEEE80211_ACTION_S_CHANSWITCHANN:
+				ieee80211_parse_csaie(ni, frm, wh);
+				break;
+			default:
+				IEEE80211_DISCARD(vap, IEEE80211_MSG_ANY, wh,
+					"mgt", "action frame category 0x%x, "
+					"action 0x%x not handled", cat, act);
+				break;
+			}
+			break;
+		default:
+			IEEE80211_DISCARD(vap, IEEE80211_MSG_ANY, wh, "mgt",
+				"action frame category 0x%x not handled", cat);
+			break;
+		}
+		break;
+	}
+
 	default:
 		IEEE80211_DISCARD(vap, IEEE80211_MSG_ANY, wh, "mgt",
 				"subtype 0x%x not handled", subtype);

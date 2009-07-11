@@ -846,7 +846,9 @@ struct ath_softc {
 						 * received pulses */
 	int sc_radar_ignored;			/* if set, we ignored all 
 						 * detected radars */
-	u_int32_t sc_nexttbtt;
+	u_int32_t sc_nexttbtt;	/* TBTT following the next SWBA, updated only
+				 * by ath_beacon_config() to avoid race
+				 * conditions */
 	u_int64_t sc_last_tsf;
 };
 
@@ -1013,6 +1015,5 @@ void ath_sysctl_unregister(void);
 	  "MadWifi" : \
 	  DEV_NAME(_v->iv_ic->ic_dev))
 
-void ath_radar_detected(struct ath_softc *sc, const char *message);
 
 #endif /* _DEV_ATH_ATHVAR_H */

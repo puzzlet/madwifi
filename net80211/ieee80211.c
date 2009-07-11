@@ -361,6 +361,11 @@ ieee80211_ifattach(struct ieee80211com *ic)
 		ieee80211_expire_dfs_excl_timer;
 	ic->ic_dfs_excl_timer.data = (unsigned long) ic;
 
+	/* Initialize CSA related variables. */
+	init_timer(&ic->ic_csa_timer);
+	ic->ic_csa_timer.data = (unsigned long)ic;
+	ic->ic_csa_timer.function = ieee80211_doth_switch_channel_tmr;
+
 	ieee80211_crypto_attach(ic);
 	ieee80211_node_attach(ic);
 	ieee80211_power_attach(ic);
@@ -520,8 +525,6 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct net_device *dev,
 	}
 	vap->iv_opmode = opmode;
 	IEEE80211_INIT_TQUEUE(&vap->iv_stajoin1tq, ieee80211_sta_join1_tasklet, vap);
-
-	vap->iv_chanchange_count = 0;
 
 	/* Enable various functionality by default, if we're capable. */
 #ifdef ATH_WME	/* Not yet the default */
@@ -870,19 +873,14 @@ ieee80211_dfs_action(struct ieee80211com *ic) {
 		/* It is not scanning, but waiting for ath driver to move the 
 		 * vap to RUN. */
 	}
-	/* Check the scan results using only cached results */
-	if (!(ieee80211_check_scan(vap, IEEE80211_SCAN_NOSSID |
-					IEEE80211_SCAN_KEEPMODE |
-					IEEE80211_SCAN_USECACHE, 0,
-				   vap->iv_des_nssid, vap->iv_des_ssid,
-				   ieee80211_scan_dfs_action))) {
-		/* No channel was found, so call the scan action with no
-		 * result. */
-		ieee80211_scan_dfs_action(vap, NULL);
-	}
+
+	ieee80211_scan_dfs_action(vap);
 }
 
-void
+/* Check if some Non-Occupancy Period timer have expired and update flags
+ * accordingly */
+
+static void
 ieee80211_expire_excl_restrictions(struct ieee80211com *ic)
 {
 	struct ieee80211_channel *c  = NULL;
@@ -904,6 +902,12 @@ ieee80211_expire_excl_restrictions(struct ieee80211com *ic)
 					  c->ic_ieee, c->ic_freq, tv_now.tv_sec,
 					  tv_now.tv_usec);
 				c->ic_flags &= ~IEEE80211_CHAN_RADAR;
+				ic->ic_chan_non_occupy[i].tv_sec  = 0;
+				ic->ic_chan_non_occupy[i].tv_usec = 0;
+				/* FIXME : should we use ic_curchan or ic_bsschan ? */
+				if (c == ic->ic_curchan) {
+					ic->ic_set_dfs_interference(ic, 0);
+				}
 			} else {
 				if_printf(dev,
 					  "Channel %3d (%4d MHz) is still "
@@ -960,7 +964,7 @@ ieee80211_update_dfs_excl_timer(struct ieee80211com *ic)
 	}
 }
 
-/* Periodically expire radar avoidance marks. */
+/* Timer callback : periodically expire radar avoidance marks. */
 static void
 ieee80211_expire_dfs_excl_timer(unsigned long data)
 {
@@ -977,17 +981,12 @@ ieee80211_expire_dfs_excl_timer(unsigned long data)
 		/* Go through and clear any interference flag we have, if we
 		 * just got it cleared up for us */
 		TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
-		  /* We need to check for the special value
-		     IEEE80211_CHAN_ANYC before using vap->iv_des_chan
-		     since it will cause a kernel panic */
 			if ((vap->iv_state == IEEE80211_S_RUN) &&
-			    ((vap->iv_opmode == IEEE80211_M_HOSTAP) ||
-			     (vap->iv_opmode == IEEE80211_M_IBSS)) &&
-			    /* Operating on channel other than desired. */
-			    (vap->iv_des_chan != IEEE80211_CHAN_ANYC) &&
-			    (vap->iv_des_chan->ic_freq > 0) &&
-			    (vap->iv_des_chan->ic_freq !=
-			     ic->ic_bsschan->ic_freq)) {
+			    IEEE80211_IS_MODE_DFS_MASTER(vap->iv_opmode) &&
+			    /* Desired channel is really defined */
+			    (vap->iv_des_chan != NULL) &&
+			    (vap->iv_des_chan != IEEE80211_CHAN_ANYC)) {
+
 				struct ieee80211_channel *des_chan =
 					ieee80211_find_channel(ic, 
 							vap->iv_des_chan->
@@ -1016,11 +1015,25 @@ ieee80211_expire_dfs_excl_timer(unsigned long data)
 								ic_freq,
 							vap->iv_des_chan->
 								ic_flags);
-					ic->ic_chanchange_chan =
-						des_chan->ic_ieee;
-					ic->ic_chanchange_tbtt =
-						IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
-					ic->ic_flags |= IEEE80211_F_CHANSWITCH;
+
+					/* Directly call ic_set_channel() in
+					 * order to start CAC if we are not
+					 * really changing channel (it happens
+					 * at the end of the Non-Occupancy
+					 * Period for instance */
+
+					if (des_chan == ic->ic_bsschan) {
+						ic->ic_curchan = ic->ic_bsschan;
+						ic->ic_set_channel(ic);
+					} else {
+
+					ieee80211_start_new_csa(vap,
+						IEEE80211_CSA_CAN_STOP_TX,
+						des_chan,
+						IEEE80211_DEFAULT_CHANCHANGE_TBTT_COUNT,
+						0);
+					}
+
 				} else if (ieee80211_msg_is_reported(vap, 
 							IEEE80211_MSG_DOTH)) {
 					/* Find the desired channel in 
@@ -1066,7 +1079,7 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 	struct net_device *dev = ic->ic_dev;
 	struct timeval tv_now;
 	unsigned int excl_period = ic->ic_get_dfs_excl_period(ic);
-	int i;
+	int i, was_on_radar;
 
 	do_gettimeofday(&tv_now);
 	if_printf(dev, "Radar found on channel %3d (%4d MHz) -- "
@@ -1074,6 +1087,11 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 			ichan->ic_ieee, ichan->ic_freq, 
 			tv_now.tv_sec, tv_now.tv_usec);
 	if (IEEE80211_IS_MODE_DFS_MASTER(ic->ic_opmode)) {
+
+		/* Check if the current channel is already under radar before
+		 * setting radar flag */
+		was_on_radar = IEEE80211_IS_CHAN_RADAR(ic->ic_curchan);
+
 		/* Mark the channel in the ic_chan list */
 		if (ic->ic_flags_ext & IEEE80211_FEXT_MARKDFS) {
 			if_printf(dev, "Marking channel %3d (%4d MHz) in "
@@ -1116,14 +1134,27 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 				return;
 			}
 			if  (ic->ic_curchan->ic_freq == c->ic_freq) {
-				if_printf(dev, "%s: Invoking "
+
+				/* If current channel is already marked for
+				 * radar, do nothing. It prevents a new CSA
+				 * process to start */
+				if (was_on_radar) {
+					if_printf(dev,
+						"%s: current channel "
+						"already under radar\n",
+						__func__);
+				} else {
+
+					if_printf(dev, "%s: Invoking "
 						"ieee80211_dfs_action "
 						"(%d, 0x%x)\n",
 						__func__, ichan->ic_freq, 
 						ichan->ic_flags);
-				/* The current channel has been marked. We
-				 * need to move away from it. */
-				ieee80211_dfs_action(ic);
+					/* The current channel has been
+					 * marked. We need to move away from
+					 * it. */
+					ieee80211_dfs_action(ic);
+				}
 			} else
 				if_printf(dev,
 						"Unexpected channel frequency! "
@@ -1136,12 +1167,20 @@ ieee80211_mark_dfs(struct ieee80211com *ic, struct ieee80211_channel *ichan)
 						ic->ic_curchan->ic_ieee, 
 						ic->ic_curchan->ic_freq);
 		} else {
+			struct ieee80211vap *vap;
+
 			/* Change to a radar free 11a channel for dfstesttime
-			 * seconds. */
-			ic->ic_chanchange_chan = IEEE80211_RADAR_TEST_MUTE_CHAN;
-			ic->ic_chanchange_tbtt =
-				IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
-			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
+			 * seconds.
+			 * Start a channel switch on all available VAPs. */
+			TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
+				c = ieee80211_doth_findchan(
+						vap,
+						IEEE80211_RADAR_TEST_MUTE_CHAN);
+
+				ieee80211_start_new_csa(vap, IEEE80211_CSA_CAN_STOP_TX,
+					c, IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT, 0);
+			}
+
 			if_printf(dev,
 					"Mute test - markdfs is off, we are "
 					"in hostap mode, found radar on "

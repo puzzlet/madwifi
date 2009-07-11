@@ -235,11 +235,10 @@ int ath_radar_update(struct ath_softc *sc)
 
 	/* Update the DFS flags (as a sanity check) */
 	if (ath_radar_correct_dfs_flags(sc, &sc->sc_curchan))
-		DPRINTF(sc, ATH_DEBUG_DOTH, "%s: %s: channel required "
-			"corrections to private flags.\n",
-			SC_DEV_NAME(sc), __func__);
-	required = ath_radar_is_dfs_required(sc, &sc->sc_curchan) &&
-		    (ic->ic_flags & IEEE80211_F_DOTH);
+		DPRINTF(sc, ATH_DEBUG_DOTH, "channel required "
+			"corrections to private flags.\n");
+	required = ((sc->sc_curchan.privFlags & CHANNEL_DFS) &&
+		    (ic->ic_flags & IEEE80211_F_DOTH));
 	/* configure radar pulse detector register using default values, but do
 	 * not toggle the enable bit.  XXX: allow tweaking?? */
 	ath_radar_set_params(sc, NULL);
@@ -296,12 +295,46 @@ int ath_radar_update(struct ath_softc *sc)
 	return (required == ath_radar_is_enabled(sc));
 }
 
-/* Update channel's DFS flags based upon whether DFS is required.  Return
- * true if the value was repaired. */
+static
+int ath_radar_is_indoor_channel(HAL_CHANNEL *hchan)
+{
+	/* Warning : we use hardcoded values here suited for France */
+	if ((hchan->channel >= 2412) && (hchan->channel <= 2472))
+		return 1;
+	if ((hchan->channel >= 5150) && (hchan->channel <= 5350))
+		return 1;
+	if ((hchan->channel >= 5470) && (hchan->channel <= 5725))
+		return 1;
+
+	return 0;
+}
+
+static
+int ath_radar_is_outdoor_channel(HAL_CHANNEL *hchan)
+{
+	/* Warning : we use hardcoded values here suited for France */
+	if ((hchan->channel >= 2412) && (hchan->channel <= 2472))
+		return 1;
+	if ((hchan->channel >= 5470) && (hchan->channel <= 5725))
+		return 1;
+
+	return 0;
+}
+
+/* Update channel's DFS flags based upon whether DFS is required.  Return true
+ * if the value was repaired. It also add flags to know if a channel can be
+ * used indoor or outdoor or both. Those flags have been added and made
+ * compatible with HAL flags (as defined in <hal/ah.h> */
+
+#define CHANNEL_INDOOR  0x00004
+#define CHANNEL_OUTDOOR 0x00008
+
 int ath_radar_correct_dfs_flags(struct ath_softc *sc, HAL_CHANNEL *hchan)
 {
 	u_int32_t old_channelFlags = hchan->channelFlags;
-	u_int32_t old_privFlags = hchan->privFlags;
+	u_int8_t old_privFlags = hchan->privFlags;
+	int changed;
+
 	if (ath_radar_is_dfs_required(sc, hchan)) {
 		hchan->channelFlags |= CHANNEL_PASSIVE;
 		hchan->privFlags |= CHANNEL_DFS;
@@ -309,8 +342,21 @@ int ath_radar_correct_dfs_flags(struct ath_softc *sc, HAL_CHANNEL *hchan)
 		hchan->channelFlags &= ~CHANNEL_PASSIVE;
 		hchan->privFlags &= ~CHANNEL_DFS;
 	}
-	return ((old_privFlags != hchan->privFlags) ||
-		(old_channelFlags != hchan->channelFlags));
+
+	changed = ((old_privFlags != hchan->privFlags) ||
+		   (old_channelFlags != hchan->channelFlags));
+
+	hchan->channelFlags &= ~(CHANNEL_INDOOR | CHANNEL_OUTDOOR);
+
+	if (ath_radar_is_indoor_channel(hchan)) {
+		hchan->channelFlags |= CHANNEL_INDOOR;
+	}
+
+	if (ath_radar_is_outdoor_channel(hchan)) {
+		hchan->channelFlags |= CHANNEL_OUTDOOR;
+	}
+
+	return changed;
 }
 
 /* Returns true if DFS is required for the regulatory domain, country and 
@@ -1254,6 +1300,7 @@ static const char *get_longpulse_desc(int lp)
 
 static HAL_BOOL rp_analyze(struct ath_softc *sc)
 {
+	struct ieee80211com *ic = &sc->sc_ic;
 	HAL_BOOL radar = 0;
 	struct ath_rp *pulse;
 
@@ -1487,30 +1534,30 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 #ifdef ATH_RADAR_LONG_PULSE
 			} else {
 				DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
-					"%s: Sample contains data matching %s\n",
-					DEV_NAME(sc->sc_dev),
+					"Sample contains data matching %s\n",
 					get_longpulse_desc(best_lp_bc));
 			}
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
 
 			ath_rp_print(sc, 0 /* analyzed pulses only */ );
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: ========================================\n",
-				DEV_NAME(sc->sc_dev));
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: ==END RADAR SAMPLE======================\n",
-				DEV_NAME(sc->sc_dev));
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: ========================================\n",
-				DEV_NAME(sc->sc_dev));
+			DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
+				"========================================\n");
+			DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
+				"==END RADAR SAMPLE======================\n");
+			DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
+				"========================================\n");
 		}
 #ifdef ATH_RADAR_LONG_PULSE
 		if (!best_lp_bc)
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
-			ath_radar_detected(sc, radar_patterns[best_index].name);
+			ic->ic_radar_detected(ic,
+					      radar_patterns[best_index].name,
+					      0, 0);
 #ifdef ATH_RADAR_LONG_PULSE
 		else 
-			ath_radar_detected(sc, get_longpulse_desc(best_lp_bc));
+			ic->ic_radar_detected(ic,
+					      get_longpulse_desc(best_lp_bc),
+					      0, 0);
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
 	}
 	return radar;

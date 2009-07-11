@@ -969,114 +969,143 @@ ieee80211_scan_flush(struct ieee80211com *ic)
 	}
 }
 
+/* Check if a channel is usable for a DFS channel switch */
+static int
+ieee80211_dfs_is_channel_usable(struct ieee80211com *ic,
+				struct ieee80211_channel *channel)
+{
+	u_int16_t curChanBandFlags, curChanOutdoorFlags;
+
+	/*
+	 * Criteria for the new frequency:
+	 * - it must be different from the current frequency
+	 * - it must not have radar detected
+	 * - it must be an active channel
+	 * - it must be in the same band (2.4Ghz/5Ghz)
+	 * - it must be suitable for indoor/outdoor use according to what the
+	 *   user selected
+	 */
+
+	curChanBandFlags = ic->ic_bsschan->ic_flags &
+		(IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_5GHZ);
+	curChanOutdoorFlags = ic->ic_country_outdoor ?
+		IEEE80211_CHAN_OUTDOOR : IEEE80211_CHAN_INDOOR;
+
+	return ((channel->ic_freq != ic->ic_bsschan->ic_freq) &&
+		(!IEEE80211_IS_CHAN_RADAR(channel) &&
+		 (ic->ic_flags & IEEE80211_F_DOTH)) &&
+		(isset(ic->ic_chan_active, channel->ic_ieee)) &&
+		(channel->ic_flags & curChanBandFlags) &&
+		(channel->ic_flags & curChanOutdoorFlags));
+}
+
 /*
- * Execute radar channel change. This is called when a radar/dfs
- * signal is detected.  AP mode only.  Return 1 on success, 0 on
- * failure
+ * Execute radar channel change. This is called when a radar signal is
+ * detected. AP/IBSS mode only. Return 1 on success, 0 on failure
  */
-int
-ieee80211_scan_dfs_action(struct ieee80211vap *vap,
-			  const struct ieee80211_scan_entry *se)
+void
+ieee80211_scan_dfs_action(struct ieee80211vap *vap)
 {
 	struct ieee80211com *ic = vap->iv_ic;
 	struct ieee80211_channel *new_channel = NULL;
+	int chanStart, i, count;
 
-	if (!IEEE80211_IS_MODE_DFS_MASTER(vap->iv_opmode))
-		return 0;
-	if (se != NULL) {
-		new_channel = se->se_chan;
-		if (new_channel != NULL) {
+	if (!IEEE80211_IS_MODE_DFS_MASTER(vap->iv_opmode)) {
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: called but not in DFS master mode\n",
+				  __func__);
+		return;
+	}
+
+	/* Do nothing if a channel switch is already in progress */
+	if (ic->ic_flags & IEEE80211_F_CHANSWITCH) {
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: channel switch already in progress\n",
+				  __func__);
+		return;
+	}
+
+	if ((ic->ic_curchan != NULL) &&
+	    (ic->ic_curchan != IEEE80211_CHAN_ANYC)) {
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: ic_curchan is %3d (%4d MHz)\n",
+				  __func__, ic->ic_curchan->ic_ieee,
+				  ic->ic_curchan->ic_freq);
+	}
+
+	if ((ic->ic_bsschan != NULL) &&
+	    (ic->ic_bsschan != IEEE80211_CHAN_ANYC)) {
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: ic_bsschan is %3d (%4d MHz)\n",
+				  __func__, ic->ic_bsschan->ic_ieee,
+				  ic->ic_bsschan->ic_freq);
+	}
+
+	/* According to FCC/ETSI rules on uniform spreading, we shall select a
+	 * channel out of the list of usable channels so that the probability
+	 * of selecting a given channel shall be the same for all channels
+	 * (reference: ETSI 301 893 v1.3.1 $4.6.2.5.1 */
+	/* First, we count the usable channels */
+	count = 0;
+
+	for (i = 0; i < ic->ic_nchans; i++) {
+		if (ieee80211_dfs_is_channel_usable(
+			    ic, &ic->ic_channels[i])) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					  "%s: new channel found in scan cache\n",
-					  __func__);
+					  "%s: usable channel %3d "
+					  "(%4d MHz)\n",
+					  __func__,
+					  ic->ic_channels[i].ic_ieee,
+					  ic->ic_channels[i].ic_freq);
+			count ++;
 		}
-	} else {
-		/* No channel was found via scan module, means no good scanlist
-		 * was found */
-		int chanStart, i, count;
-		u_int32_t curChanFlags;
+	}
 
-		if ((ic->ic_curchan != NULL) &&
-		    (ic->ic_curchan != IEEE80211_CHAN_ANYC)) {
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					  "%s: ic_curchan is %3d (%4d MHz)\n",
-					  __func__, ic->ic_curchan->ic_ieee,
-					  ic->ic_curchan->ic_freq);
-		}
+	if (count != 0) {
+		/* Next, we pickup a random usable channel */
+		chanStart = jiffies % count;
 
-		if ((ic->ic_bsschan != NULL) &&
-		    (ic->ic_bsschan != IEEE80211_CHAN_ANYC)) {
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					  "%s: ic_bsschan is %3d (%4d MHz)\n",
-					  __func__, ic->ic_bsschan->ic_ieee,
-					  ic->ic_bsschan->ic_freq);
-		}
-
-		/* According to FCC/ETSI rules on uniform spreading, we shall
-		 * select a channel out of the list of usable channels so that
-		 * the probability of selecting a given channel shall be the
-		 * same for all channels (reference: ETSI 301 893 v1.3.1
-		 * $4.6.2.5.1 */
-		/* First, we count the usable channels */
 		count = 0;
-		curChanFlags = (ic->ic_bsschan->ic_flags) &
-			~(IEEE80211_CHAN_RADAR);
 		for (i = 0; i < ic->ic_nchans; i++) {
-			if ((ic->ic_channels[i].ic_ieee !=
-						ic->ic_bsschan->ic_ieee) &&
-			    (ic->ic_channels[i].ic_flags == curChanFlags)) {
-				IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-						"%s: usable channel %3d "
-						"(%4d MHz)\n",
-						__func__,
-						ic->ic_channels[i].ic_ieee,
-						ic->ic_channels[i].ic_freq);
-				count ++;
-			}
-		}
-
-		if (count != 0) {
-			/* Next, we pickup a random usable channel */
-			chanStart = jiffies % count;
-
-			count = 0;
-			for (i = 0; i < ic->ic_nchans; i++) {
-				if ((ic->ic_channels[i].ic_ieee !=
-				     ic->ic_bsschan->ic_ieee) &&
-				    (ic->ic_channels[i].ic_flags ==
-				     curChanFlags)) {
-					if (count++ == chanStart) {
-						new_channel =
-							&ic->ic_channels[i];
-						break;
-					}
+			/* must be the same formula as above */
+			if (ieee80211_dfs_is_channel_usable(
+				    ic, &ic->ic_channels[i])) {
+				if (count++ == chanStart) {
+					new_channel =
+						&ic->ic_channels[i];
+					break;
 				}
 			}
 		}
-
-		if (new_channel != NULL)
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					"%s: new random channel found %3d "
-					"(%4d MHz)\n", __func__,
-					new_channel->ic_ieee,
-					new_channel->ic_freq);
 	}
 
-	if (!new_channel) {
-		/* Search for the first channel with no radar detected */
-		int n = 0;
-		for (n = 0; n < ic->ic_nchans; n++) {
-			if (!IEEE80211_IS_CHAN_RADAR(&ic->ic_channels[n])) {
-				new_channel = &ic->ic_channels[n];
-				break;
-			}
+	if (new_channel == NULL) {
+		/* We found no channel to switch to (for instance, all
+		 * available channels are under Non-Occupancy Period). In this
+		 * case, we still need to send an action frame and beacon with
+		 * CSA IE to tell other nodes to stop their transmission, in
+		 * order to meet the Channel Closing Transmission Time
+		 * requirement of FCC/ETSI */
+
+		if ((ic->ic_bsschan != NULL) &&
+		    (ic->ic_bsschan != IEEE80211_CHAN_ANYC)) {
+			new_channel = ic->ic_bsschan;
 		}
-		if (new_channel != NULL)
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
-					"%s: new non-radar channel found\n",
-					__func__);
 	}
+
 	if (new_channel != NULL) {
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
+				  "%s: new channel found %3d "
+				  "(%4d MHz)\n", __func__,
+				  new_channel->ic_ieee,
+				  new_channel->ic_freq);
+
+		/* send a CSA frame immediately */
+		ieee80211_send_csa_frame(vap,
+					 IEEE80211_CSA_MUST_STOP_TX,
+					 new_channel->ic_ieee,
+					 IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT);
+
 		/* A suitable scan entry was found, so change channels */
 		if (vap->iv_state == IEEE80211_S_RUN) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
@@ -1085,10 +1114,9 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 					  new_channel->ic_ieee,
 					  new_channel->ic_freq);
 
-			ic->ic_chanchange_chan = new_channel->ic_ieee;
-			ic->ic_chanchange_tbtt =
-				IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT;
-			ic->ic_flags |= IEEE80211_F_CHANSWITCH;
+			ieee80211_start_new_csa(vap,
+				IEEE80211_CSA_MUST_STOP_TX, new_channel,
+				IEEE80211_RADAR_CHANCHANGE_TBTT_COUNT, 0);
 		} else {
 
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
@@ -1108,9 +1136,6 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 		/* A suitable scan entry was not found */
 		IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH,
 				  "%s: new channel not found\n", __func__);
-		return 0;
 	}
-
-	return 1;
 }
 EXPORT_SYMBOL(ieee80211_scan_dfs_action);

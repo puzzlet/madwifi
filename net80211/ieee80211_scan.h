@@ -96,7 +96,7 @@ int ieee80211_check_scan(struct ieee80211vap *, int, u_int, u_int,
 int ieee80211_bg_scan(struct ieee80211vap *);
 void ieee80211_cancel_scan(struct ieee80211vap *);
 
-int ieee80211_scan_dfs_action(struct ieee80211vap *, const struct ieee80211_scan_entry *);
+void ieee80211_scan_dfs_action(struct ieee80211vap *);
 
 struct ieee80211_scanparams;
 void ieee80211_add_scan(struct ieee80211vap *, const struct ieee80211_scanparams *,
