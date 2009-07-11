@@ -562,15 +562,24 @@ ssid_equal(const struct ieee80211_node *a, const struct ieee80211_node *b)
 /*
  * Join the specified IBSS/BSS network.  The node is assumed to
  * be passed in with a reference already held for use in assigning
- * to iv_bss.
+ * to iv_bss. Returns 1 on success, 0 on failure.
  */
 static int
 ieee80211_sta_join1(struct ieee80211_node *selbs)
 {
 	struct ieee80211vap *vap = selbs->ni_vap;
 	struct ieee80211com *ic = selbs->ni_ic;
+	struct ieee80211_node *ni_bss = vap->iv_bss;
 	struct ieee80211_node *obss;
 	int canreassoc;
+
+	/* Check vap->iv_bss at the beginning */
+	if (ni_bss == NULL) {
+		IEEE80211_DPRINTF(vap, IEEE80211_MSG_ASSOC,
+				  "%s: BUG: ni_bss is NULL\n",
+				  __func__);
+		return 0;
+	}
 
 	if (vap->iv_opmode == IEEE80211_M_IBSS) {
 		/*
@@ -590,11 +599,47 @@ ieee80211_sta_join1(struct ieee80211_node *selbs)
 	 */
 	canreassoc = ((obss != NULL) &&
 		(vap->iv_state == IEEE80211_S_RUN) && ssid_equal(obss, selbs));
-	vap->iv_bss = selbs;
-	IEEE80211_ADDR_COPY(vap->iv_bssid, selbs->ni_bssid);
-	if (obss != NULL)
-		ieee80211_unref_node(&obss);
-	ic->ic_bsschan = selbs->ni_chan;
+	/*
+	 * In IBSS mode, updates vap->iv_bss content from selbs. In other
+	 * modes, set vap->iv_bss = selbs
+	 */
+	if (vap->iv_opmode == IEEE80211_M_IBSS) {
+		IEEE80211_ADDR_COPY(vap->iv_bssid, selbs->ni_bssid);
+
+		IEEE80211_ADDR_COPY(ni_bss->ni_bssid, selbs->ni_bssid);
+		/* FIXME : ni_tstamp should be updated with value from beacons
+		 * only, not from probe responses since ni_tstamp is used to
+		 * synchronize beacons transmission in ath_beacon_config() */
+		ni_bss->ni_tstamp.tsf	= selbs->ni_tstamp.tsf;
+		ni_bss->ni_intval	= selbs->ni_intval;
+		ni_bss->ni_capinfo	= selbs->ni_capinfo;
+		ni_bss->ni_chan		= selbs->ni_chan;
+
+		/* Since ESSID matches, we don't need to update it */
+
+		ni_bss->ni_fhdwell	= selbs->ni_fhdwell;
+		ni_bss->ni_fhindex	= selbs->ni_fhindex;
+		ni_bss->ni_erp		= selbs->ni_erp;
+		ni_bss->ni_timoff	= selbs->ni_timoff;
+		if (selbs->ni_wme_ie != NULL)
+			ieee80211_saveie(&ni_bss->ni_wme_ie, selbs->ni_wme_ie);
+		if (selbs->ni_wpa_ie != NULL)
+			ieee80211_saveie(&ni_bss->ni_wpa_ie, selbs->ni_wpa_ie);
+		if (selbs->ni_rsn_ie != NULL)
+			ieee80211_saveie(&ni_bss->ni_rsn_ie, selbs->ni_rsn_ie);
+		if (selbs->ni_ath_ie != NULL)
+			ieee80211_saveath(ni_bss, selbs->ni_ath_ie);
+		ni_bss->ni_rates = selbs->ni_rates;
+
+		/* We got a reference to selbs, so need to unref() */
+		ieee80211_unref_node(&selbs);
+	} else {
+		vap->iv_bss = selbs;
+		IEEE80211_ADDR_COPY(vap->iv_bssid, selbs->ni_bssid);
+		if (obss != NULL)
+			ieee80211_unref_node(&obss);
+	}
+	ic->ic_bsschan = vap->iv_bss->ni_chan;
 	ic->ic_curchan = ic->ic_bsschan;
 	ic->ic_curmode = ieee80211_chan2mode(ic->ic_curchan);
 	ic->ic_set_channel(ic);
