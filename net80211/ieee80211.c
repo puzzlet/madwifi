@@ -893,7 +893,7 @@ ieee80211_expire_excl_restrictions(struct ieee80211com *ic)
 	do_gettimeofday(&tv_now);
 	for (i = 0; i < ic->ic_nchans; i++) {
 		c = &ic->ic_channels[i];
-		if (c->ic_flags & IEEE80211_CHAN_RADAR) {
+		if (IEEE80211_IS_CHAN_RADAR(c)) {
 			if (timeval_compare(&ic->ic_chan_non_occupy[i],
 					    &tv_now) < 0) {
 				if_printf(dev,
@@ -938,7 +938,7 @@ ieee80211_update_dfs_excl_timer(struct ieee80211com *ic)
 	tv_next.tv_usec = 0;
 	for (i = 0; i < ic->ic_nchans; i++) {
 		chan = &ic->ic_channels[i];
-		if (chan->ic_flags & IEEE80211_CHAN_RADAR) {
+		if (IEEE80211_IS_CHAN_RADAR(chan)) {
 			if ((tv_next.tv_sec == 0) &&
 			    (tv_next.tv_usec == 0)) {
 				tv_next = ic->ic_chan_non_occupy[i];
@@ -1005,8 +1005,7 @@ ieee80211_expire_dfs_excl_timer(unsigned long data)
 								ic_freq,
 							vap->iv_des_chan->
 								ic_flags);
-				} else if (!(des_chan->ic_flags &
-							IEEE80211_CHAN_RADAR)) {
+				} else if (!IEEE80211_IS_CHAN_RADAR(des_chan)) {
 					IEEE80211_DPRINTF(vap, 
 							IEEE80211_MSG_DOTH,
 							"%s: Desired channel "

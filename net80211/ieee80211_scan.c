@@ -1066,8 +1066,7 @@ ieee80211_scan_dfs_action(struct ieee80211vap *vap,
 		/* Search for the first channel with no radar detected */
 		int n = 0;
 		for (n = 0; n < ic->ic_nchans; n++) {
-			if (0 == (ic->ic_channels[n].ic_flags &
-						IEEE80211_CHAN_RADAR)) {
+			if (!IEEE80211_IS_CHAN_RADAR(&ic->ic_channels[n])) {
 				new_channel = &ic->ic_channels[n];
 				break;
 			}

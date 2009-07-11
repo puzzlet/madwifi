@@ -730,7 +730,7 @@ ieee80211_ioctl_siwfreq(struct net_device *dev, struct iw_request_info *info,
 			return 0;			/* no change, return */
 
 		/* Don't allow to change to channel with radar found */
-		if (c->ic_flags & IEEE80211_CHAN_RADAR)
+		if (IEEE80211_IS_CHAN_RADAR(c))
 			return -EINVAL;
 
 		/*
