@@ -691,7 +691,6 @@ struct ath_softc {
 	unsigned int	sc_stagbeacons:1;	/* use staggered beacons */
 	unsigned int	sc_dfswait:1;		/* waiting on channel for radar detect */
 	unsigned int	sc_ackrate:1;		/* send acks at high bitrate */
-	unsigned int	sc_dfs_cac:1;		/* waiting on channel for radar detect */
 	unsigned int	sc_hasintmit:1;		/* Interference mitigation */
 	unsigned int	sc_useintmit:1;		/* Interference mitigation enabled? */
 	unsigned int	sc_txcont:1;		/* Is continuous transmit enabled? */

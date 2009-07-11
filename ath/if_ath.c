@@ -788,7 +788,6 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
 	/* initialize DFS related variables */
 	sc->sc_dfswait = 0;
-	sc->sc_dfs_cac = 0;
 	sc->sc_dfs_testmode = 0;
 
 	init_timer(&sc->sc_dfs_cac_timer);
@@ -1137,7 +1136,7 @@ ath_detach(struct net_device *dev)
 
 	ath_hal_setpower(sc->sc_ah, HAL_PM_AWAKE, AH_TRUE);
 	/* Flush the radar task if it's scheduled */
-	if (sc->sc_dfs_cac)
+	if (timer_pending(&sc->sc_dfs_cac_timer))
 		flush_scheduled_work();
 
 	sc->sc_invalid = 1;
@@ -1745,7 +1744,7 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 static int
 ath_chan_unavail(struct ath_softc *sc)
 {
-	return sc->sc_dfs_cac ||
+	return timer_pending(&sc->sc_dfs_cac_timer) ||
 		((sc->sc_curchan.privFlags & CHANNEL_DFS) &&
 		 (sc->sc_curchan.privFlags & CHANNEL_INTERFERENCE));
 }
@@ -1753,7 +1752,7 @@ ath_chan_unavail(struct ath_softc *sc)
 static inline int
 _ath_cac_running_dbgmsg(struct ath_softc *sc, const char *func)
 {
-	int b = sc->sc_dfs_cac;
+	int b = timer_pending(&sc->sc_dfs_cac_timer);
 	if (b)
 		DPRINTF(sc, ATH_DEBUG_DOTH,
 				"%s: Invoked a transmit function during DFS "
@@ -2430,7 +2429,7 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 			 * Handle beacon transmission directly; deferring
 			 * this is too slow to meet timing constraints
 			 * under load. */
-			if (!sc->sc_dfs_cac)
+			if (!timer_pending(&sc->sc_dfs_cac_timer))
 				ath_beacon_send(sc, &needmark, hw_tsf);
 			else {
 				sc->sc_beacons = 0;
@@ -2483,7 +2482,7 @@ ath_intr(int irq, void *dev_id, struct pt_regs *regs)
 		}
 		if (status & HAL_INT_BMISS) {
 			sc->sc_stats.ast_bmiss++;
-			if (!sc->sc_dfs_cac)
+			if (!timer_pending(&sc->sc_dfs_cac_timer))
 				ATH_SCHEDULE_TQUEUE(&sc->sc_bmisstq, &needmark);
 			else {
 				sc->sc_beacons = 0;
@@ -8770,7 +8769,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 	/* Stop any pending channel calibrations or availability check if we
 	 * are really changing channels.  maybe a turbo mode switch only. */
 	if (hchan.channel != sc->sc_curchan.channel)
-		if (!sc->sc_dfs_testmode && sc->sc_dfs_cac)
+		if (!sc->sc_dfs_testmode && timer_pending(&sc->sc_dfs_cac_timer))
 			ath_interrupt_dfs_cac(sc, 
 					"Channel change interrupted DFS wait.");
 
@@ -8847,7 +8846,6 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 			/* set the timeout to normal */
 			dev->watchdog_timeo = 120 * HZ;
 			/* Disable beacons and beacon miss interrupts */
-			sc->sc_dfs_cac = 1;
 			sc->sc_beacons = 0;
 			sc->sc_imask &= ~(HAL_INT_SWBA | HAL_INT_BMISS);
 			ath_hal_intrset(ah, sc->sc_imask);
@@ -8860,7 +8858,7 @@ ath_chan_set(struct ath_softc *sc, struct ieee80211_channel *chan)
 		 * re configure beacons when it is a turbo mode switch.
 		 * HW seems to turn off beacons during turbo mode switch.
 		 */
-		if (sc->sc_beacons && !sc->sc_dfs_cac)
+		if (sc->sc_beacons && !timer_pending(&sc->sc_dfs_cac_timer))
 			ath_beacon_config(sc, NULL);
 		/*
 		 * Re-enable interrupts.
@@ -8919,7 +8917,7 @@ ath_calibrate(unsigned long arg)
 				(TAILQ_FIRST(&ic->ic_vaps)->iv_opmode != 
 				 IEEE80211_M_WDS) &&
 				!txcont_was_active &&
-				!sc->sc_dfs_cac) {
+		    		!timer_pending(&sc->sc_dfs_cac_timer)) {
 			sc->sc_beacons = 1;
 		}
 
@@ -9283,7 +9281,7 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 
 		/* if it is a DFS channel and has not been checked for radar
 		 * do not let the 80211 state machine to go to RUN state. */
-		if (sc->sc_dfs_cac &&
+		if (timer_pending(&sc->sc_dfs_cac_timer) &&
 				IEEE80211_IS_MODE_DFS_MASTER(vap->iv_opmode)) {
 			DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH, 
 				"VAP -> DFSWAIT_PENDING \n");
@@ -9308,12 +9306,11 @@ ath_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 			sc->sc_beacons = 1;
 		}
 	} else {
-		if (sc->sc_dfs_cac &&
+		if (timer_pending(&sc->sc_dfs_cac_timer) &&
 		    IEEE80211_IS_MODE_DFS_MASTER(vap->iv_opmode) &&
 		    (sc->sc_dfs_cac_timer.data == (unsigned long)vap))
 		{
 			del_timer_sync(&sc->sc_dfs_cac_timer);
-			sc->sc_dfs_cac = 0;
 			DPRINTF(sc, ATH_DEBUG_STATE, 
 					"VAP DFSWAIT_PENDING -> run\n");
 		}
@@ -9352,7 +9349,7 @@ done:
 #endif
 bad:
 	netif_wake_queue(dev);
-	dev->watchdog_timeo = (sc->sc_dfs_cac ? 120 : 5) * HZ;		/* set the timeout to normal */
+	dev->watchdog_timeo = (timer_pending(&sc->sc_dfs_cac_timer) ? 120 : 5) * HZ;		/* set the timeout to normal */
 	return error;
 }
 
@@ -9371,7 +9368,7 @@ ath_dfs_cac_completed(unsigned long data )
 	struct ieee80211vap *vap ;
 	struct timeval tv;
 
-	if (!sc->sc_dfs_cac) {
+	if (!timer_pending(&sc->sc_dfs_cac_timer)) {
 		DPRINTF(sc, ATH_DEBUG_DOTH, "DFS wait timer "
 				"expired, but the driver didn't think we "
 				"were in dfswait.  Somebody forgot to "
@@ -9389,7 +9386,6 @@ ath_dfs_cac_completed(unsigned long data )
 					ieee80211_mhz2ieee(sc->sc_curchan.channel, 
 						sc->sc_curchan.channelFlags), 
 					tv.tv_sec, (long)tv.tv_usec);
-		sc->sc_dfs_cac = 0;
 		if (sc->sc_curchan.privFlags & CHANNEL_INTERFERENCE) {
 			DPRINTF(sc, ATH_DEBUG_DOTH, 
 					"DFS wait timer expired "
@@ -12062,7 +12058,7 @@ ath_interrupt_dfs_cac(struct ath_softc *sc, const char *reason)
 	struct timeval tv;
 
 	del_timer_sync(&sc->sc_dfs_cac_timer);
-	if (sc->sc_dfs_cac) {
+	if (timer_pending(&sc->sc_dfs_cac_timer)) {
 		do_gettimeofday(&tv);
 		DPRINTF(sc, ATH_DEBUG_STATE | ATH_DEBUG_DOTH,
 				"%s - Channel: %u Time: %ld.%06ld\n",
@@ -12071,7 +12067,6 @@ ath_interrupt_dfs_cac(struct ath_softc *sc, const char *reason)
 					sc->sc_curchan.channelFlags),
 				tv.tv_sec, (long)tv.tv_usec);
 	}
-	sc->sc_dfs_cac = 0;
 }
 
 /* Invoked from interrupt context when radar is detected and positively
@@ -12112,7 +12107,7 @@ ath_radar_detected(struct ath_softc *sc, const char *cause)
 	/* Stop here if we are testing w/o channel switching */
 	if (sc->sc_dfs_testmode) {
 		/* ath_dump_phyerr_statistics(sc, cause); */
-		if (sc->sc_dfs_cac)
+		if (timer_pending(&sc->sc_dfs_cac_timer))
 			DPRINTF(sc, ATH_DEBUG_DOTH, 
 					"dfs_testmode enabled -- "
 					"staying in CAC mode!\n");
