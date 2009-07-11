@@ -75,6 +75,9 @@
 #undef MIN
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
+#undef SQR
+#define SQR(x)		((x)*(x))
+
 #include "ah.h"
 #include "if_ath_hal.h"
 
@@ -89,18 +92,22 @@
 #define nofloat_pct(_value, _pct) \
 	( (_value * (1000 + _pct)) / 1000 )
 
+/* convert units used for the rp_width into us. This conversion is based on
+ * measure and might not be very accurate */
+#define WIDTH_TO_TSF(x)	(((x) * 200) / 256)
+
 struct radar_pattern_specification {
 	/* The name of the rule/specification (i.e. what did we detect) */
 	const char *name;
-	/* Interval MIN = 1000000 / FREQ - 2%
+	/* Interval MIN = 1000000 / FREQ - 0.1%
 	 * (a.k.a. Pulse/Burst Repetition Interval) */
 	u_int32_t min_rep_int;
-	/* Interval MAX = 1000000 / FREQ + 2%
+	/* Interval MAX = 1000000 / FREQ + 0.1%
 	 * (a.k.a. Pulse/Burst Repetition Interval) */
 	u_int32_t max_rep_int;
-	/* Do we adjust the min/max interval values dynamically
-	 * based upon running mean interval? */
-	HAL_BOOL dyn_ints;
+	/* AH_FALSE for ETSI radars, AH_TRUE for FCC radars. Used to adjust
+	 * the timestamp of the pulse using the pulse width */
+	HAL_BOOL is_fcc;
 	/* Fuzz factor dynamic matching, as unsigned integer percentage 
 	 * of variation (i.e. 2 for +/- 2% timing) */
 	u_int32_t fuzz_pct;
@@ -122,31 +129,51 @@ struct radar_pattern_specification {
 
 static struct radar_pattern_specification radar_patterns[] = {
 #ifdef DFS_DOMAIN_ETSI
-	{"ETSI - PRF200",  4900, 5100, AH_FALSE, 20, 3, 4, 10, 4,  8, AH_TRUE},
-	{"ETSI - PRF300",  3267, 3399, AH_FALSE, 20, 3, 4, 10, 4,  6, AH_TRUE},
-	{"ETSI - PRF500",  1960, 2040, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
-	{"ETSI - PRF750",  1307, 1359, AH_FALSE, 20, 5, 4, 15, 4, 13, AH_TRUE},
-	{"ETSI - PRF800",  1225, 1275, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
-	{"ETSI - PRF1000",  980, 1020, AH_FALSE, 20, 4, 4, 10, 4,  8, AH_TRUE},
-	{"ETSI - PRF1200",  817,  849, AH_FALSE, 20, 5, 4, 15, 4, 13, AH_TRUE},
-	{"ETSI - PRF1500",  653,  679, AH_FALSE, 20, 5, 4, 15, 4,  6, AH_TRUE},
-	{"ETSI - PRF1600",  613,  637, AH_FALSE, 20, 5, 4, 15, 4,  7, AH_TRUE},
-	{"ETSI - PRF2000",  490,  510, AH_FALSE, 20, 7, 4, 20, 4, 10, AH_TRUE},
-	{"ETSI - PRF2300",  426,  442, AH_FALSE, 20, 9, 4, 25, 6, 20, AH_TRUE},
-	{"ETSI - PRF3000",  327,  339, AH_FALSE, 20, 7, 4, 20, 5, 20, AH_TRUE},
-	{"ETSI - PRF3500",  280,  290, AH_FALSE, 20, 9, 4, 25, 2, 20, AH_TRUE},
-	{"ETSI - PRF4000",  245,  255, AH_FALSE, 20, 7, 4, 20, 5, 20, AH_TRUE},
+	/* ETSI - Type 2 - 1,2,5us - PRF 200 - BURST 10 or
+	   ETSI - Type 3 - 10,15us - PRF 200 - BURST 15 */
+	{"ETSI - PRF200",  4995, 5005, AH_FALSE, 20, 4, 4, 15, 4,  8, AH_TRUE},
+	/* ETSI - Type 2 - 1,2,5us - PRF 300 - BURST 10 or
+	   ETSI - Type 3 - 10,15us - PRF 300 - BURST 15 */
+	{"ETSI - PRF300",  3329, 3337, AH_FALSE, 20, 4, 4, 15, 4,  6, AH_TRUE},
+	/* ETSI - Type 2 - 1,2,5us - PRF 500 - BURST 10 or
+	   ETSI - Type 3 - 10,15us - PRF 500 - BURST 15 */
+	{"ETSI - PRF500",  1998, 2002, AH_FALSE, 20, 4, 4, 15, 4,  8, AH_TRUE},
+	/* ETSI - Type 1 - 1us - PRF 750 - BURST 15 */
+	{"ETSI - PRF750",  1331, 1335, AH_FALSE, 20, 5, 4, 15, 4, 13, AH_TRUE},
+	/* ETSI - Type 2 - 1,2,5us - PRF 800 - BURST 10 or
+	   ETSI - Type 3 - 10,15us - PRF 800 - BURST 15 */
+	{"ETSI - PRF800",  1248, 1252, AH_FALSE, 20, 4, 4, 15, 4,  8, AH_TRUE},
+	/* ETSI - Type 2 - 1,2,5us - PRF 1000 - BURST 10 or
+	   ETSI - Type 3 - 10,15us - PRF 1000 - BURST 15 */
+	{"ETSI - PRF1000",  999, 1001, AH_FALSE, 20, 4, 4, 15, 4,  8, AH_TRUE},
+	/* ETSI - Type 4 - 1,2,5,10,15us - PRF 1200 - BURST 15 */
+	{"ETSI - PRF1200",  832,  834, AH_FALSE, 20, 5, 4, 15, 4, 13, AH_TRUE},
+	/* ETSI - Type 4 - 1,2,5,10,15us - PRF 1500 - BURST 15 */
+	{"ETSI - PRF1500",  665,  667, AH_FALSE, 20, 5, 4, 15, 4,  6, AH_TRUE},
+	/* ETSI - Type 4 - 1,2,5,10,15us - PRF 1600 - BURST 15 */
+	{"ETSI - PRF1600",  624,  626, AH_FALSE, 20, 5, 4, 15, 4,  7, AH_TRUE},
+	/* ETSI - Type 6 - 20,30us - PRF 2000 - BURST 20 */
+	{"ETSI - PRF2000",  499,  501, AH_FALSE, 20, 6, 4, 20, 4, 10, AH_TRUE},
+	/* ETSI - Type 5 - 1,2,5,10,15us - PRF 2300 - BURST 25 */
+	{"ETSI - PRF2300",  432,  435, AH_FALSE, 20, 8, 4, 25, 6, 20, AH_TRUE},
+	/* ETSI - Type 5 - 1,2,5,10,15us - PRF 3000 - BURST 25 or
+	   ETSI - Type 6 - 20,30us - PRF 3000 - BURST 20 */
+	{"ETSI - PRF3000",  332,  334, AH_FALSE, 20, 6, 4, 25, 5, 20, AH_TRUE},
+	/* ETSI - Type 5 - 1,2,5,10,15us - PRF 3500 - BURST 25 */
+	{"ETSI - PRF3500",  284,  286, AH_FALSE, 20, 8, 4, 25, 2, 20, AH_TRUE},
+	/* ETSI - Type 5 - 1,2,5,10,15us - PRF 4000 - BURST 25 or
+	   ETSI - Type 6 - 20,30us - PRF 4000 - BURST 20 */
+	{"ETSI - PRF4000",  249,  251, AH_FALSE, 20, 6, 4, 25, 5, 20, AH_TRUE},
 #endif
 #ifdef DFS_DOMAIN_FCC
-	{"FCC - Type 1",   1399, 1714, AH_TRUE, 10, 5, 10, 18, 4,  6, AH_FALSE},
-	{"FCC - Type 2",    147,  235, AH_TRUE, 10, 8, 10, 29, 6, 12, AH_FALSE},
-	{"FCC - Type 3-4",  196,  273, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC - Type 3-4",  275,  352, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC - Type 3-4",  354,  431, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC - Type 3-4",  433,  510, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC - Type 3-4",  235,  313, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC - Type 3-4",  314,  392, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE},
-	{"FCC - Type 3-4",  393,  471, AH_TRUE, 10, 8,  8, 18, 2, 16, AH_FALSE}
+	/* FCC - Type 1 -     1us -    PRI 1428 - BURST 18 */
+	{"FCC - Type 1",   1426, 1430, AH_TRUE,  10, 6, 6, 18, 4,  6, AH_FALSE},
+	/* FCC - Type 2 -   1/5us - PRI 150/230 - BURST 23/29 */
+	{"FCC - Type 2",    149,  231, AH_TRUE,  10, 8, 8, 29, 6, 12, AH_FALSE},
+	/* FCC - Type 3 -  6/10us - PRI 200/500 - BURST 16/18 */
+	{"FCC - Type 3",    199,  501, AH_TRUE,  10, 6, 6, 18, 6, 12, AH_FALSE},
+	/* FCC - Type 4 - 11/20us - PRI 200/500 - BURST 12/16 */
+	{"FCC - Type 4",    199,  501, AH_TRUE,  10, 5, 5, 16, 6, 12, AH_FALSE}
 #endif
 };
 
@@ -259,8 +286,7 @@ int ath_radar_update(struct ath_softc *sc)
 		if (required) {
 			new_radar |= AR5K_PHY_RADAR_ENABLE;
 			new_filter |= AR5K_AR5212_PHY_ERR_FIL_RADAR;
-			new_rxfilt |= (HAL_RX_FILTER_PHYERR |
-				       HAL_RX_FILTER_PHYRADAR);
+			new_rxfilt |= HAL_RX_FILTER_PHYRADAR;
 			new_mask |= HAL_INT_RXPHY;
 			new_ier |= HAL_INT_RXPHY;
 		} else {
@@ -828,21 +854,12 @@ static HAL_BOOL rp_analyze_short_pulse(
 	unsigned int best_missed = 0;
 	unsigned int best_pri = 0;
 	unsigned int best_cr = 0;
+	u_int64_t t0;
 
-	u_int64_t t0_min, t0_max, t1, t_min, t_max;
-	u_int32_t noise = 0, matched = 0, missed = 0, partial_miss = 0;
 	struct ath_rp *pulse;
 	u_int32_t pulse_count_minimum = 0;
 	struct radar_pattern_specification *pattern = NULL;
 	struct radar_pattern_specification *best_pattern = NULL;
-
-	u_int32_t new_period = 0;
-	u_int64_t last_tsf = 0;
-	u_int32_t last_seen_period = 0;
-	u_int32_t sum_periods = 0;
-	u_int32_t mean_period = 0;
-	u_int32_t adjusted_max_rep_int = 0;
-	u_int32_t adjusted_min_rep_int = 0;
 
 	if (index)
 		*index = 0;
@@ -866,11 +883,11 @@ static HAL_BOOL rp_analyze_short_pulse(
 	 * - since we have a limited and known number of radar patterns, we
 	 *   loop on all possible radar pulse period
 	 *
-	 * - we start the search from the last timestamp (t1), going
-	 *   backward in time, up to the point for the first possible radar
-	 *   pulse, ie t0_min - PERIOD * BURST_MAX
+	 * - we start the search from the last timestamp (t0), going backward
+	 *   in time, up to the point for the first possible radar pulse, ie
+	 *   t0 - PERIOD_MAX * BURST_MAX
 	 *
-	 * - on this timescale, we matched the number of hit/missed using T -
+	 * - on this timescale, we matched the number of hit/missed using t0 -
 	 *   PERIOD * n taking into account the 2% error margin (using
 	 *   min_rep_int, max_rep_int)
 	 *
@@ -882,80 +899,63 @@ static HAL_BOOL rp_analyze_short_pulse(
 	 * This exceeds all known Atheros MTBF so, forget about TSF roll over.
 	 */
 
-	/* t1 is the timestamp of the last radar pulse */
-	t1 = (u_int64_t)last_pulse->rp_tsf;
-
 	/* loop through all patterns */
 	for (i = 0; i < sizetab(radar_patterns); i++) {
+		int matched = 1, missed = 0, partial_miss = 0, noise = 0;
+		int64_t t, last_t, t_min, t_avg, t_max, tn_max;
+		int A, B, N, C, D, SUM_SQR;
+		int a, a_min, a_avg, a_max;
+		int b, b_min, b_avg, b_max;
+		int count;
+		int last_matched = 0;
+
 		pattern = &radar_patterns[i];
 
-		/* underflow */
-		if ((pattern->min_rep_int *
-		     (pattern->min_evts - 1)) >= t1) {
-			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-				"%s: %s skipped (last pulse isn't old enough to"
-				" match this pattern).  %10llu >= %10llu.\n",
-				SC_DEV_NAME(sc), pattern->name,
-				(unsigned long long)(
-					pattern->min_rep_int *
-					pattern->min_evts),
-				(unsigned long long)t1);
-			continue;
-		}
+		/* t0 is the timestamp of the beginning of the last radar
+		 * pulse. We assume that the hardware reports the end of the
+		 * pulse, so we compute the beginning based on the reported
+		 * pulse width, which might larger than the real pulse.
+		 *
+		 * BIG WARNING : using FCC samples, it seems that this
+		 * correction is not needed at all, so we are using the
+		 * dyn_ints flag to avoid this correction */
+		t0 = last_pulse->rp_tsf;
+		if (!pattern->is_fcc)
+			t0 -= WIDTH_TO_TSF(last_pulse->rp_width);
 
-		/* this min formula is to check for underflow.  It's the
-		 * minimum needed duration to gather specified number of
-		 * matches, assuming minimum match interval. */
-		t0_min = (pattern->min_rep_int *
-			  pattern->min_evts) < t1 ?
-		    t1 - (pattern->min_rep_int *
-			  pattern->min_evts) : 0;
+		/* initial values for a_min, a_avg, a_max and b_min, b_avg,
+		 * b_max */
+		a_min = -10;
+		a_avg =   0;
+		a_max = +10;
+
+		b_min = pattern->min_rep_int;
+		b_avg = (pattern->min_rep_int + pattern->max_rep_int)/2;
+		b_max = pattern->max_rep_int;
+
+		/* initial values for t_min, t_avg, t_max */
+		t_min = a_min + b_min;
+		t_avg = a_avg + b_avg;
+		t_max = a_max + b_max;
 
 		/* this max formula is to stop when we exceed maximum time
-		 * period for the pattern.  It's the oldest possible TSF that
-		 * could match. */
-		t0_max = (pattern->max_rep_int *
-			  pattern->max_evts) < t1 ?
-		    t1 - (pattern->max_rep_int *
-			  pattern->max_evts) : 0;
+		 * period for the pattern.  It's the oldest possible value for
+		 * t that could match. */
+		tn_max = a_max + b_max*(pattern->max_evts-1);
 
-		/* we directly start with the timestamp before t1 */
+		last_t = -1;
+
+		A = 0;
+		B = 0;
+		N = 1;
+		C = 0;
+		D = 0;
+		SUM_SQR = 0;
+
+		/* we directly start with the timestamp before t0 */
 		pulse = pulse_prev(last_pulse);
 
-		/* initial values for t_min, t_max */
-		t_min = pattern->max_rep_int < t1 ?
-			t1 - pattern->max_rep_int : 0;
-		t_max = pattern->min_rep_int < t1 ?
-			t1 - pattern->min_rep_int : 0;
-
-		last_tsf = t1;
-		last_seen_period = 0;
-		sum_periods = 0;
-		matched = 0;
-		noise = 0;
-		missed = 0;
-		partial_miss = 0;
-		mean_period = 0;
-		adjusted_max_rep_int =
-			pattern->max_rep_int;
-		adjusted_min_rep_int =
-			pattern->min_rep_int;
-
 		for (;;) {
-			if (mean_period && pattern->dyn_ints) {
-				u_int32_t fuzz_pct = pattern->fuzz_pct;
-				adjusted_max_rep_int =
-					MIN(nofloat_pct(mean_period, fuzz_pct),
-					    pattern->max_rep_int);
-
-				adjusted_min_rep_int =
-					MAX(nofloat_pct(mean_period, -fuzz_pct),
-					    pattern->min_rep_int);
-			}
-			else {
-				adjusted_max_rep_int = pattern->max_rep_int;
-				adjusted_min_rep_int = pattern->min_rep_int;
-			}
 
 			/* check if we are at the end of the list */
 			if (&pulse->list == &sc->sc_rp_list) 
@@ -963,193 +963,316 @@ static HAL_BOOL rp_analyze_short_pulse(
 			if (!pulse->rp_allocated)
 				break;
 
+			t = t0 - pulse->rp_tsf;
+			if (!pattern->is_fcc)
+				t += WIDTH_TO_TSF(pulse->rp_width);
+
 			/* Do not go too far... this is an optimization to not
-			 * keep checking after we hit maximum time span for the
-			 * pattern. */
-			if (pulse->rp_tsf < t0_max) {
+			 * keep checking after we hit maximum time span for
+			 * the pattern. */
+			if ((t < 0) || (t > tn_max)) {
 				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-					"%s: %s matching stopped (pulse->rp_tsf"
-					" < t0_max).  t1=%10llu t0_max=%10llu "
-					"t_min=%10llu t_max=%10llu matched=%u "
-					"missed=%u\n", SC_DEV_NAME(sc),
+					"%-17s [%2d] tsf: %10llu width: %3u "
+					"t:%5lld [range: %5lld-%5lld] [%2d] "
+					"%s\n",
 					pattern->name,
-					(unsigned long long)t1,
-					(unsigned long long)t0_max,
-					(unsigned long long)t_min,
-					(unsigned long long)t_max,
-					matched, missed);
-				break;
-			}
-			/* if we missed more than specified number of pulses,
-			 * we stop searching */
-			if (partial_miss >
-			    pattern->max_consecutive_missing) {
-				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-					"%s: %s matching stopped (too many "
-					"consecutive pulses missing). %d>%d "
-					"matched=%u. missed=%u.\n",
-					SC_DEV_NAME(sc), pattern->name,
-					partial_miss,
-					pattern->max_consecutive_missing,
-					matched, missed);
+					pulse->rp_index,
+					pulse->rp_tsf,
+					pulse->rp_width,
+					t, t_min, t_max,
+					matched+missed+partial_miss,
+					"overflow");
 				break;
 			}
 
-			new_period = (u_int64_t)
-				(last_tsf && last_tsf > pulse->rp_tsf) ?
-					last_tsf - pulse->rp_tsf : 0;
-			if (pulse->rp_tsf > t_max) {
+			/* we want to find the previous pulse in the range
+			 * [t_min, t_max] which is closest to t_avg */
+
+			if (t < t_min) {
+				/* t < t_min : this pulse is not matching the
+				 * current radar pattern, it is just
+				 * noise. Ignore it by going to the next
+				 * pulse */
+
 				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE, 
-					"%s: %-17s [%2d] %5s [**:**] tsf: "
-					"%10llu [range: %5llu-%5llu].  width: "
-					"%3d. period: %4llu. last_period: %4llu"
-					". mean_period: %4llu. last_tsf: %10llu"
-					".\n",
-					SC_DEV_NAME(sc),
+					"%-17s [%2d] tsf: %10llu width: %3u "
+					"t:%5lld [range: %5lld-%5lld] [%2d] "
+					"%s\n",
 					pattern->name,
 					pulse->rp_index,
-					"noise",
-					(unsigned long long)pulse->rp_tsf,
-					(unsigned long long)t_min,
-					(unsigned long long)t_max,
-					(u_int8_t)pulse->rp_width,
-					(unsigned long long)new_period,
-					(unsigned long long)last_seen_period,
-					(unsigned long long)mean_period,
-					(unsigned long long)last_tsf);
+					pulse->rp_tsf,
+					pulse->rp_width,
+					t, t_min, t_max,
+					matched+missed+partial_miss,
+					"noise");
+
 				/* this event is noise, ignore it */
 				pulse = pulse_prev(pulse);
 				noise++;
-			} else if (pulse->rp_tsf >= t_min) {
-				/* we found a match */
-				matched++;
-				if (partial_miss)
-					new_period /= (partial_miss + 1);
-				missed += partial_miss;
-				partial_miss = 0;
-				sum_periods += new_period;
-				mean_period = matched ?
-						(sum_periods / matched) :
-						0;
-				if (mean_period &&
-				    pattern->dyn_ints &&
-				    (mean_period >
-				     pattern->max_rep_int ||
-				     mean_period <
-				     pattern->min_rep_int)) {
+			} else if (t <= t_max) {
+				/* t_min <= t <= t_max : this pulse is
+				 * matching the current radar pattern */
+
+				if (last_t == -1) {
+					/* this pulse is the first matching pulse */
+
 					DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-						"%s: %s mean period deviated "
-						"from original range [period: "
-						"%4u, range: %4u-%4u]\n",
-						SC_DEV_NAME(sc),
+						"%-17s [%2d] tsf: %10llu width: %3u "
+						"t:%5lld [range: %5lld-%5lld] [%2d] "
+						"%s\n",
 						pattern->name,
-						mean_period,
-						pattern->min_rep_int,
-						pattern->max_rep_int);
-					break;
+						pulse->rp_index,
+						pulse->rp_tsf,
+						pulse->rp_width,
+						t, t_min, t_max,
+						matched+missed+partial_miss,
+						"first match");
+
+
+					matched ++;
+					missed += partial_miss;
+					partial_miss = 0;
+					last_t = t;
+
+					count = matched+missed+partial_miss-1;
+					A += t;
+					B += t*count;
+					N += 1;
+					C += count;
+					D += count*count;
+					SUM_SQR += SQR( t - (a_avg+b_avg*count));
+				} else {
+					/* this pulse is not the first
+					 * matching pulse. Check if it is
+					 * closest to t_avg than the existing
+					 * pulse */
+					if (labs(t-t_avg) < labs(last_t-t_avg)) {
+
+						/* this pulse is closer to
+						 * t_avg. Update computation
+						 * and go to the next pulse */
+
+						DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+							"%-17s [%2d] tsf: %10llu width: %3u "
+							"t:%5lld [range: %5lld-%5lld] [%2d] "
+							"%s\n",
+							pattern->name,
+							pulse->rp_index,
+							pulse->rp_tsf,
+							pulse->rp_width,
+							t, t_min, t_max,
+							matched+missed+partial_miss,
+							"better match");
+
+						count = matched+missed+partial_miss-1;
+						A -= last_t;
+						B -= last_t*count;
+						SUM_SQR -= SQR( last_t - (a_avg+b_avg*count));
+
+						A += t;
+						B += t*count;
+						SUM_SQR += SQR( last_t - (a_avg+b_avg*count));
+
+						noise ++;
+						last_t = t;
+					} else {
+						/* this pulse is further to t_avg. */
+
+						DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+							"%-17s [%2d] tsf: %10llu width: %3u "
+							"t:%5lld [range: %5lld-%5lld] [%2d] "
+							"%s\n",
+							pattern->name,
+							pulse->rp_index,
+							pulse->rp_tsf,
+							pulse->rp_width,
+							t, t_min, t_max,
+							matched+missed+partial_miss,
+							"worst match");
+
+						noise ++;
+					}
 				}
 
-				/* Remember we are scanning backwards... */
+
+				/* go to the previous pulse */
+				pulse = pulse_prev(pulse);
+			} else {
+				/* t > t_max : this pulse is not matching the
+				 * current radar pattern yet. Update range */
+
 				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-					"%s: %-17s [%2d] %5s [%2d:%-2d] tsf: "
-					"%10llu [range: %5llu-%5llu].  width: "
-					"%3d. period: %4llu. last_period: %4llu"
-					". mean_period: %4llu. last_tsf: %10llu"
-					".\n",
-					SC_DEV_NAME(sc),
+					"%-17s [%2d] tsf: %10llu width: %3u "
+					"t:%5lld [range: %5lld-%5lld] [%2d] "
+					"%s\n",
 					pattern->name,
 					pulse->rp_index,
-					"match",
-					MAX(matched + missed + partial_miss - 1,
-					    0),
-					(matched + missed + partial_miss),
-					(unsigned long long)pulse->rp_tsf,
-					(unsigned long long)t_min,
-					(unsigned long long)t_max,
-					(u_int8_t)pulse->rp_width,
-					(unsigned long long)new_period,
-					(unsigned long long)last_seen_period,
-					(unsigned long long)mean_period,
-					(unsigned long long)last_tsf);
+					pulse->rp_tsf,
+					pulse->rp_width,
+					t, t_min, t_max,
+					matched + missed + partial_miss,
+					"range update");
 
-				/* record tsf and period */
-				last_seen_period = new_period;
-				last_tsf = pulse->rp_tsf;
 
-				/* advance to next pulse */
-				pulse = pulse_prev(pulse);
+				/* we do not found a pulse in the current
+				 * range, we increase the number of miss */
+				if (last_t == -1) {
+					partial_miss++;
 
-				/* update bounds */
-				t_min = adjusted_max_rep_int < last_tsf ?
-					last_tsf - adjusted_max_rep_int :
-					0;
-				t_max = adjusted_min_rep_int < last_tsf ?
-					last_tsf - adjusted_min_rep_int :
-					0;
-			} else {
-				partial_miss++;
-				/* if we missed more than specified number of
-				 * pulses, we stop searching */
-				if ((missed + partial_miss) >
-				    pattern->max_missing) {
-					DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-						"%s: %s matching stopped (too "
-						"many total pulses missing). "
-						"%d>%d  matched=%u. missed=%u."
-						"\n",
-						SC_DEV_NAME(sc),
-						pattern->name,
-						missed,
-						pattern->max_missing,
-						matched,
-						missed);
-					break;
+					/* if we missed more than the
+					 * specified partial number of pulses,
+					 * we stop searching */
+					if (partial_miss > pattern->max_consecutive_missing) {
+						DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+							"%-17s matching stopped (too many "
+							"consecutive pulses missing). %d>%d "
+							"matched=%d. missed=%d.\n",
+							pattern->name,
+							partial_miss,
+							pattern->max_consecutive_missing,
+							matched, missed);
+						break;
+					}
+
+					/* if we missed more than the
+					 * specified total number of pulses,
+					 * we stop searching */
+					if (missed + partial_miss > pattern->max_missing) {
+						DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+							"%-17s matching stopped (too "
+							"many total pulses missing). "
+							"%d>%d  matched=%d. missed=%d."
+							"\n",
+							pattern->name,
+							missed,
+							pattern->max_missing,
+							matched,
+							missed);
+						break;
+					}
 				}
-				/* Default mean period to approximate center
-				 * of range.  Remember we are scanning
-				 * backwards... */
-				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-					"%s: %-17s [**] %5s [%2d:%-2d] tsf: "
-					"(missing) [range: %5llu-%5llu].  "
-					"width: ***. period: ****. last_period:"
-					" %4llu. mean_period: %4llu. last_tsf: "
-					"%10llu.\n",
-					SC_DEV_NAME(sc),
-					pattern->name,
-					"missed",
-					MAX(matched + missed + partial_miss - 1,
-					    0),
-					(matched + missed + partial_miss),
-					(unsigned long long)t_min,
-					(unsigned long long)t_max,
-					(unsigned long long)last_seen_period,
-					(unsigned long long)mean_period,
-					(unsigned long long)last_tsf);
 
-				/* update bounds */
-				t_min = adjusted_max_rep_int < t_min ?
-					t_min - adjusted_max_rep_int :
-					0;
-				t_max = adjusted_min_rep_int < t_max ?
-					t_max - adjusted_min_rep_int :
-					0;
+				/* Quick update to b */
+				if ((1 < matched) && (matched < 4) &&
+				    (matched!=last_matched)) {
+					int c = a_avg, d = b_avg;
+
+					if (C*C-N*D != 0) {
+						a = a_avg;
+						b = (C*A-N*B)/(C*C-N*D);
+
+						b_avg = b;
+
+						DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+							"%-17s updating b_avg to %d\n",
+							pattern->name, b_avg);
+
+						SUM_SQR += (SQR(a)-SQR(c))*N+2*(a*b-c*d)*C+(SQR(b)-SQR(d))*D
+							-2*(a-c)*A-2*(b-d)*B;
+
+						last_matched = matched;
+					}
+				}
+
+				/* Update (a,b) */
+				if ((matched >= 4) &&
+				    (matched != last_matched)) {
+					int c = a_avg, d = b_avg;
+
+					if (C*C-N*D != 0) {
+						a=(C*B-A*D)/(C*C-N*D);
+						b=(C*A-N*B)/(C*C-N*D);
+
+						a_min = a-10;
+						a_avg = a;
+						a_max = a+10;
+
+						b_min = b-1;
+						b_avg = b;
+						b_max = b+1;
+
+						DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+							"%-17s updating a to (%d,%d,%d) and b to (%d,%d,%d)\n",
+							pattern->name,
+							a_min, a_avg, a_max,
+							b_min, b_avg, b_max);
+
+						SUM_SQR += (SQR(a)-SQR(c))*N+2*(a*b-c*d)*C+(SQR(b)-SQR(d))*D
+							    -2*(a-c)*A-2*(b-d)*B;
+
+						last_matched = matched;
+					}
+				}
+
+				/* Update range */
+				count = matched+missed+partial_miss;
+				t_min = a_min + b_min*count;
+				t_avg = a_avg + b_avg*count;
+				t_max = a_max + b_max*count;
+
+				/* Check if we intersect with previous/next range */
+				/* t_min < t_max(count-1) */
+				if ((count>=1) && (t_min < a_max + b_max*(count-1))) {
+
+					t_min = a_avg + b_avg*count - b_avg/2;
+
+					DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+						"%-17s [%2d] tsf: %10llu width: %3u "
+						"t:%5lld [range: %5lld-%5lld] [%2d] "
+						"%s\n",
+						pattern->name,
+						pulse->rp_index,
+						pulse->rp_tsf,
+						pulse->rp_width,
+						t, t_min, t_max,
+						matched + missed + partial_miss,
+						"updated t_min");
+				}
+				/* t_max > t_min(count+1) */
+				if (t_max > a_min + b_min*(count+1)) {
+
+					t_max = a_avg + b_avg*count + b_avg/2;
+
+					DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+						"%-17s [%2d] tsf: %10llu width: %3u "
+						"t:%5lld [range: %5lld-%5lld] [%2d] "
+						"%s\n",
+						pattern->name,
+						pulse->rp_index,
+						pulse->rp_tsf,
+						pulse->rp_width,
+						t, t_min, t_max,
+						matched + missed + partial_miss,
+						"updated t_max");
+				}
+				last_t = -1;
 			}
 		}
 
-		/* print counters for this PRF */
-		if (matched > 1) {
+		/* print counters for this PRF (we avoid case where the
+		 * variance is greater than 100). 100 is based on the fact
+		 * that most pulses are less than 10us from the ideal value
+		 * and as such, variance should be less than 100 */
+		if ((matched > 1) &&
+		    (N != 0) && (SUM_SQR/N<100)) {
 			int compare_result = CR_FALLTHROUGH;
 			int match_result = MR_MATCH;
-			/* we add one to the matched since we counted only the
-			 * time differences */
-			/* matched++; not sure... */
+
+			DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
+				"%-17s matched %d missed %d mean_period %d noise %d variance %d\n",
+				pattern->name,
+				matched,
+				missed,
+				b_avg,
+				noise,
+				SUM_SQR/N);
 
 			/* check if PRF counters match a known radar, if we are
 			 * confident enought */
 			if (MR_MATCH == (match_result = match_radar(
 					matched,
 					missed,
-					mean_period,
+					b_avg,
 					noise,
 					pattern->min_evts,
 					pattern->max_evts,
@@ -1161,7 +1284,7 @@ static HAL_BOOL rp_analyze_short_pulse(
 					compare_radar_matches(
 						matched,
 						missed, 
-						mean_period,
+						b_avg,
 						noise,
 						pattern->min_evts,
 						pattern->max_evts,
@@ -1184,10 +1307,9 @@ static HAL_BOOL rp_analyze_short_pulse(
 			}
 			if (DFLAG_ISSET(sc, ATH_DEBUG_DOTHFILT)) {
 				DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-					"%s: [%02d] %13s: %-17s [match=%2u {%2u"
+					"[%02d] %13s: %-17s [match=%2u {%2u"
 					"..%2u},missed=%2u/%2u,dur=%2d {%2u.."
 					"%2u},noise=%2u/%2u,cr:%d]\n",
-					SC_DEV_NAME(sc),
 					last_pulse->rp_index,
 					compare_result > CR_FALLTHROUGH ? 
 						"NEW-BEST" : 
@@ -1211,16 +1333,15 @@ static HAL_BOOL rp_analyze_short_pulse(
 				best_missed = missed;
 				best_index = i;
 				best_pattern = pattern;
-				best_pri = mean_period;
+				best_pri = b_avg;
 				best_noise = noise;
 				best_cr = compare_result;
 			}
 			else if (compare_result <= CR_FALLTHROUGH) {
 				DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-					"%s: %s match not better than best so "
+					"%-17s match not better than best so "
 					"far.  cr: %d matched: %d  missed: "
 					"%d min_evts: %d\n",
-					SC_DEV_NAME(sc),
 					pattern->name, 
 					compare_result,
 					matched, 
@@ -1231,10 +1352,9 @@ static HAL_BOOL rp_analyze_short_pulse(
 	}
 	if (-1 != best_index) {
 		DPRINTF(sc, ATH_DEBUG_DOTHFILTVBSE,
-			"%s: [%02d] %10s: %-17s [match=%2u {%2u..%2u},missed="
+			"[%02d] %10s: %-17s [match=%2u {%2u..%2u},missed="
 			"%2u/%2u,dur=%2d {%2u..%2u},noise=%2u/%2u,cr=%2d] "
 			"RI=%-9u RF=%-4u\n",
-			SC_DEV_NAME(sc),
 			last_pulse->rp_index,
 			"BEST/PULSE",
 			best_pattern->name,
@@ -1407,12 +1527,11 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 						best_cr 	= compare_result;
 					}
 					DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-						"%s: %10s: %-17s [match=%2u "
+						"%10s: %-17s [match=%2u "
 						"{%2u..%2u}, missed=%2u/%2u, "
 						"dur=%2d {%2u..%2u}, "
 						"noise=%2u/%2u, cr=%2d] "
 						"RI=%-9u RF=%-4u\n",
-						DEV_NAME(sc->sc_dev),
 						(compare_result > CR_FALLTHROUGH) ? 
 							"BETTER" : "WORSE",
 						radar_patterns[index].name,
@@ -1457,10 +1576,9 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 			best_pattern = 
 				&radar_patterns[best_index];
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: %10s: %-17s [match=%2u {%2u..%2u},missed="
+				"%10s: %-17s [match=%2u {%2u..%2u},missed="
 				"%2u/%2u,dur=%2d {%2u..%2u},noise=%2u/%2u,cr=%2d] "
 				"RI=%-9u RF=%-4u\n",
-				DEV_NAME(sc->sc_dev),
 				"BEST MATCH",
 				best_pattern->name,
 				best_matched, 
@@ -1480,9 +1598,8 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 		}
 		else {
 			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: %10s: %-17s [match=%2u {%2u..%2u},missed="
+				"%10s: %-17s [match=%2u {%2u..%2u},missed="
 				"%2u/%2u,noise=%2u/%2u]\n",
-				DEV_NAME(sc->sc_dev),
 				"BEST MATCH",
 				get_longpulse_desc(best_lp_bc),
 				best_lp_bc, 
@@ -1495,16 +1612,13 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 				);
 		}
 #endif /* #ifdef ATH_RADAR_LONG_PULSE */
-		if (DFLAG_ISSET(sc, ATH_DEBUG_DOTHFILT)) {
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: ========================================\n",
-				DEV_NAME(sc->sc_dev));
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: ==BEGIN RADAR SAMPLE====================\n",
-				DEV_NAME(sc->sc_dev));
-			DPRINTF(sc, ATH_DEBUG_DOTHFILT,
-				"%s: ========================================\n",
-				DEV_NAME(sc->sc_dev));
+		if (DFLAG_ISSET(sc, ATH_DEBUG_DOTHPULSES)) {
+			DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
+				"========================================\n");
+			DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
+				"==BEGIN RADAR SAMPLE====================\n");
+			DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
+				"========================================\n");
 
 #ifdef ATH_RADAR_LONG_PULSE
 			if (!best_lp_bc) {
@@ -1512,11 +1626,10 @@ static HAL_BOOL rp_analyze(struct ath_softc *sc)
 				best_pattern = 
 					&radar_patterns[best_index];
 				DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
-					"%s: Sample contains data matching %s "
+					"Sample contains data matching %-17s "
 					"[match=%2u {%2u..%2u}, "
 					"missed=%2u/%2u, dur=%2d {%2u..%2u}, "
 					"noise=%2u/%2u,cr=%d] RI=%-9u RF=%-4u\n",
-					DEV_NAME(sc->sc_dev),
 					best_pattern->name,
 					best_matched, 
 					best_pattern->min_pulse, 
@@ -1633,15 +1746,16 @@ void ath_rp_record(struct ath_softc *sc, u_int64_t tsf, u_int8_t rssi,
 {
 	struct ath_rp *pulse;
 
-	DPRINTF(sc, ATH_DEBUG_DOTHPULSES, "%s: ath_rp_record: "
+	DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
 		"tsf=%10llu rssi=%3u width=%3u%s\n", 
-		SC_DEV_NAME(sc), (unsigned long long)tsf, rssi, width,
+		tsf, rssi, width,
 		sc->sc_rp_ignored ? " (ignored)" : "");
 
 	if (sc->sc_rp_ignored) {
 		return;
 	}
 
+#if 0
 	/* pulses width 255 seems to trigger false detection of radar. we
 	 * ignored it then. */
 
@@ -1649,6 +1763,7 @@ void ath_rp_record(struct ath_softc *sc, u_int64_t tsf, u_int8_t rssi,
 		/* ignored */
 		return ;
 	}
+#endif
 
 	/* check if the new radar pulse is after the last one recorded, or
 	 * else, we flush the history */
@@ -1738,36 +1853,21 @@ void ath_rp_print_mem(struct ath_softc *sc, int analyzed_pulses_only)
 void ath_rp_print(struct ath_softc *sc, int analyzed_pulses_only)
 {
 	struct ath_rp *pulse;
-	u_int64_t oldest_tsf = ~0;
 
-	IPRINTF(sc, "Pulse dump of %spulses from ring buffer containing %d "
-	       "pulses.\n",
-	       analyzed_pulses_only ? "analyzed " : "",
-	       sc->sc_rp_num);
-
-	/* Find oldest TSF value so we can print relative times */
-	oldest_tsf = ~0;
-	list_for_each_entry_reverse(pulse, &sc->sc_rp_list, list)
-		if (pulse->rp_allocated && pulse->rp_tsf < oldest_tsf)
-			oldest_tsf = pulse->rp_tsf;
+	DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
+		"Pulse dump of %spulses from ring buffer containing %d "
+		"pulses.\n",
+		analyzed_pulses_only ? "analyzed " : "",
+		sc->sc_rp_num);
 
 	list_for_each_entry_reverse(pulse, &sc->sc_rp_list, list) {
 		if (!pulse->rp_allocated)
 			continue;
-		if ((!analyzed_pulses_only) || pulse->rp_analyzed)
-			IPRINTF(sc, "Pulse [%3d, %p] : relative_tsf=%10llu "
-			       "tsf=%10llu rssi=%3u width=%3u allocated=%d "
-			       "analyzed=%d next=%p prev=%p\n",
-			       pulse->rp_index,
-			       pulse,
-			       (unsigned long long)(pulse->rp_tsf - oldest_tsf),
-			       (unsigned long long)pulse->rp_tsf,
-			       pulse->rp_rssi,
-			       pulse->rp_width,
-			       pulse->rp_allocated,
-			       pulse->rp_analyzed,
-			       pulse->list.next,
-			       pulse->list.prev);
+		if ((!analyzed_pulses_only) || pulse->rp_analyzed) {
+			DPRINTF(sc, ATH_DEBUG_DOTHPULSES,
+				"tsf=%10llu rssi=%3u width=%3u\n",
+				pulse->rp_tsf, pulse->rp_rssi, pulse->rp_width);
+		}
 	}
 }
 
