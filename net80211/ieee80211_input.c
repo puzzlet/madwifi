@@ -847,47 +847,59 @@ out:
 }
 
 EXPORT_SYMBOL(ieee80211_input);
-/* 
- * Context: softIRQ (tasklet) 
- */ 
-int 
-ieee80211_input_all(struct ieee80211com *ic, 
-		struct sk_buff *skb, int rssi, u_int64_t rtsf) 
-{ 
-	struct ieee80211vap *vap, *next_vap; 
-	struct sk_buff *tskb = NULL;
-	int type = -1;	/* Used to determine when to blinks LEDs. */
 
-	/* Create a new SKB copy for each VAP except the last
-	 * one, which gets the original SKB. */
-	vap = TAILQ_FIRST(&ic->ic_vaps);
-	while (vap) {
-		for (next_vap = TAILQ_NEXT(vap, iv_next); next_vap;
-				next_vap = TAILQ_NEXT(next_vap, iv_next)) {
-			if ((next_vap->iv_dev->flags & (IFF_RUNNING | IFF_UP))
-					== (IFF_RUNNING | IFF_UP))
-				break;
+/*
+ * Deliver a received skb to all VAPs, free the skb.
+ *
+ * Context: softIRQ (tasklet)
+ */
+int
+ieee80211_input_all(struct ieee80211com *ic,
+		    struct sk_buff *skb, int rssi, u_int64_t rtsf)
+{
+	struct ieee80211vap *vap, *first_vap = NULL;
+	int type;		/* Used to determine when to blink LEDs. */
+
+	for (vap = TAILQ_FIRST(&ic->ic_vaps); vap;
+	     vap = TAILQ_NEXT(vap, iv_next)) {
+		struct sk_buff *tskb;
+
+		/* Check if the interface is up and running */
+		if ((vap->iv_dev->flags & (IFF_RUNNING | IFF_UP)) !=
+		    (IFF_RUNNING | IFF_UP))
+			continue;
+
+		/* The first VAP will get a special treatment - it will
+		   get the original skb to avoid unneeded skb copying */
+		if (!first_vap) {
+			first_vap = vap;
+			continue;
 		}
 
-		if (!next_vap) {
-			tskb = skb;
-			skb = NULL;
-		} else
-			tskb = skb_copy(skb, GFP_ATOMIC);
-
-		if (!tskb)
+		/* Other VAPs get a copy of the skb */
+		tskb = skb_copy(skb, GFP_ATOMIC);
+		if (!tskb) {
 			/* XXX: Brilliant OOM handling. */
 			vap->iv_devstats.tx_dropped++;
-		else
-			type = ieee80211_input(vap, NULL, tskb, rssi, rtsf);
+			continue;
+		}
+		ieee80211_input(vap, NULL, tskb, rssi, rtsf);
+	}
 
-		vap = next_vap;
-	};
+	/* Process the first VAP now.  Any VAP should return a valid type
+	   unless something is very wrong (invalid packet etc).  */
+	if (first_vap)
+		type = ieee80211_input(first_vap, NULL, skb, rssi, rtsf);
+	else {
+		/* No active VAPs, just free the skb */
+		ieee80211_dev_kfree_skb(&skb);
+		type = -1;
+	}
 
-	ieee80211_dev_kfree_skb(&skb);
-	return type; 
-} 
-EXPORT_SYMBOL(ieee80211_input_all); 
+	return type;
+}
+
+EXPORT_SYMBOL(ieee80211_input_all);
 
 /*
  * Determines whether a frame should be accepted, based on information
