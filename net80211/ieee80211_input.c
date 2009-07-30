@@ -213,8 +213,10 @@ ieee80211_input(struct ieee80211vap *vap, struct ieee80211_node *ni_or_null,
 	u_int16_t rxseq;
 
 	if ((vap->iv_dev->flags & (IFF_RUNNING | IFF_UP)) !=
-			(IFF_RUNNING | IFF_UP))
-		goto out;
+			(IFF_RUNNING | IFF_UP)) {
+		ieee80211_dev_kfree_skb(&skb);
+		return -1;
+	}
 
 	/* Initialize ni as in the previous API. */
 	if (ni_or_null == NULL) {
