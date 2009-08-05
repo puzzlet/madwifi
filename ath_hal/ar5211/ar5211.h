@@ -282,8 +282,8 @@ extern	HAL_BOOL ar5211SetKeyCacheEntry(struct ath_hal *, uint16_t entry,
 extern	HAL_BOOL ar5211SetKeyCacheEntryMac(struct ath_hal *,
 			uint16_t, const uint8_t *);
 
-extern	HAL_BOOL ar5211SetPowerMode(struct ath_hal *, uint32_t powerRequest,
-		int setChip);
+extern	HAL_BOOL ar5211SetPowerMode(struct ath_hal *,
+			HAL_POWER_MODE powerRequest, int setChip);
 extern	HAL_POWER_MODE ar5211GetPowerMode(struct ath_hal *);
 
 extern	void ar5211SetBeaconTimers(struct ath_hal *,
