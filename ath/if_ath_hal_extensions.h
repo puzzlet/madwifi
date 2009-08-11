@@ -236,6 +236,8 @@ struct ath5k_srev_name {
 #define AR5K_SREV_VER_AR5416	0xc0 /* PCI-E */
 #define AR5K_SREV_VER_AR5418	0xca /* PCI-E */
 #define AR5K_SREV_VER_AR2425	0xe2 /* PCI-E */
+#define AR5K_SREV_VER_AR9160	0x400
+#define AR5K_SREV_VER_AR9280	0x800
 
 #define AR5K_SREV_RAD_5110	0x00
 #define AR5K_SREV_RAD_5111	0x10

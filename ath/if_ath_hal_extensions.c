@@ -65,6 +65,8 @@ static struct ath5k_srev_name srev_names[] = {
 	{ "5416",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5416 },
 	{ "5418",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR5418 },
 	{ "2425",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR2425 },
+	{ "9160",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR9160 },
+	{ "9280",	AR5K_VERSION_VER,	AR5K_SREV_VER_AR9280 },
 	{ "xxxxx",	AR5K_VERSION_VER,	AR5K_SREV_UNKNOWN },
 	{ "5110",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_5110 },
 	{ "5111",	AR5K_VERSION_RAD,	AR5K_SREV_RAD_5111 },
@@ -132,7 +134,7 @@ ath5k_chip_name(enum ath5k_srev_type type, u_int16_t val)
 	for (i = 0; i < ARRAY_SIZE(srev_names); i++) {
 		if (srev_names[i].sr_type != type)
 			continue;
-		if ((val & 0xff) < srev_names[i + 1].sr_val) {
+		if (val < srev_names[i + 1].sr_val) {
 			name = srev_names[i].sr_name;
 			break;
 		}
