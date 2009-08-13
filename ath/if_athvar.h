@@ -79,7 +79,7 @@ typedef void *TQUEUE_ARG;
 #endif /* !DECLARE_TASKLET */
 
 #include <linux/sched.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,41)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,41)) && !defined(INIT_WORK)
 #include <linux/tqueue.h>
 #define work_struct			tq_struct
 #define schedule_work(t)		schedule_task((t))
