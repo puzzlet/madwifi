@@ -73,13 +73,8 @@
 struct minstrel_softc {
 	struct ath_ratectrl arc; 	/* base state */
 
-#ifdef CONFIG_SYSCTL
-	struct ctl_table_header *sysctl_header;
-	struct ctl_table *sysctls;
-#endif
 	struct ath_softc  *sc;
 	struct net_device *sc_dev;
-
 
 	struct timer_list timer;	/* periodic timer */
 	int close_timer_now;
