@@ -390,6 +390,7 @@ ieee80211_load_module(const char *modname)
 }
 
 
+#ifdef CONFIG_PROC_FS
 static struct proc_dir_entry *proc_madwifi;
 static int proc_madwifi_count = 0;
 
@@ -743,6 +744,7 @@ static struct file_operations proc_iv_bss_ops = {
 	.open = proc_iv_bss_open,
 	.release = proc_ieee80211_close,
 };
+#endif			/* CONFIG_PROC_FS */
 
 #ifdef IEEE80211_DEBUG
 static int
@@ -943,7 +945,6 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 {
 	int i, space;
 	char *devname = NULL;
-	struct ieee80211_proc_entry *tmp = NULL;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17)
 	int ret;
 
@@ -1014,6 +1015,7 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 		vap->iv_sysctls = NULL;
 	}
 
+#ifdef CONFIG_PROC_FS
 	/* Ensure the base madwifi directory exists */
 	if (!proc_madwifi && proc_net != NULL) {
 		proc_madwifi = proc_mkdir("madwifi", proc_net);
@@ -1035,7 +1037,8 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 
 	/* Recreate any other proc entries that have been registered */
 	if (vap->iv_proc) {
-		tmp = vap->iv_proc_entries;
+		struct ieee80211_proc_entry *tmp = vap->iv_proc_entries;
+
 		while (tmp) {
 			if (!tmp->entry) {
 				tmp->entry = create_proc_entry(tmp->name,
@@ -1046,8 +1049,10 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 			tmp = tmp->next;
 		}
 	}
+#endif			/* CONFIG_PROC_FS */
 }
 
+#ifdef CONFIG_PROC_FS
 /* Frees all memory used for the list of proc entries */
 void
 ieee80211_proc_cleanup(struct ieee80211vap *vap)
@@ -1127,12 +1132,11 @@ ieee80211_proc_vcreate(struct ieee80211vap *vap,
 	return 0;
 }
 EXPORT_SYMBOL(ieee80211_proc_vcreate);
+#endif			/* CONFIG_PROC_FS */
 
 void
 ieee80211_virtfs_vdetach(struct ieee80211vap *vap)
 {
-	struct ieee80211_proc_entry *tmp=NULL;
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,21)
 	sysfs_remove_group(&vap->iv_dev->dev.kobj, &ieee80211_attr_grp);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17)
@@ -1144,9 +1148,11 @@ ieee80211_virtfs_vdetach(struct ieee80211vap *vap)
 		vap->iv_sysctl_header = NULL;
 	}
 
+#ifdef CONFIG_PROC_FS
 	if (vap->iv_proc) {
 		/* Remove child proc entries but leave them in the list */
-		tmp = vap->iv_proc_entries;
+		struct ieee80211_proc_entry *tmp = vap->iv_proc_entries;
+
 		while (tmp) {
 			if (tmp->entry) {
 				remove_proc_entry(tmp->name, vap->iv_proc);
@@ -1161,6 +1167,7 @@ ieee80211_virtfs_vdetach(struct ieee80211vap *vap)
 		}
 		proc_madwifi_count--;
 	}
+#endif			/* CONFIG_PROC_FS */
 
 	if (vap->iv_sysctls && vap->iv_sysctls[2].procname) {
 		kfree(vap->iv_sysctls[2].procname);
