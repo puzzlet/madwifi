@@ -63,7 +63,7 @@ static int s = -1;
 static const char *progname;
 
 static void
-checksocket()
+checksocket(void)
 {
 	if (s < 0 ? (s = socket(AF_INET, SOCK_DGRAM, 0)) == -1 : 0)
 		perror("socket(SOCK_DGRAM)");

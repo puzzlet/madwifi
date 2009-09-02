@@ -29,11 +29,11 @@
 #define MACS "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx"
 #define MACP(mac) (mac)[0], (mac)[1], (mac)[2], (mac)[3], (mac)[4], (mac)[5]
 
-char *dev = "ath0";
-int sock;
-int warn_wpa = 1;
+static char *dev = "ath0";
+static int sock;
+static int warn_wpa = 1;
 
-int parse_mac(uint8_t *mac, const char *str)
+static int parse_mac(uint8_t *mac, const char *str)
 {
 	if (sscanf(str, MACS,
 			&mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]
@@ -44,14 +44,17 @@ int parse_mac(uint8_t *mac, const char *str)
 		return 1;
 	}
 }
-void hexdump(unsigned char *data, ssize_t dlen) {
+
+static void hexdump(unsigned char *data, ssize_t dlen)
+{
 	//printf("%s: (%i) ", prefix, dlen);
 	while (dlen-- > 0) {
 		printf("%02hhx", *data++);
 	}
 }
 
-int set80211param(int op, int arg) {
+static int set80211param(int op, int arg)
+{
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
@@ -67,7 +70,8 @@ int set80211param(int op, int arg) {
 	return 0;
 }
 
-int get80211param(int op) {
+static int get80211param(int op)
+{
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
@@ -83,7 +87,8 @@ int get80211param(int op) {
 }
 
 
-int set80211priv(int op, void *data, int len) {
+static int set80211priv(int op, void *data, int len)
+{
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
@@ -99,7 +104,8 @@ int set80211priv(int op, void *data, int len) {
 	return iwr.u.data.length;
 }
 
-void prep_key(struct ieee80211req_key *wk, int keyidx, uint8_t *mac) {
+static void prep_key(struct ieee80211req_key *wk, int keyidx, uint8_t *mac)
+{
 	memset(wk, 0, sizeof(struct ieee80211req_key));
 	wk->ik_keyix = keyidx;
 
@@ -108,15 +114,18 @@ void prep_key(struct ieee80211req_key *wk, int keyidx, uint8_t *mac) {
 	}
 }
 
-char *cipherstrs[] = { "WEP", "TKIP", "OCB", "CCMP", "invalid", "CKIP", "none" };
+static char *cipherstrs[] = { "WEP", "TKIP", "OCB", "CCMP", "invalid",
+			      "CKIP", "none" };
 
-char *strcipher(int c) {
+static char *strcipher(int c)
+{
 
 	if (c > IEEE80211_CIPHER_NONE) return "invalid";
 	return cipherstrs[c];
 }
 
-char *strflags(int f) {
+static char *strflags(int f)
+{
 	static char buf[5];
 	char *ff = buf;
 	memset(buf, 0, sizeof(buf));
@@ -129,7 +138,8 @@ char *strflags(int f) {
 	return buf;
 }
 
-int getkey(int keyidx, uint8_t *mac, int verbose) {
+static int getkey(int keyidx, uint8_t *mac, int verbose)
+{
 	struct ieee80211req_key wk;
 
 	if (warn_wpa && get80211param(IEEE80211_PARAM_WPA) == 0) {
@@ -155,14 +165,17 @@ int getkey(int keyidx, uint8_t *mac, int verbose) {
 	return -1;
 }
 
-int delkey(int keyidx, uint8_t *mac) {
+static int delkey(int keyidx, uint8_t *mac)
+{
 	struct ieee80211req_key wk;
 
 	prep_key(&wk, keyidx, mac);
 	return set80211priv(IEEE80211_IOCTL_DELKEY, &wk, sizeof(wk));
 }
 
-int setkey(int keyidx, uint8_t *mac, int type, int flags, int keylen, char *key) {
+static int setkey(int keyidx, uint8_t *mac, int type, int flags, int keylen,
+		  char *key)
+{
 	struct ieee80211req_key wk;
 
 	prep_key(&wk, keyidx, mac);
@@ -175,7 +188,8 @@ int setkey(int keyidx, uint8_t *mac, int type, int flags, int keylen, char *key)
 }
 
 
-void iter_sta() {
+static void iter_sta(void)
+{
 	uint8_t buf[24*1024];
 	uint8_t *bufpos;
 	ssize_t len;
@@ -195,7 +209,8 @@ void iter_sta() {
 	}
 }
 
-void set_wpa(int cipher, int wpa, int key) {
+static void set_wpa(int cipher, int wpa, int key)
+{
 	printf("Setting WPA: cipher=%s wpa=%i mgmt=%i\n",
 		strcipher(cipher), wpa, key);
 	set80211param(IEEE80211_PARAM_MCASTCIPHER, cipher);
@@ -207,7 +222,8 @@ void set_wpa(int cipher, int wpa, int key) {
 }
 
 
-void init() {
+static void init(void)
+{
 	sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
 		perror("socket()");
@@ -216,7 +232,8 @@ void init() {
 }
 
 
-void help() {
+static void help(void)
+{
 	fprintf(stderr, "Possible options are:\n"
 		"	-a		print all group keys\n"
 		"	-A		print all keys (default option)\n"
@@ -234,7 +251,8 @@ void help() {
 		"", dev);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
 	int keyidx = 0;
 	uint8_t mac[6];
 	int cipher = IEEE80211_CIPHER_AES_CCM;
