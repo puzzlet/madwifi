@@ -634,7 +634,6 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 	const HAL_RATE_TABLE *rt = sc->sc_currates;
 	unsigned int x;
 	int retry_index, tx_time;
-	int srate;
 	int ndx = 0;
 
 	sn->num_rates = 0;
@@ -689,30 +688,24 @@ ath_rate_ctl_reset(struct ath_softc *sc, struct ieee80211_node *ni)
 	}
 
 	if (vap->iv_fixed_rate != IEEE80211_FIXED_RATE_NONE) {
-		srate = sn->num_rates - 1;
+		int srate;
 
-		/* A fixed rate is to be used; ic_fixed_rate is an
-		 * index into the supported rate set.  Convert this
-		 * to the index into the negotiated rate set for
-		 * the node.  We know the rate is there because the
-		 * rate set is checked when the station associates. */
-		/* NB: the rate set is assumed to be sorted. */
-		for (;
-				(srate >= 0) &&
-				(ni->ni_rates.rs_rates[srate] &
-				 IEEE80211_RATE_VAL) != vap->iv_fixed_rate;
-				srate--);
+		/*
+		 * A fixed rate is to be used.  Find the corresponding
+		 * index in the rate table.
+		 */
+		for (srate = 0; srate < sn->num_rates; srate++)
+			if (vap->iv_fixed_rate ==
+			    (ni->ni_rates.rs_rates[srate] & IEEE80211_RATE_VAL)) {
+				sn->static_rate_ndx = srate;
+				ni->ni_txrate = srate;
+				return;
+			}
 
-		KASSERT(srate >= 0,
-			("fixed rate %d not in rate set", vap->iv_fixed_rate));
-
-		sn->static_rate_ndx = srate;
-		ni->ni_txrate = srate;
-		DPRINTF(sc, "%s: %s " MAC_FMT " fixed rate %d%sMbps\n",
-			dev_info, __func__, MAC_ADDR(ni->ni_macaddr),
-			sn->rates[srate].rate / 2,
-			(sn->rates[srate].rate % 2) ? ".5 " : " ");
-		return;
+		printk(KERN_WARNING "%s: %s: fixed rate %u%sMbps is not "
+		       "available and will be ignored\n", vap->iv_dev->name,
+		       dev_info, vap->iv_fixed_rate / 2,
+		       (vap->iv_fixed_rate & 1) ? ".5" : "");
 	}
 
 	for (x = 0; x < ni->ni_rates.rs_nrates; x++) {

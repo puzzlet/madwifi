@@ -80,6 +80,12 @@
 #define	DPRINTF(sc, _fmt, ...)
 #endif
 
+#include "release.h"
+#if 0
+static char *version = "0.1 (" RELEASE_VERSION ")";
+#endif
+static char *dev_info = "ath_rate_amrr";
+
 static int ath_rateinterval = 1000;		/* rate ctl interval (ms)  */
 static int ath_rate_max_success_threshold = 10;
 static int ath_rate_min_success_threshold = 1;
@@ -270,35 +276,41 @@ ath_rate_ctl_start(struct ath_softc *sc, struct ieee80211_node *ni)
 	int srate;
 
 	KASSERT(ni->ni_rates.rs_nrates > 0, ("no rates"));
-	if (vap->iv_fixed_rate == IEEE80211_FIXED_RATE_NONE) {
+
+	if (vap->iv_fixed_rate != IEEE80211_FIXED_RATE_NONE) {
 		/*
-		 * No fixed rate is requested. For 11b start with
-		 * the highest negotiated rate; otherwise, for 11g
-		 * and 11a, we start "in the middle" at 24Mb or 36Mb.
+		 * A fixed rate is to be used.  Find the corresponding
+		 * index in the rate table.
 		 */
-		srate = ni->ni_rates.rs_nrates - 1;
-		if (sc->sc_curmode != IEEE80211_MODE_11B) {
-			/*
-			 * Scan the negotiated rate set to find the
-			 * closest rate.
-			 */
-			/* NB: the rate set is assumed sorted */
-			for (; srate >= 0 && RATE(srate) > 72; srate--);
-			KASSERT(srate >= 0, ("bogus rate set"));
-		}
-	} else {
-		/*
-		 * A fixed rate is to be used; ic_fixed_rate is an
-		 * index into the supported rate set.  Convert this
-		 * to the index into the negotiated rate set for
-		 * the node.  We know the rate is there because the
-		 * rate set is checked when the station associates.
-		 */
-		srate = ni->ni_rates.rs_nrates - 1;
-		for (; srate >= 0 && RATE(srate) != vap->iv_fixed_rate; srate--);
-		KASSERT(srate >= 0,
-			("fixed rate %d not in rate set", vap->iv_fixed_rate));
+		for (srate = 0; srate < ni->ni_rates.rs_nrates; srate++)
+			if (vap->iv_fixed_rate ==
+			    (ni->ni_rates.rs_rates[srate] & IEEE80211_RATE_VAL)) {
+				ath_rate_update(sc, ni, srate);
+				return;
+			}
+
+		printk(KERN_WARNING "%s: %s: fixed rate %u%sMbps is not "
+		       "available and will be ignored\n", vap->iv_dev->name,
+		       dev_info, vap->iv_fixed_rate / 2,
+		       (vap->iv_fixed_rate & 1) ? ".5" : "");
 	}
+
+	/*
+	 * No fixed rate is requested. For 11b start with
+	 * the highest negotiated rate; otherwise, for 11g
+	 * and 11a, we start "in the middle" at 24Mb or 36Mb.
+	 */
+	srate = ni->ni_rates.rs_nrates - 1;
+	if (sc->sc_curmode != IEEE80211_MODE_11B) {
+		/*
+		 * Scan the negotiated rate set to find the
+		 * closest rate.
+		 */
+		/* NB: the rate set is assumed sorted */
+		for (; srate >= 0 && RATE(srate) > 72; srate--);
+		KASSERT(srate >= 0, ("bogus rate set"));
+	}
+
 	ath_rate_update(sc, ni, srate);
 #undef RATE
 }
@@ -553,12 +565,6 @@ static struct ieee80211_rate_ops ath_rate_ops = {
 	.attach = ath_rate_attach,
 	.detach = ath_rate_detach,
 };
-
-#include "release.h"
-#if 0
-static char *version = "0.1 (" RELEASE_VERSION ")";
-static char *dev_info = "ath_rate_amrr";
-#endif
 
 MODULE_AUTHOR("INRIA, Mathieu Lacage");
 MODULE_DESCRIPTION("AMRR Rate control algorithm");
