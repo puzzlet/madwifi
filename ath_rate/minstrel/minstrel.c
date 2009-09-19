@@ -283,7 +283,7 @@ calc_usecs_unicast_packet(struct ath_softc *sc, int length,
 		tt += (long_retries + 1) * ath_hal_computetxtime(sc->sc_ah, rt, length,
 							rix, AH_TRUE);
 		for (x = 0; x <= short_retries + long_retries; x++) {
-			cw = MIN(ATH_DEFAULT_CWMAX, (cw + 1) * 2);
+			cw = MIN(ATH_DEFAULT_CWMAX, (cw << 1) | 1);
 			tt += (t_slot * cw / 2);
 		}
 		return tt;
