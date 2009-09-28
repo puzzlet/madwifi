@@ -174,12 +174,18 @@ static inline struct net_device *_alloc_netdev(int sizeof_priv, const char *mask
 	  void __user *buffer, size_t *lenp)
 #define	ATH_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
 	proc_dointvec(ctl, write, filp, buffer, lenp)
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,8) */
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 #define	ATH_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
 	f(ctl_table *ctl, int write, struct file *filp, \
 	  void __user *buffer, size_t *lenp, loff_t *ppos)
 #define	ATH_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
 	proc_dointvec(ctl, write, filp, buffer, lenp, ppos)
+#else /* Linux 2.6.32+ */
+#define	ATH_SYSCTL_DECL(f, ctl, write, filp, buffer, lenp, ppos) \
+	f(ctl_table *ctl, int write, \
+	  void __user *buffer, size_t *lenp, loff_t *ppos)
+#define	ATH_SYSCTL_PROC_DOINTVEC(ctl, write, filp, buffer, lenp, ppos) \
+	proc_dointvec(ctl, write, buffer, lenp, ppos)
 #endif
 
 #define	ATH_TIMEOUT	1000
