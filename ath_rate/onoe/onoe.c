@@ -449,7 +449,7 @@ static int maxint = 0x7fffffff;		/* 32-bit big */
  * Static (i.e. global) sysctls.
  */
 static ctl_table ath_rate_static_sysctls[] = {
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "interval",
 	  .mode		= 0644,
 	  .data		= &ath_rateinterval,
@@ -458,7 +458,7 @@ static ctl_table ath_rate_static_sysctls[] = {
 	  .extra2	= &maxint,
 	  .proc_handler	= proc_dointvec_minmax
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "raise",
 	  .mode		= 0644,
 	  .data		= &ath_rate_raise,
@@ -467,7 +467,7 @@ static ctl_table ath_rate_static_sysctls[] = {
 	  .extra2	= &maxpercent,
 	  .proc_handler	= proc_dointvec_minmax
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "raise_threshold",
 	  .mode		= 0644,
 	  .data		= &ath_rate_raise_threshold,
@@ -477,21 +477,21 @@ static ctl_table ath_rate_static_sysctls[] = {
 	{ 0 }
 };
 static ctl_table ath_rate_table[] = {
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "rate_onoe",
 	  .mode		= 0555,
 	  .child	= ath_rate_static_sysctls
 	}, { 0 }
 };
 static ctl_table ath_ath_table[] = {
-	{ .ctl_name	= DEV_ATH,
+	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_rate_table
 	}, { 0 }
 };
 static ctl_table ath_root_table[] = {
-	{ .ctl_name	= CTL_DEV,
+	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,
 	  .child	= ath_ath_table

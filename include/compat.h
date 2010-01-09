@@ -199,6 +199,14 @@ typedef unsigned long resource_size_t;
 #define DEV_ATH CTL_UNNUMBERED
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+#define ATH_INIT_CTL_NAME(val)
+#define ATH_SET_CTL_NAME(ctl, val)
+#else
+#define ATH_INIT_CTL_NAME(val) .ctl_name = val,
+#define ATH_SET_CTL_NAME(ctl, val) ctl.ctl_name = val
+#endif
+
 /* __skb_append got a third parameter in 2.6.14 */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14)
 #define __skb_queue_after(_list, _old, _new)	__skb_append(_old, _new)

@@ -975,7 +975,7 @@ EXPORT_SYMBOL(ath_hal_memcmp);
 
 static ctl_table ath_hal_sysctls[] = {
 #ifdef AH_DEBUG
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "debug",
 	  .mode		= 0644,
 	  .data		= &ath_hal_debug,
@@ -983,21 +983,21 @@ static ctl_table ath_hal_sysctls[] = {
 	  .proc_handler	= proc_dointvec
 	},
 #endif /* AH_DEBUG */
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "dma_beacon_response_time",
 	  .data		= &ath_hal_dma_beacon_response_time,
 	  .maxlen	= sizeof(ath_hal_dma_beacon_response_time),
 	  .mode		= 0644,
 	  .proc_handler	= proc_dointvec
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "sw_beacon_response_time",
 	  .mode		= 0644,
 	  .data		= &ath_hal_sw_beacon_response_time,
 	  .maxlen	= sizeof(ath_hal_sw_beacon_response_time),
 	  .proc_handler	= proc_dointvec
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "swba_backoff",
 	  .mode		= 0644,
 	  .data		= &ath_hal_additional_swba_backoff,
@@ -1005,19 +1005,19 @@ static ctl_table ath_hal_sysctls[] = {
 	  .proc_handler	= proc_dointvec
 	},
 #ifdef AH_DEBUG_ALQ
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "alq",
 	  .mode		= 0644,
 	  .proc_handler	= sysctl_hw_ath_hal_log
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "alq_size",
 	  .mode		= 0644,
 	  .data		= &ath_hal_alq_qsize,
 	  .maxlen	= sizeof(ath_hal_alq_qsize),
 	  .proc_handler	= proc_dointvec
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "alq_lost",
 	  .mode		= 0644,
 	  .data		= &ath_hal_alq_lost,
@@ -1028,21 +1028,21 @@ static ctl_table ath_hal_sysctls[] = {
 	{ 0 }
 };
 static ctl_table ath_hal_table[] = {
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "hal",
 	  .mode		= 0555,
 	  .child	= ath_hal_sysctls
 	}, { 0 }
 };
 static ctl_table ath_ath_table[] = {
-	{ .ctl_name	= DEV_ATH,
+	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_hal_table
 	}, { 0 }
 };
 static ctl_table ath_root_table[] = {
-	{ .ctl_name	= CTL_DEV,
+	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,
 	  .child	= ath_ath_table

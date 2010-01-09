@@ -899,39 +899,39 @@ IEEE80211_SYSCTL_DECL(ieee80211_sysctl_monitor_crc_errors, ctl, write, filp, buf
 
 static const ctl_table ieee80211_sysctl_template[] = {
 #ifdef IEEE80211_DEBUG
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "debug",
 	  .mode		= 0644,
 	  .proc_handler	= ieee80211_sysctl_debug
 	},
 #endif
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "dev_type",
 	  .mode		= 0644,
 	  .proc_handler	= ieee80211_sysctl_dev_type
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "monitor_nods_only",
 	  .mode		= 0644,
 	  .proc_handler	= ieee80211_sysctl_monitor_nods_only
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "monitor_txf_len",
 	  .mode		= 0644,
 	  .proc_handler	= ieee80211_sysctl_monitor_txf_len
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "monitor_phy_errors",
 	  .mode		= 0644,
 	  .proc_handler = ieee80211_sysctl_monitor_phy_errors
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "monitor_crc_errors",
 	  .mode		= 0644,
 	  .proc_handler = ieee80211_sysctl_monitor_crc_errors
 	},
 	/* NB: must be last entry before NULL */
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "%parent",
 	  .maxlen	= IFNAMSIZ,
 	  .mode		= 0444,
@@ -984,12 +984,12 @@ ieee80211_virtfs_latevattach(struct ieee80211vap *vap)
 	strncpy(devname, vap->iv_dev->name, strlen(vap->iv_dev->name) + 1);
 
 	/* setup the table */
-	vap->iv_sysctls[0].ctl_name = CTL_NET;
+	ATH_SET_CTL_NAME(vap->iv_sysctls[0], CTL_NET);
 	vap->iv_sysctls[0].procname = "net";
 	vap->iv_sysctls[0].mode = 0555;
 	vap->iv_sysctls[0].child = &vap->iv_sysctls[2];
 	/* [1] is NULL terminator */
-	vap->iv_sysctls[2].ctl_name = CTL_AUTO;
+	ATH_SET_CTL_NAME(vap->iv_sysctls[2], CTL_AUTO);
 	vap->iv_sysctls[2].procname = devname; /* XXX bad idea? */
 	vap->iv_sysctls[2].mode = 0555;
 	vap->iv_sysctls[2].child = &vap->iv_sysctls[4];

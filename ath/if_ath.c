@@ -11177,173 +11177,173 @@ ATH_SYSCTL_DECL(ath_sysctl_halparam, ctl, write, filp, buffer, lenp, ppos)
 }
 
 static const ctl_table ath_sysctl_template[] = {
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "distance",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_DISTANCE,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "slottime",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_SLOTTIME,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "acktimeout",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_ACKTIMEOUT,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "ctstimeout",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_CTSTIMEOUT,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "softled",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_SOFTLED,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "ledpin",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_LEDPIN,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "countrycode",
 	  .mode		= 0444,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_COUNTRYCODE,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "maxvaps",
 	  .mode		= 0444,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_MAXVAPS,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "regdomain",
 	  .mode		= 0444,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_REGDOMAIN,
 	},
 #ifdef AR_DEBUG
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "debug",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_DEBUG,
 	},
 #endif
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "txantenna",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_TXANTENNA,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "rxantenna",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RXANTENNA,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "diversity",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_DIVERSITY,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "txintrperiod",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_TXINTRPERIOD,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "fftxqmin",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_FFTXQMIN,
 	},
 #ifdef ATH_SUPERG_XR
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "xrpollperiod",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_XR_POLL_PERIOD,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "xrpollcount",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_XR_POLL_COUNT,
 	},
 #endif
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "ackrate",
 	  .mode		= 0644,
 	  .proc_handler	= ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_ACKRATE,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "rp",
 	  .mode         = 0200,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RP,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "radar_print",
 	  .mode         = 0200,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RP_PRINT,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "radar_print_all",
 	  .mode         = 0200,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RP_PRINT_ALL,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "radar_dump",
 	  .mode         = 0200,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RP_PRINT_MEM,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "radar_dump_all",
 	  .mode         = 0200,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RP_PRINT_MEM_ALL,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "rp_flush",
 	  .mode         = 0200,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RP_FLUSH,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "panic",
 	  .mode         = 0200,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_PANIC,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "rp_ignored",
 	  .mode         = 0644,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RP_IGNORED,
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "radar_ignored",
 	  .mode         = 0644,
 	  .proc_handler = ath_sysctl_halparam,
 	  .extra2	= (void *)ATH_RADAR_IGNORED,
 	},
-	{ .ctl_name     = CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname     = "intmit",
 	  .mode         = 0644,
 	  .proc_handler = ath_sysctl_halparam,
@@ -11386,12 +11386,12 @@ ath_dynamic_sysctl_register(struct ath_softc *sc)
 	strncpy(dev_name, DEV_NAME(sc->sc_dev), strlen(DEV_NAME(sc->sc_dev)) + 1);
 
 	/* setup the table */
-	sc->sc_sysctls[0].ctl_name = CTL_DEV;
+	ATH_SET_CTL_NAME(sc->sc_sysctls[0], CTL_DEV);
 	sc->sc_sysctls[0].procname = "dev";
 	sc->sc_sysctls[0].mode = 0555;
 	sc->sc_sysctls[0].child = &sc->sc_sysctls[2];
 	/* [1] is NULL terminator */
-	sc->sc_sysctls[2].ctl_name = CTL_AUTO;
+	ATH_SET_CTL_NAME(sc->sc_sysctls[2], CTL_AUTO);
 	sc->sc_sysctls[2].procname = dev_name;
 	sc->sc_sysctls[2].mode = 0555;
 	sc->sc_sysctls[2].child = &sc->sc_sysctls[4];
@@ -11508,7 +11508,7 @@ ath_announce(struct net_device *dev)
  */
 static ctl_table ath_static_sysctls[] = {
 #ifdef AR_DEBUG
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "debug",
 	  .mode		= 0644,
 	  .data		= &ath_debug,
@@ -11516,28 +11516,28 @@ static ctl_table ath_static_sysctls[] = {
 	  .proc_handler	= proc_dointvec
 	},
 #endif
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "countrycode",
 	  .mode		= 0444,
 	  .data		= &ath_countrycode,
 	  .maxlen	= sizeof(ath_countrycode),
 	  .proc_handler	= proc_dointvec
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "maxvaps",
 	  .mode		= 0444,
 	  .data		= &ath_maxvaps,
 	  .maxlen	= sizeof(ath_maxvaps),
 	  .proc_handler	= proc_dointvec
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "outdoor",
 	  .mode		= 0444,
 	  .data		= &ath_outdoor,
 	  .maxlen	= sizeof(ath_outdoor),
 	  .proc_handler	= proc_dointvec
 	},
-	{ .ctl_name	= CTL_AUTO,
+	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "xchanmode",
 	  .mode		= 0444,
 	  .data		= &ath_xchanmode,
@@ -11547,14 +11547,14 @@ static ctl_table ath_static_sysctls[] = {
 	{ 0 }
 };
 static ctl_table ath_ath_table[] = {
-	{ .ctl_name	= DEV_ATH,
+	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_static_sysctls
 	}, { 0 }
 };
 static ctl_table ath_root_table[] = {
-	{ .ctl_name	= CTL_DEV,
+	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,
 	  .child	= ath_ath_table
