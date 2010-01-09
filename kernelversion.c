@@ -8,9 +8,14 @@
  */
 #include <linux/version.h>
 
-/* Linux 2.6.18+ uses <linux/utsrelease.h> */
 #ifndef UTS_RELEASE
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+/* Linux 2.6.33+ uses <generated/utsrelease.h> */
+#include <generated/utsrelease.h>
+#else
+/* Linux 2.6.18 - 2.6.32 uses <linux/utsrelease.h> */
 #include <linux/utsrelease.h>
+#endif
 #endif
 
 char *uts_release = UTS_RELEASE;
