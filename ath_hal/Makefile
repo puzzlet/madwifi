@@ -155,5 +155,5 @@ clean:
 	rm -rf .tmp_versions
 
 ath_hal.o: $(addprefix $(obj)/,$(ath_hal-objs))
-	$(LD) $(LDFLAGS) -o ath_hal.$(KMODSUF) -r $(ath_hal-objs)
+	$(LD) $(LDOPTS) -o ath_hal.$(KMODSUF) -r $(ath_hal-objs)
 
