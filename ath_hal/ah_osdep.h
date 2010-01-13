@@ -64,6 +64,7 @@ struct ath_hal_chip *AR5212_chip_ptr __attribute__((__weak__));	\
 struct ath_hal_chip *AR5312_chip_ptr __attribute__((__weak__));	\
 struct ath_hal_chip *AR5416_chip_ptr __attribute__((__weak__));	\
 struct ath_hal_chip *AR9160_chip_ptr __attribute__((__weak__));	\
+struct ath_hal_chip *AR9280_chip_ptr __attribute__((__weak__));	\
 struct ath_hal_chip *const *ah_chips_ptrs[] = {			\
 	&AR5210_chip_ptr,					\
 	&AR5211_chip_ptr,					\
@@ -71,6 +72,7 @@ struct ath_hal_chip *const *ah_chips_ptrs[] = {			\
 	&AR5312_chip_ptr,					\
 	&AR5416_chip_ptr,					\
 	&AR9160_chip_ptr,					\
+	&AR9280_chip_ptr,					\
 	NULL							\
 }
 
