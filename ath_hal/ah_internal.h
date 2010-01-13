@@ -583,6 +583,17 @@ extern	void ath_hal_assert_failed(const char* filename,
 #endif /* AH_ASSERT */
 
 /*
+ * Return the h/w frequency for a channel.  This may be
+ * different from ic_freq if this is a GSM device that
+ * takes 2.4GHz frequencies and down-converts them.
+ */
+static OS_INLINE uint16_t
+ath_hal_gethwchannel(struct ath_hal *ah, const HAL_CHANNEL *c)
+{
+	return ath_hal_checkchannel(ah, c)->channel;
+}
+
+/*
  * Convert between microseconds and core system clocks.
  */
 extern	u_int ath_hal_mac_clks(struct ath_hal *ah, u_int usecs);
