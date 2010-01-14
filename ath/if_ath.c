@@ -1434,7 +1434,7 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 				}
 			}
 		} else {
-			EPRINTF(sc, "Unique BSSID requested on HW that does"
+			EPRINTF(sc, "Unique BSSID requested on HW that "
 				"does not support the necessary features.");
 		}
 	}
