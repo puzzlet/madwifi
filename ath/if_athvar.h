@@ -984,6 +984,11 @@ typedef void (*ath_callback) (struct ath_softc *);
 #define ATH_GBUF_LOCK_CHECK(_sc)
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
+#include <linux/semaphore.h>
+#else
+#include <asm/semaphore.h>
+#endif
 /* Protects the device from concurrent accesses */
 #define	ATH_LOCK_INIT(_sc)		init_MUTEX(&(_sc)->sc_lock)
 #define	ATH_LOCK_DESTROY(_sc)
