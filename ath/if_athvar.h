@@ -990,7 +990,7 @@ typedef void (*ath_callback) (struct ath_softc *);
 #include <asm/semaphore.h>
 #endif
 /* Protects the device from concurrent accesses */
-#define	ATH_LOCK_INIT(_sc)		init_MUTEX(&(_sc)->sc_lock)
+#define	ATH_LOCK_INIT(_sc)		sema_init(&(_sc)->sc_lock, 1)
 #define	ATH_LOCK_DESTROY(_sc)
 #define	ATH_LOCK(_sc)			down(&(_sc)->sc_lock)
 #define	ATH_UNLOCK(_sc)			up(&(_sc)->sc_lock)
