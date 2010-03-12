@@ -107,6 +107,7 @@ ccmp_attach(struct ieee80211vap *vap, struct ieee80211_key *k)
 	if (ctx == NULL) {
 		vap->iv_stats.is_crypto_nomem++;
 		status = 0;
+		goto out;
 	}
 
 /* This function crypto_alloc_foo might sleep. Therefore:
@@ -134,6 +135,7 @@ ccmp_attach(struct ieee80211vap *vap, struct ieee80211_key *k)
 		}
 	}
 
+out:
 	if (!status)
 		_MOD_DEC_USE(THIS_MODULE);
 	else {
