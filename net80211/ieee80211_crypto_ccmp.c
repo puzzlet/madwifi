@@ -123,11 +123,9 @@ ccmp_attach(struct ieee80211vap *vap, struct ieee80211_key *k)
 #endif
 	
 		if (ctx->cc_tfm == NULL) {
-			IEEE80211_DPRINTF(vap, IEEE80211_MSG_CRYPTO,
-					"%s: kernel support for AES "
-					"cryptography is not available; the "
-					"module may not be loaded.\n", 
-					__func__);
+			printk(KERN_ERR "%s: kernel AES support is missing; "
+			       "some modules may need to be loaded\n",
+			       vap->iv_dev->name);
 			FREE(ctx, M_DEVBUF);
 			ctx = NULL;
 			vap->iv_stats.is_crypto_nocipher++;
