@@ -199,7 +199,7 @@ To create APs that share a single MAC address, just create the VAPs:
   wlanconfig ath0 create wlandev wifi0 wlanmode ap
   wlanconfig ath1 create wlandev wifi0 wlanmode ap
 
-To create an VAP with a unique MAC addresss, use the bssid parameter:
+To create an VAP with a unique MAC address, use the bssid parameter:
 
   wlanconfig ath0 create wlandev wifi0 wlanmode ap
   wlanconfig ath1 create wlandev wifi0 wlanmode ap bssid

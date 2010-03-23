@@ -209,7 +209,7 @@ ccmp_encap(struct ieee80211_key *k, struct sk_buff *skb, u_int8_t keyid)
 	ivp[7] = k->wk_keytsc >> 40;		/* PN5 */
 
 	/*
-	 * Finally, do software encrypt if neeed.
+	 * Finally, do software encrypt if needed.
 	 */
 	if ((k->wk_flags & IEEE80211_KEY_SWCRYPT) &&
 	    !ccmp_encrypt(k, skb, hdrlen))

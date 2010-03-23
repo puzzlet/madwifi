@@ -185,7 +185,7 @@ wep_encap(struct ieee80211_key *k, struct sk_buff *skb, u_int8_t keyid)
 	ivp[3] = keyid;
 
 	/*
-	 * Finally, do software encrypt if neeed.
+	 * Finally, do software encrypt if needed.
 	 */
 	if ((k->wk_flags & IEEE80211_KEY_SWCRYPT) &&
 	    !wep_encrypt(k, skb, hdrlen))

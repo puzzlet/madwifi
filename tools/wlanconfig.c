@@ -66,7 +66,7 @@
  * These are taken from ieee80211_node.h
  */
 #define IEEE80211_NODE_TURBOP	0x0001		/* Turbo prime enable */
-#define IEEE80211_NODE_COMP	0x0002		/* Compresssion enable */
+#define IEEE80211_NODE_COMP	0x0002		/* Compression enable */
 #define IEEE80211_NODE_FF	0x0004          /* Fast Frame capable */
 #define IEEE80211_NODE_XR	0x0008		/* Atheros WME enable */
 #define IEEE80211_NODE_AR	0x0010		/* AR capable */
