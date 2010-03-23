@@ -1680,7 +1680,8 @@ static inline void ath_override_intmit_if_disabled(struct ath_softc *sc)
 		ath_hal_restore_default_intmit(sc->sc_ah);
 	/* Sanity check... remove later. */
 	if (!sc->sc_useintmit) {
-		ath_hal_verify_default_intmit(sc->sc_ah);
+		if (sc->sc_hasintmit)
+			ath_hal_verify_default_intmit(sc->sc_ah);
 		/* If we don't have int. mit. and we don't have DFS on channel,
 		 * it is safe to filter error packets. */
 		if (!ath_radar_is_dfs_required(sc, &sc->sc_curchan)) {
