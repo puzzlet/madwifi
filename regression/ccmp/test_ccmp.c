@@ -114,6 +114,8 @@ static const u_int8_t test1_encrypted[] = {	/* Encrypted MPDU with MIC */
 	0x3c, 0x04, 0xd0, 0x19, 0x78, 0x45, 0xce, 0x0b,
 	0x16, 0xf9, 0x76, 0x23,
 };
+#define test1_pn 0xb5039776e70cULL
+#define test1_keyix 0
 
 /*
 ==== CCMP test mpdu   2 ====
@@ -170,6 +172,8 @@ static const u_int8_t test2_encrypted[] = {	/* Encrypted MPDU with MIC */
 	0xb0, 0x69, 0xfe, 0x82, 0x71, 0x4a, 0x61, 0x0b, 0x54, 0x2f, 0xbf,
 	0x8d, 0xa0, 0x6a, 0xa4, 0xae,
 };
+#define test2_pn 0x31f3cbba97eaULL
+#define test2_keyix 2
 
 /*
 ==== CCMP test mpdu   3 ====
@@ -229,6 +233,8 @@ static const u_int8_t test3_encrypted[] = {	/* Encrypted MPDU with MIC */
 	0xb8, 0x96, 0x46, 0xc8, 0xfd, 0x1f, 0x1f, 0x61, 0xa9, 0xfb,
 	0x4b, 0xb3,
 };
+#define test3_pn 0x2fdca0f3a5aeULL
+#define test3_keyix 2
 
 /*
 ==== CCMP test mpdu  4 ==== 
@@ -287,6 +293,8 @@ static const u_int8_t test4_encrypted[] = {	/* Encrypted MPDU with MIC */
 	0x3b, 0x1a, 0x7b, 0x10, 0x31, 0xfc, 0x88, 0x00, 0x4f, 0x35,
 	0xee, 0x3d,
 };
+#define test4_pn 0xf670a55a0fe3ULL
+#define test4_keyix 0
 
 /*
 ==== CCMP test mpdu   5 ====
@@ -346,6 +354,8 @@ static const u_int8_t test5_encrypted[] = {	/* Encrypted MPDU with MIC */
 	0x5e, 0xc0, 0x3a, 0xf6, 0xce, 0x0c, 0x3b, 0xe1, 0x97, 0xd3,
 	0x05, 0xeb,
 };
+#define test5_pn 0xa7ffe03c0e37ULL
+#define test5_keyix 2
 
 /*
 ==== CCMP test mpdu   6 ====
@@ -405,6 +415,8 @@ static const u_int8_t test6_encrypted[] = {	/* Encrypted MPDU with MIC */
 	0xad, 0xb6, 0xcc, 0x86, 0x30, 0x9a, 0x8d, 0x5c, 0x46, 0x6b,
 	0xbb, 0x71,
 };
+#define test6_pn 0x6b81eca48989ULL
+#define test6_keyix 1
 
 /*
 ==== CCMP test mpdu   7 ====
@@ -461,6 +473,8 @@ static const u_int8_t test7_encrypted[] = {	/* Encrypted MPDU with MIC */
 	0xf1, 0xfe, 0xf9, 0xa1, 0xf3, 0x54, 0x7a, 0x8c, 0x13, 0xb3,
 	0x22, 0x5a, 0x2d, 0x09, 0x57, 0xec, 0xfa, 0xbe, 0x95, 0xb9,
 };
+#define test7_pn 0x5eec4073e723ULL
+#define test7_keyix 3
 
 /*
 ==== CCMP test mpdu   8 ====
@@ -520,9 +534,11 @@ static const u_int8_t test8_encrypted[] = {	/* Encrypted MPDU with MIC */
 	0x3f, 0xa1, 0x74, 0x62, 0x6d, 0xba, 0x8e, 0xf7, 0xf0, 0x80,
 	0x87, 0xdd,
 };
+#define test8_pn 0xcefd996eccddULL
+#define test8_keyix 2
 
-#define	TEST(n,name,cipher,keyix,pn) { \
-	name, IEEE80211_CIPHER_##cipher,keyix, pn##LL, \
+#define	TEST(n, name, cipher) { \
+	name, IEEE80211_CIPHER_##cipher, test##n##_keyix, test##n##_pn, \
 	test##n##_key,   sizeof(test##n##_key), \
 	test##n##_plaintext, sizeof(test##n##_plaintext), \
 	test##n##_encrypted, sizeof(test##n##_encrypted) \
@@ -540,14 +556,14 @@ static struct ciphertest {
 	const u_int8_t	*encrypted;
 	size_t		encrypted_len;
 } ccmptests[] = {
-	TEST(1, "CCMP test mpdu 1", AES_CCM, 0, 199027030681356),
-	TEST(2, "CCMP test mpdu 2", AES_CCM, 2, 54923164817386),
-	TEST(3, "CCMP test mpdu 3", AES_CCM, 2, 52624639632814),
-	TEST(4, "CCMP test mpdu 4", AES_CCM, 0, 270963670912995),
-	TEST(5, "CCMP test mpdu 5", AES_CCM, 2, 184717420531255),
-	TEST(6, "CCMP test mpdu 6", AES_CCM, 1, 118205765159305),
-	TEST(7, "CCMP test mpdu 7", AES_CCM, 3, 104368786630435),
-	TEST(8, "CCMP test mpdu 8", AES_CCM, 2, 227588596223197),
+	TEST(1, "CCMP test mpdu 1", AES_CCM),
+	TEST(2, "CCMP test mpdu 2", AES_CCM),
+	TEST(3, "CCMP test mpdu 3", AES_CCM),
+	TEST(4, "CCMP test mpdu 4", AES_CCM),
+	TEST(5, "CCMP test mpdu 5", AES_CCM),
+	TEST(6, "CCMP test mpdu 6", AES_CCM),
+	TEST(7, "CCMP test mpdu 7", AES_CCM),
+	TEST(8, "CCMP test mpdu 8", AES_CCM),
 };
 
 static void
