@@ -1029,7 +1029,7 @@ ath_attach(u_int16_t devid, struct net_device *dev, HAL_BUS_TAG tag)
 
 	/* Query the HAL about antenna support
 	 * Enable RX fast diversity if HAL has support. */
-	sc->sc_hasdiversity = sc->sc_diversity = !!ath_hal_hasdiversity(ah);
+	sc->sc_hasdiversity = sc->sc_diversity = ath_hal_hasdiversity(ah);
 	ath_hal_setdiversity(ah, sc->sc_diversity);
 
 	sc->sc_rxantenna = ath_hal_getdefantenna(ah);
