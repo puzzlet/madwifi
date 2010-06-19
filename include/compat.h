@@ -188,7 +188,9 @@ typedef unsigned long resource_size_t;
 #define IRQF_SHARED SA_SHIRQ
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,27)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,4,27)) || \
+    ((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)) && \
+     ((LINUX_VERSION_CODE < KERNEL_VERSION(2,6,3))))
 #define netdev_priv(_netdev) ((_netdev)->priv)
 #endif
 
