@@ -77,6 +77,19 @@
 #define NETDEV_TX_BUSY  1
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)
+#define netdev_for_each_mc_addr(mclist, dev) \
+	for (mclist = dev->mc_list; mclist; mclist = mclist->next)
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
+#define ath_netdev_hw_addr dev_mc_list
+#define ath_ha_addr(ha) ha->dmi_addr
+#else
+#define ath_netdev_hw_addr netdev_hw_addr
+#define ath_ha_addr(ha) ha->addr
+#endif
+
 /*
  * BSD/Linux compatibility shims.  These are used mainly to
  * minimize differences when importing necesary BSD code.

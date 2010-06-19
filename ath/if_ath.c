@@ -4418,7 +4418,7 @@ ath_merge_mcast(struct ath_softc *sc, u_int32_t mfilt[2])
 {
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ieee80211vap *vap;
-	struct dev_mc_list *mc;
+	struct ath_netdev_hw_addr *ha;
 	u_int32_t val;
 	u_int8_t pos;
 
@@ -4426,11 +4426,11 @@ ath_merge_mcast(struct ath_softc *sc, u_int32_t mfilt[2])
 	/* XXX locking */
 	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
 		struct net_device *dev = vap->iv_dev;
-		for (mc = dev->mc_list; mc; mc = mc->next) {
+		netdev_for_each_mc_addr (ha, dev) {
 			/* calculate XOR of eight 6-bit values */
-			val = LE_READ_4(mc->dmi_addr + 0);
+			val = LE_READ_4(ath_ha_addr(ha) + 0);
 			pos = (val >> 18) ^ (val >> 12) ^ (val >> 6) ^ val;
-			val = LE_READ_4(mc->dmi_addr + 3);
+			val = LE_READ_4(ath_ha_addr(ha) + 3);
 			pos ^= (val >> 18) ^ (val >> 12) ^ (val >> 6) ^ val;
 			pos &= 0x3f;
 			mfilt[pos / 32] |= (1 << (pos % 32));
