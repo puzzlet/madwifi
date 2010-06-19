@@ -48,7 +48,7 @@
 #include <linux/init.h>
 #include <linux/delay.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,11)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,12)
 /* Copied from Linux lib/sort.c */
 static void u32_swap(void *a, void *b, int size)
 {
