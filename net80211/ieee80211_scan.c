@@ -37,7 +37,7 @@
 /*
  * IEEE 802.11 scanning support.
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

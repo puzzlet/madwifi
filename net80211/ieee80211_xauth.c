@@ -46,7 +46,7 @@
  * of the available callbacks--the user mode authenticator process works
  * entirely from messages about stations joining and leaving.
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

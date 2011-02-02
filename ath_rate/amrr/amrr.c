@@ -43,7 +43,7 @@
  * "IEEE 802.11 Rate Adaptation: A Practical Approach" by
  *    Mathieu Lacage, Hossein Manshaei, Thierry Turletti
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

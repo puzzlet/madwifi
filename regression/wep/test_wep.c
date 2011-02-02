@@ -44,7 +44,7 @@
  * you want; e.g. insmod wep_test tests=7 will run only test MPDUs
  * 1, 2, and 3.
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

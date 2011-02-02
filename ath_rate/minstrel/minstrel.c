@@ -87,7 +87,7 @@
  * Also, this implementation tracks the average transmission time for
  * a few different packet sizes independently for each link. */
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 

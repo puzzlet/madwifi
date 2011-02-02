@@ -45,7 +45,7 @@
  * and if found the frame is either accepted (ACL_POLICY_ALLOW)
  * or rejected (ACL_POLICY_DENT).
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

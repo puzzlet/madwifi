@@ -41,7 +41,7 @@
  * John Bicket's SampleRate control algorithm.
  */
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

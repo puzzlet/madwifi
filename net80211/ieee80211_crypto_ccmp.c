@@ -38,7 +38,7 @@
  * AP driver. The code is used with the consent of the author and
  * its license is included below.
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>

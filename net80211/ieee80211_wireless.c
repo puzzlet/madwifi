@@ -39,7 +39,7 @@
 /*
  * Wireless extensions support for 802.11 common code.
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 

@@ -34,7 +34,7 @@
 /*
  * Atheros module glue for rate control algorithms.
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 

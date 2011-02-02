@@ -44,9 +44,9 @@
 /* Don't use virtualized timer in Linux 2.6.20+ */
 #define USE_REAL_TIME_DELAY
 
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
-#endif /* AUTOCONF_INCLUDED */
+#endif
 #include <linux/version.h>
 #include <linux/module.h>
 #include <linux/init.h>

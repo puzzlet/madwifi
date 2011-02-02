@@ -33,7 +33,7 @@
 /*
  * IEEE 802.11 support (Linux-specific code)
  */
-#ifndef AUTOCONF_INCLUDED
+#if !defined(AUTOCONF_INCLUDED) && !defined(CONFIG_LOCALVERSION)
 #include <linux/config.h>
 #endif
 #include <linux/version.h>
