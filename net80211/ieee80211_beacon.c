@@ -197,7 +197,6 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 	struct sk_buff *skb;
 	int pktlen;
 	u_int8_t *frm;
-	struct ieee80211_rateset *rs;
 
 	/*
 	 * beacon frame format
@@ -220,7 +219,6 @@ ieee80211_beacon_alloc(struct ieee80211_node *ni,
 	 * XXX Vendor-specific OIDs (e.g. Atheros)
 	 * NB: we allocate the max space required for the TIM bitmap.
 	 */
-	rs = &ni->ni_rates;
 	pktlen = 8					/* time stamp */
 		 + sizeof(u_int16_t)			/* beacon interval */
 		 + sizeof(u_int16_t)			/* capability information */

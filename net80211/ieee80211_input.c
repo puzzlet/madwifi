@@ -4144,7 +4144,7 @@ ieee80211_recv_pspoll(struct ieee80211_node *ni, struct sk_buff *skb0)
 
 	/* Okay, take the first queued packet and put it out... */
 	IEEE80211_NODE_SAVEQ_LOCK_IRQ(ni);
-	IEEE80211_NODE_SAVEQ_DEQUEUE(ni, skb, qlen);
+	qlen = IEEE80211_NODE_SAVEQ_DEQUEUE(ni, skb);
 	IEEE80211_NODE_SAVEQ_UNLOCK_IRQ(ni);
 	if (skb == NULL) {
 		IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_POWER, wh->i_addr2,

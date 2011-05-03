@@ -308,13 +308,12 @@ ar9280ConfigPCIE(struct ath_hal *ah, HAL_BOOL restore)
 static void
 ar9280WriteIni(struct ath_hal *ah, const HAL_CHANNEL *chan)
 {
-	u_int modesIndex, freqIndex;
+	u_int modesIndex;
 	int regWrites = 0;
 
 	/* Setup the indices for the next set of register array writes */
 	/* XXX Ignore 11n dynamic mode on the AR5416 for the moment */
 	if (IS_CHAN_2GHZ(chan)) {
-		freqIndex = 2;
 		if (IS_CHAN_HT40(chan))
 			modesIndex = 3;
 		else if (IS_CHAN_108G(chan))
@@ -322,7 +321,6 @@ ar9280WriteIni(struct ath_hal *ah, const HAL_CHANNEL *chan)
 		else
 			modesIndex = 4;
 	} else {
-		freqIndex = 1;
 		if (IS_CHAN_HT40(chan) ||
 		    IS_CHAN_TURBO(chan))
 			modesIndex = 2;

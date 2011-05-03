@@ -225,7 +225,6 @@ calc_usecs_unicast_packet(struct ath_softc *sc, int length,
 		rts = 1;
 
 	if (rts || cts) {
-		int ctsrate;
 		int ctsduration = 0;
 
 		if (!rt->info[cix].rateKbps) {
@@ -237,7 +236,6 @@ calc_usecs_unicast_packet(struct ath_softc *sc, int length,
 		}
 
 
-		ctsrate = rt->info[cix].rateCode | rt->info[cix].shortPreamble;
 		if (rts)		/* SIFS + CTS */
 			ctsduration += rt->info[cix].spAckDuration;
 

@@ -304,10 +304,9 @@ ieee80211_node_pwrsave(struct ieee80211_node *ni, int enable)
 
 		for (;;) {
 			struct sk_buff *skb;
-			int qlen;
 
 			IEEE80211_NODE_SAVEQ_LOCK_IRQ(ni);
-			IEEE80211_NODE_SAVEQ_DEQUEUE(ni, skb, qlen);
+			IEEE80211_NODE_SAVEQ_DEQUEUE(ni, skb);
 			IEEE80211_NODE_SAVEQ_UNLOCK_IRQ(ni);
 			if (skb == NULL)
 				break;

@@ -362,10 +362,10 @@ typedef spinlock_t acl_lock_t;
 #endif
 
 /* caller MUST lock IEEE80211_NODE_SAVEQ */
-#define	IEEE80211_NODE_SAVEQ_DEQUEUE(_ni, _skb, _qlen) do {	\
+#define	IEEE80211_NODE_SAVEQ_DEQUEUE(_ni, _skb) ({		\
 	_skb = __skb_dequeue(&(_ni)->ni_savedq);		\
-	(_qlen) = skb_queue_len(&(_ni)->ni_savedq);		\
-} while (0)
+	skb_queue_len(&(_ni)->ni_savedq);			\
+})
 #define	_IEEE80211_NODE_SAVEQ_ENQUEUE(_ni, _skb, _qlen, _age) do {	\
 	struct sk_buff *tail = skb_peek_tail(&(_ni)->ni_savedq);	\
 	if (tail != NULL) {						\
