@@ -19,6 +19,7 @@
  * $Id: if_ath_radar.h 2464 2007-06-15 22:51:56Z mtaylor $
  */
 #ifndef _IF_ATH_DEBUG_H_
+#define _IF_ATH_DEBUG_H_
 
 enum {
 	ATH_DEBUG_XMIT		= 0x00000001,	/* basic xmit operation */

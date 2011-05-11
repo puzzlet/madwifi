@@ -17,7 +17,7 @@
  * $Id: ar5416desc.h,v 1.7 2008/11/11 00:11:30 sam Exp $
  */
 #ifndef _ATH_AR5416_DESC_H_
-#define _ATH_AR5416_DESC_H
+#define _ATH_AR5416_DESC_H_
 
 /*
  * Hardware-specific descriptor structures.
