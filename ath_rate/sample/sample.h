@@ -74,7 +74,6 @@ struct rate_stats {
  * size buckets
  */
 #define NUM_PACKET_SIZE_BINS 3
-static int packet_size_bins[NUM_PACKET_SIZE_BINS] = {250, 1600, 3000};
 
 /* per-node state */
 struct sample_node {

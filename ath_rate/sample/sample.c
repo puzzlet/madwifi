@@ -124,6 +124,7 @@ static char *dev_info = "ath_rate_sample";
 static int ath_smoothing_rate = 95;	/* ewma percentage (out of 100) */
 static int ath_sample_rate = 10;		/* use x% of transmission time 
 					 * sending at a different bit-rate */
+static int packet_size_bins[NUM_PACKET_SIZE_BINS] = {250, 1600, 3000};
 
 static void ath_rate_ctl_reset(struct ath_softc *, struct ieee80211_node *);
 
