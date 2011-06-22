@@ -13,17 +13,17 @@ ifndef ATH_CAP_SUPERG_COMP
 export ATH_CAP_SUPERG_COMP=0
 endif
 
-ifndef ATH_CAP_XR
-export ATH_CAP_XR=0
-endif
+# ifndef ATH_CAP_XR
+# export ATH_CAP_XR=0
+# endif
 
 ifndef ATH_CAP_TPC
 export ATH_CAP_TPC=1
 endif
 
-ifndef ATH_CAP_TX99
-export ATH_CAP_TX99=0
-endif
+# ifndef ATH_CAP_TX99
+# export ATH_CAP_TX99=0
+# endif
 
 #
 # directives
@@ -40,14 +40,14 @@ ifneq ($(strip $(ATH_CAP_SUPERG_COMP)),0)
 COPTS+= -DATH_SUPERG_COMP=1
 endif
 
-ifneq ($(strip $(ATH_CAP_XR)),0)
-COPTS+= -DATH_SUPERG_XR=1
-endif
+# ifneq ($(strip $(ATH_CAP_XR)),0)
+# COPTS+= -DATH_SUPERG_XR=1
+# endif
 
 ifneq ($(strip $(ATH_CAP_TPC)),0)
 COPTS+= -DATH_CAP_TPC=1
 endif
 
-ifneq ($(strip $(ATH_CAP_TX99)),0)
-COPTS+= -DATH_TX99_DIAG=1
-endif
+# ifneq ($(strip $(ATH_CAP_TX99)),0)
+# COPTS+= -DATH_TX99_DIAG=1
+# endif
