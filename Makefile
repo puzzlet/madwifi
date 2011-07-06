@@ -72,7 +72,7 @@ $(TOP)/svnversion.h:
 		ver=$$(svnversion -nc . | sed -e 's/^[^:]*://;s/[A-Za-z]//'); \
 		echo "#define SVNVERSION \"svn r$$ver\"" > $@.tmp; \
 	elif [ -d .git ]; then \
-		ver=$$(git svn log | head -n2 | tail -n1 | cut -d\  -f1); \
+		ver=$$(git svn log --oneline --limit 1 | cut -d\  -f1); \
 		echo "#define SVNVERSION \"svn $$ver\"" > $@.tmp; \
 	elif [ -s SNAPSHOT ]; then \
 		ver=$$(sed -e '/^Revision: */!d;s///;q' SNAPSHOT); \
