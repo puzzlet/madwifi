@@ -702,7 +702,7 @@ ieee80211_sta_join(struct ieee80211vap *vap,
 		if (ni == NULL) {
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_NODE,
 			"%s: Unable to allocate node for BSS: " MAC_FMT "\n", __func__,
-			MAC_ADDR(ni->ni_macaddr));
+			MAC_ADDR(se->se_macaddr));
 			return 0;
 		}
 	}
