@@ -6207,7 +6207,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 						/* NB: last descriptor */
 						ds = prev->bf_desc;
 #endif
-						ts = &bf->bf_dsstatus.ds_txstat;
+						ts = &prev->bf_dsstatus.ds_txstat;
 						status = ath_hal_txprocdesc(
 								ah, ds, ts
 								);
@@ -6402,7 +6402,7 @@ ath_node_move_data(const struct ieee80211_node *ni)
 		DPRINTF(sc, ATH_DEBUG_XMIT_PROC, 
 				"moved %d buffers from XR to NORMAL\n"m count);
 	}
-#endif
+#endif	/* NOT_YET */
 	return 0;
 }
 #endif
