@@ -1799,8 +1799,8 @@ static HAL_BOOL ath_hw_reset(struct ath_softc *sc, HAL_OPMODE opmode,
 		return ret;
 
  	/* Do the same as in ath_getchannels() */
- 	ath_radar_correct_dfs_flags(sc, channel);
- 
+	ath_radar_correct_dfs_flags(sc, channel);
+
  	/* Restore CHANNEL_DFS_CLEAR and CHANNEL_INTERFERENCE flags */
 #define CHANNEL_DFS_FLAGS	(CHANNEL_DFS_CLEAR|CHANNEL_INTERFERENCE)
 	channel->privFlags = (channel->privFlags & ~CHANNEL_DFS_FLAGS) |
