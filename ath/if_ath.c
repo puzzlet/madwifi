@@ -1385,12 +1385,10 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 		/* If no default VAP debug flags are passed, allow a few to
 		 * transfer down from the driver to new VAPs so we can have load
 		 * time debugging for VAPs too. */
-		vap->iv_debug = 0 |
-			((sc->sc_debug & ATH_DEBUG_RATE) ? IEEE80211_MSG_XRATE  : 0) | 
-			((sc->sc_debug & ATH_DEBUG_XMIT) ? IEEE80211_MSG_OUTPUT : 0) | 
-			((sc->sc_debug & ATH_DEBUG_RECV) ? IEEE80211_MSG_INPUT  : 0) |
-			0
-			;
+		vap->iv_debug =
+			((sc->sc_debug & ATH_DEBUG_RATE) ? IEEE80211_MSG_XRATE  : 0) |
+			((sc->sc_debug & ATH_DEBUG_XMIT) ? IEEE80211_MSG_OUTPUT : 0) |
+			((sc->sc_debug & ATH_DEBUG_RECV) ? IEEE80211_MSG_INPUT  : 0);
 	}
 	ic->ic_debug = (sc->sc_default_ieee80211_debug & IEEE80211_MSG_IC);
 
