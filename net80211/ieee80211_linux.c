@@ -937,7 +937,7 @@ static const ctl_table ieee80211_sysctl_template[] = {
 	  .mode		= 0444,
 	  .proc_handler	= proc_dostring
 	},
-	{ 0 }
+	{ }
 };
 
 void

@@ -528,28 +528,28 @@ static ctl_table ath_rate_static_sysctls[] = {
 	  .extra2	= &maxint,
 	  .proc_handler	= proc_dointvec_minmax
 	},
-	{ 0 }
+	{ }
 };
 static ctl_table ath_rate_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_AUTO)
 	  .procname	= "rate_amrr",
 	  .mode		= 0555,
 	  .child	= ath_rate_static_sysctls
-	}, { 0 }
+	}, { }
 };
 static ctl_table ath_ath_table[] = {
 	{ ATH_INIT_CTL_NAME(DEV_ATH)
 	  .procname	= "ath",
 	  .mode		= 0555,
 	  .child	= ath_rate_table
-	}, { 0 }
+	}, { }
 };
 static ctl_table ath_root_table[] = {
 	{ ATH_INIT_CTL_NAME(CTL_DEV)
 	  .procname	= "dev",
 	  .mode		= 0555,
 	  .child	= ath_ath_table
-	}, { 0 }
+	}, { }
 };
 static struct ctl_table_header *ath_sysctl_header;
 

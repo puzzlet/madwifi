@@ -119,7 +119,7 @@ static struct pci_device_id ath_pci_id_table[] __devinitdata = {
 #endif
 	{ 0x168c, 0x002a, PCI_ANY_ID, PCI_ANY_ID }, /* AR9280 PCI Express */
 	{ 0x168c, 0x9013, PCI_ANY_ID, PCI_ANY_ID }, /* sonicwall */
-	{ 0 }
+	{ }
 };
 
 static u16 ath_devidmap[][2] = {
