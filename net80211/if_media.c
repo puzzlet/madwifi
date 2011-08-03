@@ -292,8 +292,8 @@ ifmedia_ioctl(struct net_device *dev, struct ifreq *ifr,
 			return (-EINVAL);
 
 		if (ifmr->ifm_count != 0) {
-			kptr = (int *)kmalloc(ifmr->ifm_count * sizeof(int),
-			    GFP_KERNEL);
+			kptr = kmalloc(ifmr->ifm_count * sizeof(int),
+				       GFP_KERNEL);
 
 			if (kptr == NULL)
 				return (-ENOMEM);
