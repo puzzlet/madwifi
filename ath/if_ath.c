@@ -12389,7 +12389,7 @@ ath_return_txbuf_locked(struct ath_softc *sc, struct ath_buf **bf)
 	atomic_dec(&sc->sc_txbuf_counter);
 #ifdef IEEE80211_DEBUG_REFCNT
 	DPRINTF(sc, ATH_DEBUG_TXBUF, 
-		"[TXBUF=%03d/%03d] returned txbuf %p.\n", 
+		"[TXBUF=%03d/%03d] returned txbuf.\n", 
 		ath_get_buffer_count(sc), ATH_TXBUF);
 #endif /* #ifdef IEEE80211_DEBUG_REFCNT */
 	if (netif_queue_stopped(sc->sc_dev) && 

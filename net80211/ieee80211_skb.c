@@ -273,20 +273,20 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 {
 	if (NULL == skb) {
 		skb_print_message(0 /* show_counter */, 
-			skb, func2, line2,
+			skb, func, line,
 			"ERROR: NULL skb received.  Skipping.");
 		return NULL;
 	}
 	if (M_FLAG_GET(skb, M_SKB_TRACKED)) {
 		skb_print_message(0 /* show_counter */, 
-			skb, func2, line2,
+			skb, func, line,
 			"ERROR: Already tracked skb received.  Skipping.");
 		dump_stack();
 		return skb;
 	}
 	if (skb_shared(skb)) {
 		skb_print_message(0 /* show_counter */, 
-			skb, func2, line2,
+			skb, func, line,
 			"ERROR: Shared skb received.  References leaked??");
 		dump_stack();
 	}
@@ -294,7 +294,7 @@ track_skb(struct sk_buff *skb, int users_adjustment,
 	atomic_inc(&skb_refs_counter);
 	M_FLAG_SET(skb, M_SKB_TRACKED);
 	print_skb_trackchange_message(skb, users_adjustment,
-				      func2, line2, 
+				      func, line,
 				      " is now ** TRACKED **");
 #ifdef IEEE80211_DEBUG_REFCNT_SKBDEST
 	/* Install our debug destructor, chaining to the original... */
@@ -380,7 +380,7 @@ unref_skb(struct sk_buff *skb, int type,
 
         if (skb_shared(skb)) {
 		atomic_dec(&skb_refs_counter);
-		print_skb_refchange_message(skb, -1, func2, line2);
+		print_skb_refchange_message(skb, -1, func, line);
 	}
 	else {
 		if (SKB_NI(skb) != NULL) {
@@ -674,7 +674,7 @@ void  kfree_skb_fast_debug(struct sk_buff *skb,
 		     const char *func, int line)
 {
 	/* NOT so fast... */
-	unref_skb(skb, UNREF_USE_DEV_KFREE_SKB_ANY, func, line, __func__, __LINE__);
+	unref_skb(skb, UNREF_USE_DEV_KFREE_SKB_ANY, func, line);
 }
 
 struct sk_buff *skb_unshare_debug(struct sk_buff *skb, gfp_t pri,
