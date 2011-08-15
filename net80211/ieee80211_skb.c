@@ -570,6 +570,7 @@ ieee80211_skb_references(void) {
 
 #ifdef IEEE80211_DEBUG_REFCNT
 
+#if IEEE80211_VLAN_TAG_USED
 int  vlan_hwaccel_rx_debug(struct sk_buff *skb, 
 			       struct vlan_group *grp, unsigned short vlan_tag, 
 			       const char *func, int line) {
@@ -577,6 +578,7 @@ int  vlan_hwaccel_rx_debug(struct sk_buff *skb,
 		untrack_skb(skb, 0, __func__, __LINE__),
 		grp, vlan_tag);
 }
+#endif
 
 int netif_rx_debug(struct sk_buff *skb, const char *func, int line) {
 	return netif_rx(untrack_skb(skb, 0, __func__, __LINE__));

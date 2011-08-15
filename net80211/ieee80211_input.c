@@ -1194,11 +1194,13 @@ ieee80211_deliver_data(struct ieee80211_node *ni, struct sk_buff *skb)
 		skb->protocol = eth_type_trans(skb, dev);
 #endif
 		tni = SKB_NI(skb);
+#if IEEE80211_VLAN_TAG_USED
 		if ((ni->ni_vlan != 0) && (vap->iv_vlgrp != NULL))
 			/* Attach VLAN tag. */
 			ret = vlan_hwaccel_rx(skb,
 					vap->iv_vlgrp, ni->ni_vlan);
 		else
+#endif
 			ret = netif_rx(skb);
 		if (ret == NET_RX_DROP)
 			vap->iv_devstats.rx_dropped++;
