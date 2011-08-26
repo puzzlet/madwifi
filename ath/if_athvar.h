@@ -701,7 +701,7 @@ struct ath_softc {
 	unsigned int	sc_useintmit:1;		/* Interference mitigation enabled? */
 	unsigned int	sc_txcont:1;		/* Is continuous transmit enabled? */
 	unsigned int	sc_dfs_testmode:1; 	/* IF this is on, AP vaps will stay in
-						 * 'channel availability check' indefinately,
+						 * 'channel availability check' indefinitely,
 						 * reporting radar and interference detections. */
 	unsigned int	sc_dmasize_stomp:1;	/* Whether to stomp on DMA size. */
 

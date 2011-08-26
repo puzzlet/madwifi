@@ -940,7 +940,7 @@ getNoiseFloorThresh(struct ath_hal *ah, HAL_CHANNEL_INTERNAL *chan, int16_t *nft
 }
 
 /*
- * Read the NF and check it against the noise floor threshhold
+ * Read the NF and check it against the noise floor threshold
  *
  * Returns: TRUE if the NF is good
  */

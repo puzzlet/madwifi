@@ -151,7 +151,7 @@ ath_hal_computetxtime(struct ath_hal *ah,
 
 	kbps = rates->info[rateix].rateKbps;
 	/*
-	 * index can be invalid duting dynamic Turbo transitions. 
+	 * index can be invalid during dynamic Turbo transitions.
 	 */
 	if(kbps == 0) return 0;
 	switch (rates->info[rateix].phy) {

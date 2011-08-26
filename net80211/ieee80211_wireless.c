@@ -983,7 +983,7 @@ ieee80211_ioctl_giwrange(struct net_device *dev, struct iw_request_info *info,
 	}
 
 	/* Atheros' RSSI value is SNR: 0 -> 60 for old chipsets. Range 
-	 * for newer chipsets is unknown. This value is arbitarily chosen 
+	 * for newer chipsets is unknown. This value is arbitrarily chosen
 	 * to give an indication that full rate will be available and to be 
 	 * a practicable maximum. */
 	range->max_qual.qual  = 70;
@@ -2186,7 +2186,7 @@ ieee80211_setupxr(struct ieee80211vap *vap)
 			strcat(name, "-xr");
 			/*
 			 * Create a new XR vap. If the normal VAP is already up,
-			 * bring up the XR vap aswell.
+			 * bring up the XR vap as well.
 			 */
 			vap->iv_ath_cap &= ~IEEE80211_ATHC_TURBOP; /* turn off turbo */
 			ieee80211_scan_flush(ic);	/* NB: could optimize */

@@ -76,7 +76,7 @@
  * This is halfway between the 10@100ms default from prior hardcoded setting for
  * software beacon miss timers, and the 7@100ms default from prior hardcoded 
  * timer value for hardware beacon miss timer.
- * Based upon emperical evidence and practices of commercial vendors, I believe
+ * Based upon empirical evidence and practices of commercial vendors, I believe
  * this should really be 2500ms by default. */
 #define IEEE80211_BMISSTHRESH_DEFAULT_MS 850
 

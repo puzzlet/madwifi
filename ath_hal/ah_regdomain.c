@@ -2361,7 +2361,7 @@ IS_BIT_SET(int bit, const uint64_t bitmask[])
 	return (bitmask[byteOffset] & val) != 0;
 }
 	
-/* Add given regclassid into regclassids array upto max of maxregids */
+/* Add given regclassid into regclassids array up to max of maxregids */
 static void
 ath_add_regclassid(uint8_t *regclassids, u_int maxregids,
 	u_int *nregids, uint8_t regclassid)

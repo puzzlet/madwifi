@@ -621,7 +621,7 @@ ar5416UpdateNFHistBuff(struct ar5212NfCalHist *h, int16_t *nfarray)
 }   
 
 /*
- * Read the NF and check it against the noise floor threshhold
+ * Read the NF and check it against the noise floor threshold
  */
 static int16_t
 ar5416GetNf(struct ath_hal *ah, HAL_CHANNEL_INTERNAL *chan)

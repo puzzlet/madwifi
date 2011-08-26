@@ -99,7 +99,7 @@ static struct attribute *ieee80211_sysfs_attrs[] = {
 };
 
 static struct attribute_group ieee80211_attr_grp = {
-	.name	= NULL,	/* No seperate (sub-)directory */
+	.name	= NULL,	/* No separate (sub-)directory */
 	.attrs	= ieee80211_sysfs_attrs
 };
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,17) */

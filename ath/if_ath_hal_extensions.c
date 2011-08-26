@@ -165,7 +165,7 @@ ath_hw_beacon_stop(struct ath_softc *sc) {
  * of beacon timer configuration (which we try to avoid) and due to unlucky
  * timing of local TSF updates (triggered by the reception of a beacon with the
  * same BSSID - something we can't avoid) the beacon timers can be up updated
- * seperately, leaving one of them in the past, not beeing updated until the
+ * separately, leaving one of them in the past, not beeing updated until the
  * timers wrap around. due to the fact that the beacon interval does not fit
  * into the timer period (16 bit) a whole number of times the size of the ATIM
  * window can get bigger than desired.

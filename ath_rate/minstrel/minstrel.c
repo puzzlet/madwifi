@@ -61,7 +61,7 @@
  *
  * It is not an aimless search, there is some direction to the search
  * pattern. But then, the minstels of old only sung where they thought
- * they would get an income. Similarily, we direct thesearch a little.
+ * they would get an income. Similarly, we direct the search a little.
  *
  *  Enjoy.  Derek Smithies. */
 

@@ -92,7 +92,7 @@
 
 /*
  * BSD/Linux compatibility shims.  These are used mainly to
- * minimize differences when importing necesary BSD code.
+ * minimize differences when importing necessary BSD code.
  */
 #define	NBBY	8			/* number of bits/byte */
 

@@ -1847,7 +1847,7 @@ ieee80211_build_countryie(struct ieee80211com *ic)
 	 * NB: this is not quite right, since we should have one of:
 	 *     'I': indoor only
 	 *     'O': outdoor only
-	 *     ' ': all enviroments
+	 *     ' ': all environments
 	 *  we currently can only provide 'I' or ' '.
 	 */
 	ic->ic_country_ie.country_str[2] = 'I';

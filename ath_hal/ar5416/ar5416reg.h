@@ -192,10 +192,10 @@
 #define	AR_PCIE_PM_CTRL_ENA	0x00080000
 
 #define	AR_AHB_EXACT_WR_EN	0x00000000	/* write exact bytes */
-#define	AR_AHB_BUF_WR_EN	0x00000001	/* buffer write upto cacheline*/
+#define	AR_AHB_BUF_WR_EN	0x00000001	/* buffer write up to cacheline*/
 #define	AR_AHB_EXACT_RD_EN	0x00000000	/* read exact bytes */
-#define	AR_AHB_CACHELINE_RD_EN	0x00000002	/* read upto end of cacheline */
-#define	AR_AHB_PREFETCH_RD_EN	0x00000004	/* prefetch upto page boundary*/
+#define	AR_AHB_CACHELINE_RD_EN	0x00000002	/* read up to end of cacheline */
+#define	AR_AHB_PREFETCH_RD_EN	0x00000004	/* prefetch up to page boundary*/
 #define	AR_AHB_PAGE_SIZE_1K	0x00000000	/* set page-size as 1k */
 #define	AR_AHB_PAGE_SIZE_2K	0x00000008	/* set page-size as 2k */
 #define	AR_AHB_PAGE_SIZE_4K	0x00000010	/* set page-size as 4k */
@@ -416,7 +416,7 @@
 #define	AR_PCU_MISS_BCN_IN_SLEEP	0x00004000 /* count bmiss's when sleeping */
 #define	AR_PCU_BUG_12306_FIX_ENA	0x00020000 /* use rx_clear to count sifs */
 #define	AR_PCU_FORCE_QUIET_COLL		0x00040000 /* kill xmit for channel change */
-#define	AR_PCU_TBTT_PROTECT		0x00200000 /* no xmit upto tbtt+20 uS */
+#define	AR_PCU_TBTT_PROTECT		0x00200000 /* no xmit up to tbtt+20 uS */
 #define	AR_PCU_CLEAR_VMF		0x01000000 /* clear vmf mode (fast cc)*/
 #define	AR_PCU_CLEAR_BA_VALID		0x04000000 /* clear ba state */
 

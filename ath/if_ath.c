@@ -2677,7 +2677,7 @@ ath_bmiss_tasklet(TQUEUE_ARG data)
 	struct ath_softc *sc = netdev_priv(dev);
 
 	if (time_before(jiffies, sc->sc_ic.ic_bmiss_guard)) {
-		/* Beacon miss interrupt occured too short after last beacon
+		/* Beacon miss interrupt occurred too short after last beacon
 		 * timer configuration. Ignore it as it could be spurious. */
 		DPRINTF(sc, ATH_DEBUG_ANY, "Beacon miss ignored\n");
 	} else {
@@ -10821,7 +10821,7 @@ ath_distance2timeout(struct ath_softc *sc, int distance)
 	 * being very careful or taking something into account that I can't
 	 * find in the specs.
 	 *
-	 * XXX: Update based on emperical evidence (potentially save 15us per
+	 * XXX: Update based on empirical evidence (potentially save 15us per
 	 * timeout). */
 	return ath_slottime2timeout(sc, ath_distance2slottime(sc, distance));
 }
