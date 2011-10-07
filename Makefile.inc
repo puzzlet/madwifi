@@ -134,7 +134,7 @@ ATH_RATE=	$(TOP)/ath_rate
 # 
 TOOLS=  $(TOP)/tools
 
-WARNINGS = -Werror -Wall
+WARNINGS = -Wall
 COPTS+= $(WARNINGS)
 INCS=	-include $(TOP)/include/compat.h -I$(TOP)/include
 
