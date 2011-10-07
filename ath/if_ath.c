@@ -1493,7 +1493,9 @@ ath_vap_create(struct ieee80211com *ic, const char *name,
 	}
 	if (sc->sc_hastsfadd)
 		ath_hal_settsfadjust(sc->sc_ah, sc->sc_stagbeacons);
-	SET_NETDEV_DEV(dev, ATH_GET_NETDEV_DEV(mdev));
+#ifdef ATH_PCI
+	SET_NETDEV_DEV(dev, &((struct pci_dev *)sc->sc_bdev)->dev);
+#endif
 	/* complete setup */
 	(void) ieee80211_vap_attach(vap,
 		ieee80211_media_change, ieee80211_media_status);
