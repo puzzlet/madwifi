@@ -78,8 +78,10 @@
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)
+#ifndef netdev_for_each_mc_addr
 #define netdev_for_each_mc_addr(mclist, dev) \
-	for (mclist = dev->mc_list; mclist; mclist = mclist->next)
+	for (mclist = (dev)->mc_list; mclist; mclist = mclist->next)
+#endif
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
