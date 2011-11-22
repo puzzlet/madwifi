@@ -511,7 +511,11 @@ static const struct net_device_ops ath_netdev_ops = {
 	.ndo_stop		= ath_stop,
 	.ndo_start_xmit		= ath_hardstart,
 	.ndo_tx_timeout 	= ath_tx_timeout,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+	.ndo_set_rx_mode	= ath_mode_init,
+#else
 	.ndo_set_multicast_list = ath_mode_init,
+#endif
 	.ndo_do_ioctl		= ath_ioctl,
 	.ndo_get_stats		= ath_getstats,
 	.ndo_set_mac_address	= ath_set_mac_address,
