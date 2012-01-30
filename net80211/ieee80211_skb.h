@@ -113,8 +113,10 @@ int ieee80211_skb_references(void);
 
 #ifdef IEEE80211_DEBUG_REFCNT
 
+#if IEEE80211_VLAN_TAG_USED
 int vlan_hwaccel_rx_debug(struct sk_buff *skb, struct vlan_group *grp,
 		unsigned short vlan_tag, const char *func, int line);
+#endif
 int netif_rx_debug(struct sk_buff *skb, const char *func, int line);
 struct sk_buff *alloc_skb_debug(unsigned int length, gfp_t gfp_mask,
 		const char *func, int line);
