@@ -284,7 +284,7 @@ main(int argc, char *argv[])
 		/* no args, just show global stats */
 		ifr.ifr_data = (caddr_t) &stats;
 		if (ioctl(s, SIOCG80211STATS, &ifr) < 0)
-			err(1, ifr.ifr_name);
+			err(1, "%s", ifr.ifr_name);
 		printstats(stdout, &stats);
 		return 0;
 	}
